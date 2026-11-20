@@ -1,0 +1,10 @@
+﻿# This machine's disk sustains only ~16 MiB/s of writes. The integration tests write hundreds of MB,
+# so running all of them at once makes timing assertions flaky for reasons unrelated to the engine.
+[env]
+RUST_TEST_THREADS = "4"
+
+# reqwest's HTTP/3 support is "unstable" and only compiles with this cfg. (If you also set the
+# RUSTFLAGS environment variable it replaces this, and the build stops with a message about it:
+# add `--cfg reqwest_unstable` there too.)
+[build]
+rustflags = ["--cfg", "reqwest_unstable"]

@@ -1,0 +1,44 @@
+[package]
+name = "flowget-engine"
+version = "0.1.0"
+description = "FlowGet download engine: no UI and no Tauri dependency"
+edition = "2021"
+
+[lib]
+name = "flowget_engine"
+
+[features]
+default = ["http3"]
+# HTTP/3 (QUIC). reqwest marks it unstable: it needs `--cfg reqwest_unstable`, which
+# src-tauri/.cargo/config.toml sets. Without the cfg the feature is silently compiled out below.
+http3 = ["reqwest/http3", "reqwest/rustls-tls-native-roots"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(reqwest_unstable)'] }
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "fs", "io-util", "net"] }
+tokio-util = "0.7"
+# default-tls = Schannel on Windows, so the OS certificate store (and corporate/antivirus roots) is used.
+reqwest = { version = "0.12", default-features = false, features = ["default-tls", "http2", "cookies", "stream", "charset"] }
+futures-util = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+url = "2"
+percent-encoding = "2"
+md-5 = "0.10"
+sha1 = "0.10"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+rand = "0.8"
+uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(windows)'.dependencies]
+# OS network-change notifications (NotifyIpInterfaceChange).
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_NetworkManagement_IpHelper", "Win32_NetworkManagement_Ndis", "Win32_Networking_WinSock"] }
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1", features = ["test-util"] }

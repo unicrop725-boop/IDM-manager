@@ -33,6 +33,21 @@ export interface MirrorReport {
   reason: string | null;
 }
 
+/** A network adapter Turbo Mode can use (mirrors engine adapters.rs). */
+export interface AdapterInfo {
+  id: string;
+  name: string;
+  kind: "wifi" | "ethernet" | "mobile" | "other";
+  ip: string;
+}
+
+/** Live speed through one adapter while Turbo Mode bonds two or more networks. */
+export interface AdapterProgress extends AdapterInfo {
+  speedBps: number;
+  bytes: number;
+  connections: number;
+}
+
 export interface DownloadInfo {
   id: string;
   url: string;
@@ -59,6 +74,10 @@ export interface DownloadInfo {
   /** "HTTP/3", "HTTP/2" or "HTTP/1.1" (latest response). */
   protocol: string | null;
   mirrors: MirrorReport[];
+  /** Live only (from progress events): speed per network adapter in Turbo Mode. */
+  adapters?: AdapterProgress[];
+  /** Live only: connections the engine is currently trying to keep busy (AIMD). */
+  liveConnections?: number;
 }
 
 export interface ProgressEvent {
@@ -70,6 +89,8 @@ export interface ProgressEvent {
   segments: SegmentProgress[];
   note: string | null;
   protocol: string | null;
+  connections: number;
+  adapters: AdapterProgress[];
 }
 
 export interface AddRequest {
@@ -95,4 +116,6 @@ export interface Settings {
   maxConnections: number;
   downloadDir: string;
   online: boolean;
+  /** Turbo Mode: use every active network adapter at once. */
+  turboMode: boolean;
 }

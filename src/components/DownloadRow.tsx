@@ -127,9 +127,30 @@ export default function DownloadRow({ d, onAction, actions }: Props) {
               <span>ETA {formatEta(d.etaSecs)}</span>
             </>
           )}
-          <span className="text-zinc-500">{d.connections} conn.</span>
+          <span className="text-zinc-500" title="Connections in use now. The count starts small and grows while the speed keeps improving, and drops if the server refuses connections.">
+            {running && d.liveConnections ? `${d.liveConnections} of ${d.connections}` : d.connections} conn.
+          </span>
         </div>
       </div>
+
+      {/* Turbo Mode: speed per network adapter */}
+      {running && d.adapters && d.adapters.length > 1 && (
+        <div className="mt-2 space-y-1" title="Turbo Mode: this download is using several networks at once">
+          {d.adapters.map((a) => {
+            const share = d.speedBps > 0 ? Math.min(100, (a.speedBps / d.speedBps) * 100) : 0;
+            return (
+              <div key={a.id} className="flex items-center gap-2 text-xs text-zinc-400">
+                <span className="w-32 truncate" title={`${a.name} (${a.ip})`}>{a.name}</span>
+                <div className="h-1 flex-1 overflow-hidden rounded-sm bg-white/10">
+                  <div className="h-full bg-violet-400" style={{ width: `${share}%` }} />
+                </div>
+                <span className="w-24 text-right">{formatSpeed(a.speedBps)}</span>
+                <span className="w-12 text-right text-zinc-500">{a.connections} conn.</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {d.state === "waitingForNetwork" && (
         <div className="mt-2 text-xs text-orange-300">

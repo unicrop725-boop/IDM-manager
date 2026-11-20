@@ -32,6 +32,22 @@ pub struct DomainBest {
     pub speed_bps: u64,
 }
 
+/// Live numbers for one network adapter (Turbo Mode).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct AdapterProgress {
+    pub id: String,
+    pub name: String,
+    pub kind: crate::adapters::AdapterKind,
+    pub ip: String,
+    /// Smoothed speed through this adapter, bytes per second.
+    pub speed_bps: u64,
+    /// Bytes received through this adapter in this run.
+    pub bytes: u64,
+    /// Connections currently bound to it.
+    pub connections: u32,
+}
+
 /// Sent about every 250 ms per running download.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +62,12 @@ pub struct ProgressEvent {
     pub note: Option<String>,
     /// "HTTP/3", "HTTP/2" or "HTTP/1.1" (latest response).
     pub protocol: Option<String>,
+    /// Connections the engine is currently trying to keep busy (grows with AIMD, halves on refusals).
+    #[serde(default)]
+    pub connections: u32,
+    /// Speed per network adapter; empty unless Turbo Mode is bonding two or more networks.
+    #[serde(default)]
+    pub adapters: Vec<AdapterProgress>,
 }
 
 pub enum EngineEvent {

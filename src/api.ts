@@ -2,7 +2,7 @@
 // The UI never talks to the network or the disk itself: it only calls these.
 
 import { invoke } from "@tauri-apps/api/core";
-import type { AddRequest, DownloadInfo, Settings } from "./types";
+import type { AddRequest, AdapterInfo, DownloadInfo, Settings } from "./types";
 
 export const api = {
   addDownload: (request: AddRequest) => invoke<DownloadInfo>("add_download", { request }),
@@ -20,6 +20,9 @@ export const api = {
   getSettings: () => invoke<Settings>("get_settings"),
   setDefaultConnections: (connections: number) =>
     invoke<number>("set_default_connections", { connections }),
+  /** Network adapters Turbo Mode can bond right now. */
+  getAdapters: () => invoke<AdapterInfo[]>("get_adapters"),
+  setTurboMode: (enabled: boolean) => invoke<boolean>("set_turbo_mode", { enabled }),
 };
 
 /** Tauri rejects with the plain-language string produced by the engine. */

@@ -184,3 +184,61 @@ browser extension) supply a fresh link for the same file.
   the same Last-Modified; otherwise refused. Mirrors are probed in parallel with a timeout and re-verified on every run.
   `HttpOptions::for_mirror` strips password, cookies and credential-like headers (names containing auth, cookie, token, key,
   secret, session) for mirrors on a different origin (scheme + host + port).
+
+
+## Phase 2, part 2: AIMD, disk writer, connection tuning, Turbo Mode
+
+### Adaptive connection count: additive increase (`manager.rs::maybe_grow`)
+The download's connection count (what the user asked for, the domain memory, or the default of 8) is now a **ceiling**.
+A ranged download starts with `aimd_start` = **4** connections (or, if a count is remembered for the website, with that
+count) and every `aimd_interval` = **2 s** compares the smoothed total speed with the speed at the previous comparison:
+more than `aimd_gain` = **5 %** faster means one more connection (up to the ceiling); otherwise the count has *settled*
+and stays. The decrease side was already there and is now complete:
+
+| Event | Reaction |
+|---|---|
+| HTTP **429 / 503** | halve at once (`FailLog::throttle`, one is enough: the server asked for it) |
+| `fail_threshold` (4) failed connection attempts within 20 s | halve |
+| after any halving | the ceiling becomes the halved count: no probing back up in this run |
+
+The count is remembered per domain (SQLite `domain_stats`) only when it *settled* (or was forced down): a download that
+ended while still ramping up says nothing about the best count. The ceiling is never persisted as the ramp position, so
+pause/resume keeps the user's original maximum. `ProgressEvent.connections` reports the live count to the UI.
+Set `aimd_start = 0` to start at the full count.
+
+### Disk writer (`writer.rs::DiskWriter`)
+Connections no longer write to the file. Each download owns **one dedicated OS thread** that performs every write.
+A connection collects bytes in a **1 MiB** buffer (or 200 ms worth on slow lines), queues the block on a bounded channel
+(48 blocks) and keeps reading the network while the writer writes. At most one block per connection is in flight; the next
+flush waits for it, which is also where a disk error surfaces. A slow disk therefore slows the network down instead of
+growing memory. **The writer advances the segment's `written` counter only after the block was handed to the OS**, so the
+crash-safety rule (persisted progress never exceeds what is on disk) is unchanged; every way a connection ends waits for its
+last block first. Progress is fsync'ed and persisted to SQLite every `checkpoint_interval` = **2 s**.
+
+### Connection optimisation (`dns.rs`, `http.rs`)
+* **DNS cache** (process-wide): answers are kept 5 minutes, lookups are *single-flight* (8 connections starting together
+  cause one query), and a stale answer (up to 1 h) is served if a refresh fails, which matters on flaky lines.
+* **Happy Eyeballs**: the cache returns both address families in the OS order; the connector starts on the preferred one
+  and, if it has not connected after 300 ms, races the other (RFC 8305). Tested end to end with a dead IPv6 address.
+* TCP keep-alive (30 s), `TCP_NODELAY`, connection reuse (each worker keeps its client and so its keep-alive connection
+  across range requests), HTTP/2 and HTTP/3 with fallback as before.
+* **Not done, on purpose: a 4 MB `SO_RCVBUF`.** reqwest does not expose the socket, and on Windows setting the receive
+  buffer by hand *disables* the OS's receive-window auto-tuning, which already scales the window well beyond 4 MB on fast
+  paths. Doing it properly would need replacing reqwest's connector, which is a much larger change than the gain justifies.
+* **TLS session resumption**: whatever the TLS backend does per client (Windows Schannel for TCP, rustls for HTTP/3) and
+  nothing more. Each segment has its own client, so sessions are not shared between segments; this was not measured.
+
+### Turbo Mode: multi-network bonding (`adapters.rs`, `worker.rs::AdapterSet`)
+`adapters::detect()` lists adapters that are *up*, have a *default gateway* and a usable IPv4 address (Wi-Fi, Ethernet, USB
+tethering which Windows reports as Ethernet, mobile broadband); loopback, tunnels, VPN / VM / container adapters and
+link-local addresses are skipped. With Turbo Mode on and at least two adapters, every connection is bound to one adapter's
+address (`local_address`) and its DNS answers are limited to IPv4, because an IPv6 destination would ignore the binding.
+Connections are spread by "fewest connections first"; work stealing then shifts load to the faster adapter by itself, since it
+finishes its segments first. An adapter whose connection attempts keep failing is benched for 30 s so the other networks carry
+the file. Bytes and speed per adapter are in `ProgressEvent.adapters` and shown in the UI. The switch is live: new connections
+follow it, existing ones keep their adapter until they reconnect.
+
+**Honest limits:** the binding is by *source address*. It sends traffic out of that adapter when the adapter has its own
+default route (normal for Wi-Fi + Ethernet or a tethered phone). Two adapters on the same subnet behind the same router are not
+separated. Tested here with loopback aliases (127.0.0.2 / 127.0.0.3) standing in for two networks: that proves the binding,
+the spreading, the accounting and the failure handling, **not** a real Wi-Fi + Ethernet speed-up, which needs a second network.

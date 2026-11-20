@@ -74,11 +74,26 @@ impl NetState {
 
 /// Timestamps of recent connection failures.
 #[derive(Default)]
-pub struct FailLog(Mutex<VecDeque<Instant>>);
+pub struct FailLog {
+    times: Mutex<VecDeque<Instant>>,
+    /// The server said 429 / 503 ("too many connections, slow down"): halve at once.
+    throttled: AtomicBool,
+}
 
 impl FailLog {
+    /// The server answered 429 or 503. Unlike an ordinary failure this is an explicit request to
+    /// use fewer connections, so one is enough to trigger halving.
+    pub fn throttle(&self) {
+        self.throttled.store(true, Ordering::SeqCst);
+    }
+
+    /// `true` once after a [`throttle`](Self::throttle).
+    pub fn take_throttle(&self) -> bool {
+        self.throttled.swap(false, Ordering::SeqCst)
+    }
+
     pub fn record(&self) {
-        let mut q = self.0.lock().unwrap();
+        let mut q = self.times.lock().unwrap();
         q.push_back(Instant::now());
         while q.len() > 256 {
             q.pop_front();
@@ -88,11 +103,12 @@ impl FailLog {
     /// Failures in the last `window`.
     pub fn count_within(&self, window: Duration) -> usize {
         let now = Instant::now();
-        self.0.lock().unwrap().iter().filter(|t| now.duration_since(**t) <= window).count()
+        self.times.lock().unwrap().iter().filter(|t| now.duration_since(**t) <= window).count()
     }
 
     pub fn clear(&self) {
-        self.0.lock().unwrap().clear();
+        self.times.lock().unwrap().clear();
+        self.throttled.store(false, Ordering::SeqCst);
     }
 }
 
@@ -325,5 +341,17 @@ mod tests {
         assert_eq!(f.count_within(Duration::from_millis(5)), 0, "old failures fall out of the window");
         f.clear();
         assert_eq!(f.count_within(Duration::from_secs(10)), 0);
+    }
+
+    #[test]
+    fn a_throttle_is_reported_once_and_cleared() {
+        let f = FailLog::default();
+        assert!(!f.take_throttle());
+        f.throttle();
+        assert!(f.take_throttle());
+        assert!(!f.take_throttle(), "consumed");
+        f.throttle();
+        f.clear();
+        assert!(!f.take_throttle());
     }
 }

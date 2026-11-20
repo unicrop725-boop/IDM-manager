@@ -71,12 +71,13 @@ pub fn run() {
             let engine = Engine::new(EngineConfig::new(default_dir), tx);
 
             // Saved settings.
-            let (limit, conns, records, domains) = tauri::async_runtime::block_on(async {
+            let (limit, conns, turbo, records, domains) = tauri::async_runtime::block_on(async {
                 let limit = db.get_setting("global_speed_limit").await;
                 let conns = db.get_setting("default_connections").await;
+                let turbo = db.get_setting("turbo_mode").await;
                 let records = db.load_downloads().await;
                 let domains = db.load_domains().await;
-                (limit, conns, records, domains)
+                (limit, conns, turbo, records, domains)
             });
             // The connection count that worked best per website, learned by earlier downloads.
             engine.set_domain_hints(domains.unwrap_or_else(|e| {
@@ -89,6 +90,7 @@ pub fn run() {
             if let Some(v) = conns.and_then(|s| s.parse::<u32>().ok()) {
                 engine.set_default_connections(v);
             }
+            engine.set_turbo_mode(turbo.as_deref() == Some("1"));
             // Anything that was running when the app last closed (or crashed) comes back paused,
             // with its saved progress.
             engine.restore(records.unwrap_or_else(|e| {
@@ -116,6 +118,8 @@ pub fn run() {
             commands::set_speed_limit,
             commands::get_settings,
             commands::set_default_connections,
+            commands::get_adapters,
+            commands::set_turbo_mode,
         ])
         .build(tauri::generate_context!())
         .expect("FlowGet could not start");

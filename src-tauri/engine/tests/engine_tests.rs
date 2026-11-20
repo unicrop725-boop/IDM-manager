@@ -79,6 +79,9 @@ fn test_config(dir: &Path) -> EngineConfig {
     c.progress_interval = Duration::from_millis(50);
     c.checkpoint_interval = Duration::from_millis(100);
     c.offline_poll = Duration::from_millis(200);
+    // AIMD ramp-up (start at 4, +1 per 2 s) is switched off here so that tests keep fixed connection
+    // counts; it has its own tests below.
+    c.aimd_start = 0;
     c
 }
 
@@ -1585,7 +1588,7 @@ async fn diagnose_real_http3() {
     println!("TCP answer: {:?}, alt-svc = {:?}", r.version(), r.headers().get("alt-svc"));
 
     // Speak HTTP/3 directly and report the real outcome / error.
-    match session.client_h3() {
+    match session.client_h3(None) {
         Err(e) => println!("could not even build the HTTP/3 client: {e:?}"),
         Ok(h3) => {
             let t = Instant::now();
@@ -1702,4 +1705,271 @@ async fn acceptance_1gb_pause_at_40_close_reopen_resume_checksum_matches() {
 
     let sent = server.stats.bytes_sent.load(Ordering::SeqCst);
     println!("server sent {} MiB for a {} MiB file", sent / MIB, size / MIB);
+}
+
+// ---------- Phase 2, part 2: loss, AIMD, 429/503, Turbo Mode, DNS, disk writer ---------------------
+
+/// Distinct values of `ProgressEvent::connections` seen for a download, in order.
+fn connection_counts(obs: &Obs, id: &str) -> Vec<u32> {
+    let mut out: Vec<u32> = Vec::new();
+    for p in obs.lock().unwrap().progress.iter().filter(|p| p.id == id && p.connections > 0) {
+        if out.last() != Some(&p.connections) {
+            out.push(p.connections);
+        }
+    }
+    out
+}
+
+/// ACCEPTANCE: a download completes correctly with 20 % simulated packet loss.
+///
+/// Model (see `ServerConfig::loss`): one in five 16 KiB blocks is "lost"; TCP hides that as a
+/// retransmission delay, and some losses are worse (15 % of them reset the connection when the
+/// retransmission timer gives up). On top of that, 1 % of blocks hit a random disconnect.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn acceptance_download_completes_correctly_with_20_percent_packet_loss() {
+    let size = 12 * MIB + 99;
+    let server = serve(ServerConfig {
+        size,
+        loss: 0.20,
+        loss_delay_ms: 60,
+        loss_reset_share: 0.15,
+        random_disconnect: 0.01,
+        ..Default::default()
+    })
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+
+    let info = engine.add(request(server.url())).await.unwrap();
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+
+    assert_eq!(done.downloaded, size);
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256(), "file must be byte-exact");
+    // The loss was real: connections were reset and reopened many times (8 would be a clean run).
+    let gets = server.stats.get_requests.load(Ordering::SeqCst);
+    assert!(gets >= 16, "expected many reconnects under loss, saw only {gets} GETs");
+}
+
+/// AIMD, additive increase: starts with 4 connections and adds one per interval while the total
+/// speed keeps improving, up to the download's own count (8).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn aimd_starts_with_four_connections_and_adds_one_while_speed_grows() {
+    let size = 56 * MIB;
+    // Each connection is capped, so total speed really grows with the number of connections.
+    let server = serve(ServerConfig { size, rate_per_conn: MIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.aimd_start = 4;
+    cfg.aimd_interval = Duration::from_millis(500);
+    let (engine, obs) = make_engine_with(cfg);
+
+    let info = engine.add(request(server.url())).await.unwrap(); // 8 connections requested
+    wait_for(&engine, &info.id, "8 connections", Duration::from_secs(60), |i| i.downloaded > 0).await;
+    wait_state(&engine, &info.id, DownloadState::Completed).await;
+
+    let counts = connection_counts(&obs, &info.id);
+    assert_eq!(counts.first(), Some(&4), "must start with 4 connections: {counts:?}");
+    assert_eq!(counts.last(), Some(&8), "must reach the requested 8: {counts:?}");
+    for w in counts.windows(2) {
+        assert_eq!(w[1], w[0] + 1, "grows one connection at a time: {counts:?}");
+    }
+}
+
+/// AIMD stops adding connections when they bring no gain (here the global limit caps total speed).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn aimd_stops_growing_when_extra_connections_do_not_help() {
+    let size = 24 * MIB;
+    let server = serve(ServerConfig { size, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.aimd_start = 4;
+    cfg.aimd_interval = Duration::from_millis(800);
+    let (engine, obs) = make_engine_with(cfg);
+    engine.set_global_speed_limit(4 * MIB); // the "line" is full no matter how many connections
+
+    let info = engine.add(request(server.url())).await.unwrap();
+    wait_state(&engine, &info.id, DownloadState::Completed).await;
+
+    let counts = connection_counts(&obs, &info.id);
+    assert_eq!(counts.first(), Some(&4));
+    assert!(counts.last().copied().unwrap_or(0) <= 6, "extra connections do not help here: {counts:?}");
+}
+
+/// A 503 ("too many connections") halves the connection count, and the download still completes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_503_halves_the_connection_count_and_the_download_still_completes() {
+    let size = 16 * MIB;
+    let server = serve(ServerConfig {
+        size,
+        rate_per_conn: 2 * MIB,
+        max_concurrent: Some(3),
+        busy_status: Some(503),
+        ..Default::default()
+    })
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.halve_cooldown = Duration::from_millis(300);
+    cfg.retry.max_server_retries = 40; // the refused connections keep trying until the count is right
+    let (engine, obs) = make_engine_with(cfg);
+
+    let info = engine.add(request(server.url())).await.unwrap(); // starts with 8
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
+    let counts = connection_counts(&obs, &info.id);
+    assert_eq!(counts.first(), Some(&8));
+    assert!(counts.iter().any(|&c| c <= 4), "503 must have cut the count in half at least once: {counts:?}");
+    assert!(server.stats.refused.load(Ordering::SeqCst) > 0);
+}
+
+fn fake_adapter(id: &str, name: &str, ip: &str) -> flowget_engine::AdapterInfo {
+    flowget_engine::AdapterInfo {
+        id: id.into(),
+        name: name.into(),
+        kind: flowget_engine::AdapterKind::Other,
+        ip: ip.parse().unwrap(),
+    }
+}
+
+/// Turbo Mode: with two "networks" (two local addresses), connections are bound to both, the
+/// server sees both source addresses, the file is intact and speed is reported per adapter.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn turbo_mode_spreads_connections_over_adapters_and_reports_speed_per_adapter() {
+    let size = 24 * MIB + 5;
+    let server = serve(ServerConfig { size, rate_per_conn: 2 * MIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.turbo_mode = true;
+    cfg.adapter_override = Some(vec![fake_adapter("a", "Wi-Fi", "127.0.0.2"), fake_adapter("b", "Ethernet", "127.0.0.3")]);
+    let (engine, obs) = make_engine_with(cfg);
+
+    let info = engine.add(request(server.url())).await.unwrap();
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
+
+    let peers = server.stats.peers.lock().unwrap().clone();
+    let from = |ip: &str| peers.iter().filter(|p| p.to_string() == ip).count();
+    assert!(from("127.0.0.2") >= 3, "connections via adapter 1: {peers:?}");
+    assert!(from("127.0.0.3") >= 3, "connections via adapter 2: {peers:?}");
+
+    // Per-adapter numbers in the progress events.
+    let o = obs.lock().unwrap();
+    let last = o.progress.iter().rev().find(|p| p.id == info.id && p.adapters.len() == 2).expect("adapter progress");
+    let total: u64 = last.adapters.iter().map(|a| a.bytes).sum();
+    assert!(last.adapters.iter().all(|a| a.bytes > size / 5), "both adapters carry real traffic: {:?}", last.adapters);
+    assert!(total >= size * 99 / 100, "adapter byte counters add up to the file: {total} of {size}");
+    assert!(o.progress.iter().any(|p| p.adapters.iter().any(|a| a.speed_bps > 0)), "speed per adapter was reported");
+}
+
+/// Turbo Mode off (or only one network): nothing is bound and the OS picks the route.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn without_turbo_mode_connections_are_not_bound_to_adapters() {
+    let size = 6 * MIB;
+    let server = serve(ServerConfig { size, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.turbo_mode = false;
+    cfg.adapter_override = Some(vec![fake_adapter("a", "Wi-Fi", "127.0.0.2"), fake_adapter("b", "Ethernet", "127.0.0.3")]);
+    let (engine, obs) = make_engine_with(cfg);
+    let info = engine.add(request(server.url())).await.unwrap();
+    wait_state(&engine, &info.id, DownloadState::Completed).await;
+    let peers = server.stats.peers.lock().unwrap().clone();
+    assert!(peers.iter().all(|p| p.to_string() == "127.0.0.1"), "no binding expected: {peers:?}");
+    assert!(obs.lock().unwrap().progress.iter().all(|p| p.adapters.is_empty()));
+
+    // One adapter only: still nothing to bond.
+    let dir2 = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir2.path());
+    cfg.turbo_mode = true;
+    cfg.adapter_override = Some(vec![fake_adapter("a", "Wi-Fi", "127.0.0.2")]);
+    let (engine, _obs) = make_engine_with(cfg);
+    let before = server.stats.peers.lock().unwrap().len();
+    let info = engine.add(request(server.url())).await.unwrap();
+    wait_state(&engine, &info.id, DownloadState::Completed).await;
+    let peers = server.stats.peers.lock().unwrap().clone();
+    assert!(peers[before..].iter().all(|p| p.to_string() == "127.0.0.1"), "a single network is not bonded");
+}
+
+/// An adapter that cannot connect (unplugged tether) is benched; the others finish the download.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_dead_adapter_is_benched_and_the_other_network_finishes_the_download() {
+    let size = 12 * MIB;
+    let server = serve(ServerConfig { size, rate_per_conn: 4 * MIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.turbo_mode = true;
+    // 192.0.2.x (TEST-NET-1) is not an address of this machine: binding to it fails.
+    cfg.adapter_override = Some(vec![fake_adapter("dead", "Unplugged", "192.0.2.77"), fake_adapter("ok", "Ethernet", "127.0.0.3")]);
+    let (engine, obs) = make_engine_with(cfg);
+    let info = engine.add(request(server.url())).await.unwrap();
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
+    let o = obs.lock().unwrap();
+    if let Some(last) = o.progress.iter().rev().find(|p| p.id == info.id && p.adapters.len() == 2) {
+        let ok = last.adapters.iter().find(|a| a.id == "ok").unwrap();
+        assert!(ok.bytes >= size * 99 / 100, "the working adapter carried the file: {:?}", last.adapters);
+    }
+}
+
+/// DNS: a hostname that resolves to IPv6 first (`::1`, nothing listens there) and IPv4 second
+/// still downloads (Happy Eyeballs), and eight connections cause a single lookup (cache).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn hostname_downloads_use_the_dns_cache_and_fall_back_between_address_families() {
+    let size = 8 * MIB;
+    let server = serve(ServerConfig { size, rate_per_conn: 4 * MIB, ..Default::default() }).await;
+    let port = server.addr.port();
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+    let lookups_before = flowget_engine::dns::DnsCache::global().stats.lookups.load(Ordering::SeqCst);
+
+    let info = engine.add(request(format!("http://localhost:{port}/file.bin"))).await.unwrap();
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
+
+    let lookups = flowget_engine::dns::DnsCache::global().stats.lookups.load(Ordering::SeqCst) - lookups_before;
+    assert!(lookups <= 2, "eight connections must share one DNS answer, but {lookups} lookups were made");
+}
+
+/// Disk: progress is persisted about every 2 seconds (not on every block, not every second).
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn progress_is_persisted_every_two_seconds_by_default() {
+    assert_eq!(EngineConfig::new(PathBuf::new()).checkpoint_interval, Duration::from_secs(2));
+
+    let size = 12 * MIB;
+    let server = serve(ServerConfig { size, rate_per_conn: 512 * KIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cfg = test_config(dir.path());
+    cfg.checkpoint_interval = Duration::from_secs(2); // production value
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let stamps: Arc<Mutex<Vec<Instant>>> = Arc::new(Mutex::new(Vec::new()));
+    let s2 = stamps.clone();
+    tokio::spawn(async move {
+        while let Some(ev) = rx.recv().await {
+            match ev {
+                EngineEvent::Persist(_) => s2.lock().unwrap().push(Instant::now()),
+                EngineEvent::Flush(t) => {
+                    let _ = t.send(());
+                }
+                _ => {}
+            }
+        }
+    });
+    let engine = Engine::new(cfg, tx);
+    let mut req = request(server.url());
+    req.connections = Some(4);
+    let t0 = Instant::now();
+    let info = engine.add(req).await.unwrap();
+    wait_state(&engine, &info.id, DownloadState::Completed).await;
+    let t1 = Instant::now();
+
+    // Persists strictly inside the download (start/finish state changes persist too).
+    let inside: Vec<Instant> =
+        stamps.lock().unwrap().iter().copied().filter(|t| *t > t0 + Duration::from_millis(600) && *t + Duration::from_millis(600) < t1).collect();
+    assert!(inside.len() >= 2, "a download of several seconds must be persisted periodically ({} seen)", inside.len());
+    for w in inside.windows(2) {
+        let gap = w[1] - w[0];
+        assert!(gap >= Duration::from_millis(1700), "persisted too often: {gap:?} between checkpoints");
+        assert!(gap <= Duration::from_millis(4500), "persisted too rarely: {gap:?} between checkpoints");
+    }
 }

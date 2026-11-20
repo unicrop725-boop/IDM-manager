@@ -79,6 +79,17 @@ pub struct ServerConfig {
     pub link_dead: bool,
     /// Send this `Alt-Svc` header value (e.g. `h3=":443"; ma=60`).
     pub alt_svc: Option<String>,
+    /// Answer GETs beyond `max_concurrent` with this status (e.g. 503) instead of silently dropping them.
+    pub busy_status: Option<u16>,
+    /// Simulated packet loss: the chance that any 16 KiB block of a response is "lost" (0.0 - 1.0).
+    /// TCP hides loss as retransmission, so a lost block costs `loss_delay_ms` before it arrives;
+    /// `loss_reset_share` of the lost blocks are worse (the retransmission timer gives up) and
+    /// reset the connection.
+    pub loss: f64,
+    pub loss_delay_ms: u64,
+    pub loss_reset_share: f64,
+    /// Chance per 16 KiB block of an abrupt random disconnect (independent of `loss`).
+    pub random_disconnect: f64,
 }
 
 impl Default for ServerConfig {
@@ -102,6 +113,11 @@ impl Default for ServerConfig {
             min_valid_token: 0,
             link_dead: false,
             alt_svc: None,
+            busy_status: None,
+            loss: 0.0,
+            loss_delay_ms: 120,
+            loss_reset_share: 0.0,
+            random_disconnect: 0.0,
         }
     }
 }
@@ -129,6 +145,8 @@ pub struct Stats {
     pub forbidden: AtomicU64,
     /// Connections dropped because of `max_concurrent`.
     pub refused: AtomicU64,
+    /// Remote address of every accepted connection, in order (shows which local adapter a client used).
+    pub peers: Mutex<Vec<std::net::IpAddr>>,
     triggered: Mutex<std::collections::HashSet<usize>>,
 }
 
@@ -172,7 +190,8 @@ pub async fn spawn(cfg: ServerConfig, bind: &str) -> TestServer {
     let (c, s) = (cfg.clone(), stats.clone());
     tokio::spawn(async move {
         loop {
-            let Ok((sock, _)) = listener.accept().await else { break };
+            let Ok((sock, peer)) = listener.accept().await else { break };
+            s.peers.lock().unwrap().push(peer.ip());
             let _ = sock.set_nodelay(true);
             let (c, s) = (c.clone(), s.clone());
             tokio::spawn(async move { handle(sock, c, s).await });
@@ -470,7 +489,10 @@ async fn handle(mut sock: TcpStream, cfg: Arc<Mutex<ServerConfig>>, stats: Arc<S
         let guard = ActiveGuard::new(&stats);
         if cfg.max_concurrent.is_some_and(|m| stats.active.load(Ordering::SeqCst) > m) {
             stats.refused.fetch_add(1, Ordering::SeqCst);
-            return; // guard dropped, socket closed without an answer
+            if let Some(status) = cfg.busy_status {
+                respond(&mut sock, &format!("{status} Busy"), &[("Content-Length", "0".to_string())]).await;
+            }
+            return; // guard dropped, socket closed (without an answer unless `busy_status` is set)
         }
         Some(guard)
     };
@@ -552,6 +574,9 @@ async fn handle(mut sock: TcpStream, cfg: Arc<Mutex<ServerConfig>>, stats: Arc<S
         }
     }
 
+    use rand::{Rng, SeedableRng};
+    let lossy = cfg.loss > 0.0 || cfg.random_disconnect > 0.0;
+    let mut rng = rand::rngs::StdRng::seed_from_u64(cfg.seed ^ stats.requests.load(Ordering::SeqCst).wrapping_mul(0x9E37_79B9));
     // Body
     let mut buf = vec![0u8; 64 * 1024];
     let mut sent = 0u64;
@@ -560,6 +585,18 @@ async fn handle(mut sock: TcpStream, cfg: Arc<Mutex<ServerConfig>>, stats: Arc<S
             return; // the internet just went away: cut the transfer
         }
         let mut n = ((len - sent) as usize).min(buf.len());
+        if lossy {
+            n = n.min(16 * 1024); // loss is applied per 16 KiB block
+            if rng.gen_bool(cfg.random_disconnect.clamp(0.0, 1.0)) {
+                return; // abrupt disconnect
+            }
+            if rng.gen_bool(cfg.loss.clamp(0.0, 1.0)) {
+                if rng.gen_bool(cfg.loss_reset_share.clamp(0.0, 1.0)) {
+                    return; // the retransmission timer gave up: connection reset
+                }
+                tokio::time::sleep(Duration::from_millis(cfg.loss_delay_ms)).await; // retransmission
+            }
+        }
         if let Some(max) = cfg.max_bytes_per_response {
             if sent >= max {
                 return; // drop the connection mid-body

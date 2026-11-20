@@ -1,7 +1,7 @@
 //! Tauri commands: a thin layer over the engine. No download logic lives here.
 //! Errors are returned as plain-language strings (project rule 6).
 
-use flowget_engine::{AddRequest, DownloadInfo, MAX_CONNECTIONS, MIN_CONNECTIONS};
+use flowget_engine::{AdapterInfo, AddRequest, DownloadInfo, MAX_CONNECTIONS, MIN_CONNECTIONS};
 use serde::Serialize;
 use tauri::State;
 
@@ -24,6 +24,8 @@ pub struct Settings {
     pub download_dir: String,
     /// Whether the internet is currently believed to be reachable.
     pub online: bool,
+    /// Turbo Mode: use every active network adapter at once.
+    pub turbo_mode: bool,
 }
 
 /// Add a download and start it (unless `startPaused`).
@@ -96,6 +98,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Settings {
         max_connections: MAX_CONNECTIONS,
         download_dir: state.engine.default_dir().to_string_lossy().to_string(),
         online: state.engine.is_online(),
+        turbo_mode: state.engine.turbo_mode(),
     }
 }
 
@@ -109,4 +112,22 @@ pub async fn set_default_connections(state: State<'_, AppState>, connections: u3
         .await
         .map_err(|e| format!("Could not save the setting: {e}"))?;
     Ok(applied)
+}
+
+/// The network adapters Turbo Mode can bond right now (Wi-Fi, Ethernet, USB tethering, ...).
+#[tauri::command]
+pub fn get_adapters(state: State<'_, AppState>) -> Vec<AdapterInfo> {
+    state.engine.adapters()
+}
+
+/// Turn Turbo Mode on or off. New connections of running downloads follow immediately.
+#[tauri::command]
+pub async fn set_turbo_mode(state: State<'_, AppState>, enabled: bool) -> CmdResult<bool> {
+    state.engine.set_turbo_mode(enabled);
+    state
+        .db
+        .set_setting("turbo_mode", if enabled { "1" } else { "0" })
+        .await
+        .map_err(|e| format!("Could not save the setting: {e}"))?;
+    Ok(enabled)
 }

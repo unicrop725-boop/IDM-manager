@@ -30,7 +30,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -43,7 +43,8 @@ use url::Url;
 
 use crate::checksum::{self, Checksum};
 use crate::error::{EngineError, RetryClass, UserError};
-use crate::events::{DomainBest, EngineEvent, ProgressEvent, SegmentProgress};
+use crate::adapters::{self, AdapterInfo};
+use crate::events::{AdapterProgress, DomainBest, EngineEvent, ProgressEvent, SegmentProgress};
 use crate::filename;
 use crate::http::{H3Memory, H3Plan, HttpSession};
 use crate::limiter::RateLimiter;
@@ -54,8 +55,8 @@ use crate::probe::{self, ProbeResult};
 use crate::progress::{self, SpeedMeter};
 use crate::segments::{self, Segment, MIN_STEAL_SIZE};
 use crate::table::SegmentTable;
-use crate::worker::{protocol_name, run_segment, RetryPolicy, SourceSet, WorkerCtx, WorkerExit};
-use crate::writer::OffsetFile;
+use crate::worker::{protocol_name, run_segment, AdapterSet, RetryPolicy, SourceSet, WorkerCtx, WorkerExit};
+use crate::writer::{DiskWriter, OffsetFile};
 
 pub const MIN_CONNECTIONS: u32 = 1;
 pub const MAX_CONNECTIONS: u32 = 32;
@@ -72,7 +73,7 @@ pub struct EngineConfig {
     pub retry: RetryPolicy,
     /// How often progress events are emitted.
     pub progress_interval: Duration,
-    /// How often progress is fsync'ed and persisted.
+    /// How often progress is fsync'ed and persisted to SQLite (2 s).
     pub checkpoint_interval: Duration,
 
     // ---- Phase 2 ----
@@ -98,6 +99,17 @@ pub struct EngineConfig {
     pub http3: H3Plan,
     /// How long a mirror gets to answer its verification probe.
     pub mirror_probe_timeout: Duration,
+    /// AIMD: a download starts with this many connections and grows from there (0 = start at the
+    /// full count, i.e. no ramp-up). Never above the download's own connection count.
+    pub aimd_start: u32,
+    /// AIMD: how often the total speed is compared and a connection may be added (2 s).
+    pub aimd_interval: Duration,
+    /// AIMD: add one connection only if the speed rose by more than this fraction (0.05 = 5 %).
+    pub aimd_gain: f64,
+    /// Turbo Mode: bind connections to all active network adapters (can be switched at runtime).
+    pub turbo_mode: bool,
+    /// Use exactly these adapters instead of detecting them (tests, or a user-chosen subset).
+    pub adapter_override: Option<Vec<AdapterInfo>>,
 }
 
 impl EngineConfig {
@@ -107,7 +119,7 @@ impl EngineConfig {
             default_connections: 8,
             retry: RetryPolicy::default(),
             progress_interval: Duration::from_millis(250),
-            checkpoint_interval: Duration::from_secs(1),
+            checkpoint_interval: Duration::from_secs(2),
             work_stealing: true,
             min_steal_size: MIN_STEAL_SIZE,
             stall_zero_after: Duration::from_secs(3),
@@ -120,6 +132,11 @@ impl EngineConfig {
             offline_poll: Duration::from_secs(2),
             http3: H3Plan::Auto,
             mirror_probe_timeout: Duration::from_secs(15),
+            aimd_start: 4,
+            aimd_interval: Duration::from_secs(2),
+            aimd_gain: 0.05,
+            turbo_mode: false,
+            adapter_override: None,
         }
     }
 }
@@ -266,6 +283,8 @@ struct Inner {
     hints: Mutex<HashMap<String, DomainHint>>,
     /// Websites that did not answer over QUIC recently.
     h3_memory: H3Memory,
+    /// Turbo Mode switch, shared with every running download's adapter set.
+    turbo: Arc<AtomicBool>,
 }
 
 impl Inner {
@@ -316,8 +335,10 @@ impl Engine {
 
     /// Like [`Engine::new`] with a custom network probe (used by tests to simulate an outage).
     pub fn with_connectivity(cfg: EngineConfig, tx: UnboundedSender<EngineEvent>, conn: Arc<dyn Connectivity>) -> Self {
+        let turbo = Arc::new(AtomicBool::new(cfg.turbo_mode));
         Self {
             inner: Arc::new(Inner {
+                turbo,
                 cfg: Mutex::new(cfg),
                 entries: Mutex::new(HashMap::new()),
                 tx,
@@ -361,6 +382,25 @@ impl Engine {
         self.inner.emit_updated(&e);
         self.inner.persist(&e);
         Ok(())
+    }
+
+    /// Turbo Mode: spread connections over every active network adapter (Wi-Fi, Ethernet, USB
+    /// tethering, ...). Takes effect immediately for new connections of running downloads.
+    pub fn set_turbo_mode(&self, on: bool) {
+        self.inner.turbo.store(on, Ordering::SeqCst);
+        self.inner.cfg.lock().unwrap().turbo_mode = on;
+    }
+
+    pub fn turbo_mode(&self) -> bool {
+        self.inner.turbo.load(Ordering::SeqCst)
+    }
+
+    /// The network adapters Turbo Mode can use right now.
+    pub fn adapters(&self) -> Vec<AdapterInfo> {
+        match &self.inner.cfg.lock().unwrap().adapter_override {
+            Some(list) => list.clone(),
+            None => adapters::detect(),
+        }
     }
 
     /// Load the per-domain connection counts remembered by earlier runs.
@@ -800,6 +840,29 @@ async fn checkpoint(inner: &Inner, entry: &Entry, file: &OffsetFile, table: &Seg
     inner.send(EngineEvent::Persist(Box::new(rec)));
 }
 
+/// Speed and totals per network adapter, only while Turbo Mode is actually bonding networks.
+fn adapter_progress(set: &AdapterSet, meters: &mut [SpeedMeter]) -> Vec<AdapterProgress> {
+    let now = std::time::Instant::now();
+    let mut out = Vec::new();
+    for (slot, meter) in set.slots.iter().zip(meters.iter_mut()) {
+        let bytes = slot.bytes.load(Ordering::Relaxed);
+        let speed = meter.sample(bytes, now);
+        if set.is_bonded() {
+            out.push(AdapterProgress {
+                id: slot.info.id.clone(),
+                name: slot.info.name.clone(),
+                kind: slot.info.kind,
+                ip: slot.info.ip.to_string(),
+                speed_bps: speed as u64,
+                bytes,
+                connections: slot.active() as u32,
+            });
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
 fn emit_progress(
     inner: &Inner,
     entry: &Entry,
@@ -807,6 +870,8 @@ fn emit_progress(
     meter: &mut SpeedMeter,
     note: Option<String>,
     protocol: Option<&'static str>,
+    connections: u32,
+    adapters: Vec<AdapterProgress>,
 ) {
     let snap = table.snapshot();
     let (segments, downloaded, total) = entry.with(|r| {
@@ -831,6 +896,8 @@ fn emit_progress(
         segments,
         note,
         protocol: protocol.map(str::to_string),
+        connections,
+        adapters,
     }));
 }
 
@@ -882,13 +949,22 @@ async fn probe_with_retry(
 
 /// Per-run state shared by all phases of one `execute`.
 struct RunState {
-    /// Connections we try to keep busy. Halved when connections keep failing.
+    /// Connections we try to keep busy. Halved when connections keep failing, grown by AIMD.
     target: u32,
     initial_target: u32,
     halved: bool,
     last_halve: Option<std::time::Instant>,
     /// Shown to the user while it applies, e.g. "The server limits connections: using 4".
     note: Option<String>,
+    /// AIMD: the most connections this download may use.
+    ceiling: u32,
+    /// AIMD: when the speed was last compared, and what it was.
+    grow_checked_at: std::time::Instant,
+    grow_last_speed: f64,
+    /// AIMD has found the count that works (the ceiling was reached, or the last extra connection
+    /// brought no real gain). Only then is the count remembered for the domain: a download that
+    /// ended while still ramping up says nothing about the best count.
+    settled: bool,
 }
 
 enum PhaseEnd {
@@ -982,12 +1058,27 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
     let started = std::time::Instant::now();
     let written_at_start = entry.with(|r| segments::total_downloaded(&r.segments));
     let initial_segments = entry.with(|r| r.segments.len()) as u32;
+    // AIMD: the download's connection count is the ceiling. It starts lower (4, or the count that
+    // worked best for this website last time) and adds one connection per `aimd_interval` while the
+    // total speed keeps improving. Single-stream downloads and servers without ranges skip this.
+    let ceiling = rec.connections.clamp(MIN_CONNECTIONS, MAX_CONNECTIONS);
+    let remembered = domain_of(&probed.final_url).and_then(|d| inner.hints.lock().unwrap().get(&d).map(|h| h.connections));
+    let start = match remembered {
+        Some(best) => best.clamp(MIN_CONNECTIONS, ceiling),
+        None if ranged && cfg.aimd_start > 0 => cfg.aimd_start.clamp(MIN_CONNECTIONS, ceiling),
+        None => ceiling,
+    };
     let mut run = RunState {
-        target: rec.connections.clamp(MIN_CONNECTIONS, MAX_CONNECTIONS),
+        target: if ranged { start } else { ceiling },
         initial_target: rec.connections,
         halved: false,
         last_halve: None,
         note: None,
+        ceiling,
+        grow_checked_at: std::time::Instant::now(),
+        grow_last_speed: 0.0,
+        // Nothing to ramp: started at the ceiling, or not ranged.
+        settled: !ranged || start >= ceiling,
     };
     let mut url_now = probed.final_url.clone();
     let mut refreshes = 0u32;
@@ -1071,6 +1162,10 @@ fn learn_domain(inner: &Inner, url: &Url, run: &RunState, initial_segments: u32,
     // limits, unless connections were actually cut because of failures.
     let used_full_target = initial_segments >= run.initial_target;
     if !run.halved && !used_full_target {
+        return;
+    }
+    // Still ramping up when the file ended: the count reached says nothing about the best one.
+    if !run.halved && !run.settled {
         return;
     }
     let speed = (bytes as f64 / secs) as u64;
@@ -1340,6 +1435,31 @@ fn watch_connections(
     }
 }
 
+/// AIMD, the additive half: every `aimd_interval`, if the total speed is more than `aimd_gain`
+/// (5 %) above what it was at the previous comparison, allow one more connection (up to the
+/// download's ceiling). When an interval brings no real gain the count has settled, and it stays.
+///
+/// `speed` is the smoothed total speed in bytes/s.
+fn maybe_grow(inner: &Inner, entry: &Entry, cfg: &EngineConfig, run: &mut RunState, speed: f64) {
+    if run.target >= run.ceiling {
+        run.settled = true;
+        return;
+    }
+    if run.grow_checked_at.elapsed() < cfg.aimd_interval {
+        return;
+    }
+    let previous = std::mem::replace(&mut run.grow_last_speed, speed);
+    run.grow_checked_at = std::time::Instant::now();
+    if speed > 0.0 && speed > previous * (1.0 + cfg.aimd_gain) {
+        run.target += 1;
+        run.settled = run.target >= run.ceiling;
+        inner.emit_updated(entry);
+    } else if previous > 0.0 {
+        // The last connection added (or the start) brought no real improvement: stop here.
+        run.settled = true;
+    }
+}
+
 /// If connections keep failing while the internet is up, halve the connection count.
 fn maybe_halve(
     inner: &Inner,
@@ -1352,17 +1472,25 @@ fn maybe_halve(
     if run.target <= 1 || !inner.net.is_online() {
         return;
     }
+    // 429 / 503 is the server explicitly asking for fewer connections: one is enough. Other
+    // failures must pile up (`fail_threshold` within `fail_window`).
+    let throttled = fails.take_throttle();
     if run.last_halve.is_some_and(|t| t.elapsed() < cfg.halve_cooldown) {
         return;
     }
-    if fails.count_within(cfg.fail_window) < cfg.fail_threshold {
+    if !throttled && fails.count_within(cfg.fail_window) < cfg.fail_threshold {
         return;
     }
     run.target = (run.target / 2).max(1);
     run.halved = true;
+    // Multiplicative decrease, then no probing back up for the rest of this run: the server just
+    // told us where its limit is, and growing again would only walk into it a second time.
+    run.ceiling = run.target;
+    run.settled = true;
     run.last_halve = Some(std::time::Instant::now());
     run.note = Some(format!("The server keeps refusing connections: now using {}", run.target));
     fails.clear();
+    // Persisted on purpose: the server's limit also applies after a pause / resume.
     entry.with(|r| r.connections = run.target);
     inner.emit_updated(entry);
 
@@ -1402,9 +1530,14 @@ async fn run_phase(
     // The primary link first, then the verified mirrors: connections are spread over all of them.
     let mut source_list = vec![(url.clone(), session.clone())];
     source_list.extend(mirrors.iter().cloned());
+    // Turbo Mode: the adapters connections may be bound to. Detected per run (cheap); only used while
+    // the switch is on and at least two networks are up.
+    let adapter_list = cfg.adapter_override.clone().unwrap_or_else(adapters::detect);
+    let adapter_set = Arc::new(AdapterSet::new(adapter_list, inner.turbo.clone()));
     let ctx = WorkerCtx {
         sources: Arc::new(SourceSet::new(source_list)),
-        file: file.clone(),
+        adapters: adapter_set.clone(),
+        writer: DiskWriter::spawn(file.clone()),
         validator: entry.snapshot().validator(),
         global_limiter: inner.global.clone(),
         dl_limiter: entry.limiter.clone(),
@@ -1426,6 +1559,8 @@ async fn run_phase(
     let mut ticker = tokio::time::interval(cfg.progress_interval);
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut meter = SpeedMeter::new(table.total_written(), std::time::Instant::now());
+    let mut adapter_meters: Vec<SpeedMeter> =
+        adapter_set.slots.iter().map(|_| SpeedMeter::new(0, std::time::Instant::now())).collect();
     let mut last_checkpoint = tokio::time::Instant::now();
     // At most one periodic checkpoint is in flight; a slow disk just lengthens the interval.
     let mut checkpoint_task: Option<JoinHandle<()>> = None;
@@ -1448,6 +1583,8 @@ async fn run_phase(
                 if healthy {
                     if ranged {
                         maybe_halve(inner, entry, &table, &fails, cfg, run);
+                        let speed = entry.live.lock().unwrap().speed as f64;
+                        maybe_grow(inner, entry, cfg, run, speed);
                     }
                     fill_workers(&ctx, &mut set, &mut active, target_of(run), steal);
                 }
@@ -1456,7 +1593,8 @@ async fn run_phase(
                 } else {
                     run.note.clone()
                 };
-                emit_progress(inner, entry, &table, &mut meter, note, protocol_name(protocol.load(Ordering::SeqCst)));
+                let adapters_now = adapter_progress(&adapter_set, &mut adapter_meters);
+                emit_progress(inner, entry, &table, &mut meter, note, protocol_name(protocol.load(Ordering::SeqCst)), run.target, adapters_now);
                 let idle = checkpoint_task.as_ref().is_none_or(|h| h.is_finished());
                 if idle && last_checkpoint.elapsed() >= cfg.checkpoint_interval {
                     let (inner, entry, file, table) = (inner.clone(), entry.clone(), file.clone(), table.clone());
@@ -1508,7 +1646,8 @@ async fn run_phase(
     if let Some(h) = checkpoint_task.take() {
         let _ = h.await;
     }
-    emit_progress(inner, entry, &table, &mut meter, None, protocol_name(protocol.load(Ordering::SeqCst)));
+    let adapters_now = adapter_progress(&adapter_set, &mut adapter_meters);
+    emit_progress(inner, entry, &table, &mut meter, None, protocol_name(protocol.load(Ordering::SeqCst)), run.target, adapters_now);
     checkpoint(inner, entry, file, &table).await;
 
     if let Some(e) = failure {

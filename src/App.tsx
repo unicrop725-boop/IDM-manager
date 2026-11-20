@@ -6,7 +6,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Plus } from "lucide-react";
 import { api, errorText } from "./api";
 import DownloadRow from "./components/DownloadRow";
-import type { DownloadInfo, ProgressEvent, Settings } from "./types";
+import type { AdapterInfo, DownloadInfo, ProgressEvent, Settings } from "./types";
 
 export default function App() {
   const [downloads, setDownloads] = useState<Record<string, DownloadInfo>>({});
@@ -18,6 +18,7 @@ export default function App() {
   const [mirrors, setMirrors] = useState("");
   const [globalLimitMb, setGlobalLimitMb] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
 
   // Initial load.
   useEffect(() => {
@@ -29,6 +30,7 @@ export default function App() {
         setGlobalLimitMb(s.globalSpeedLimit ? String(s.globalSpeedLimit / (1024 * 1024)) : "");
       })
       .catch((e) => setError(errorText(e)));
+    api.getAdapters().then(setAdapters).catch(() => setAdapters([]));
   }, []);
 
   // Live events from the engine.
@@ -50,6 +52,8 @@ export default function App() {
               segments: p.segments,
               note: p.note,
               protocol: p.protocol,
+              liveConnections: p.connections,
+              adapters: p.adapters,
             },
           };
         }),
@@ -93,6 +97,13 @@ export default function App() {
       setMirrors("");
     });
   };
+
+  const toggleTurbo = (enabled: boolean) =>
+    run(async () => {
+      const applied = await api.setTurboMode(enabled);
+      setSettings((s) => (s ? { ...s, turboMode: applied } : s));
+      setAdapters(await api.getAdapters());
+    });
 
   const applyGlobalLimit = () => {
     const mb = parseFloat(globalLimitMb);
@@ -171,6 +182,24 @@ export default function App() {
               placeholder="extra links, separated by spaces"
               className="w-64 rounded-md border border-white/10 bg-black/30 px-2 py-1 text-zinc-200"
             />
+          </label>
+          <label
+            className="flex items-center gap-2"
+            title={
+              adapters.length < 2
+                ? "Turbo Mode needs two active networks (for example Wi-Fi + Ethernet, or a tethered phone). Only one was found."
+                : "Bind different connections to different networks so one download uses all of them together."
+            }
+          >
+            <input
+              type="checkbox"
+              checked={settings?.turboMode ?? false}
+              onChange={(e) => toggleTurbo(e.target.checked)}
+            />
+            Turbo Mode
+            <span className="text-zinc-500">
+              ({adapters.length} network{adapters.length === 1 ? "" : "s"}: {adapters.map((a) => a.name).join(", ") || "none"})
+            </span>
           </label>
           <label className="ml-auto flex items-center gap-2">
             Global limit

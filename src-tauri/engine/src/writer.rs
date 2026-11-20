@@ -9,6 +9,10 @@ use std::io;
 use std::path::Path;
 use std::sync::Arc;
 
+use tokio::sync::{mpsc, oneshot};
+
+use crate::table::SegState;
+
 /// A shared handle that many threads may write to concurrently, each at its own offset.
 #[derive(Clone)]
 pub struct OffsetFile {
@@ -74,6 +78,66 @@ impl OffsetFile {
 
     pub fn is_empty(&self) -> io::Result<bool> {
         Ok(self.len()? == 0)
+    }
+}
+
+/// How many 1 MiB-class blocks may wait for the disk before connections have to wait (back-pressure:
+/// a slow disk slows the network down instead of filling memory).
+const WRITE_QUEUE_BLOCKS: usize = 48;
+
+/// One block to write. The writer advances the segment's `written` counter **after** the data was
+/// handed to the OS, which is what keeps "persisted progress <= bytes on disk" true.
+struct WriteJob {
+    at: u64,
+    data: Vec<u8>,
+    seg: Arc<SegState>,
+    done: oneshot::Sender<io::Result<()>>,
+}
+
+/// The dedicated writer: one OS thread per download that performs every disk write, in the order
+/// the blocks arrive. Connections never touch the file; they queue blocks and carry on reading the
+/// network. (Replaces one `spawn_blocking` per flush, which competed with everything else for the
+/// blocking pool and made the writes of different connections interleave arbitrarily.)
+///
+/// The thread ends by itself when the last clone of the `DiskWriter` is dropped.
+#[derive(Clone)]
+pub struct DiskWriter {
+    tx: mpsc::Sender<WriteJob>,
+}
+
+impl DiskWriter {
+    pub fn spawn(file: OffsetFile) -> Self {
+        let (tx, mut rx) = mpsc::channel::<WriteJob>(WRITE_QUEUE_BLOCKS);
+        std::thread::Builder::new()
+            .name("flowget-disk-writer".into())
+            .spawn(move || {
+                while let Some(job) = rx.blocking_recv() {
+                    let n = job.data.len() as u64;
+                    let result = file.write_all_at(job.at, &job.data);
+                    if result.is_ok() {
+                        job.seg.add_written(n);
+                    }
+                    let _ = job.done.send(result);
+                }
+            })
+            .expect("could not start the disk writer thread");
+        Self { tx }
+    }
+
+    /// Queue a block. The returned receiver resolves once the block is on its way to the disk
+    /// (written to the OS) and the segment's counter has been advanced.
+    pub async fn submit(
+        &self,
+        at: u64,
+        data: Vec<u8>,
+        seg: Arc<SegState>,
+    ) -> io::Result<oneshot::Receiver<io::Result<()>>> {
+        let (done, rx) = oneshot::channel();
+        self.tx
+            .send(WriteJob { at, data, seg, done })
+            .await
+            .map_err(|_| io::Error::new(io::ErrorKind::BrokenPipe, "the disk writer stopped"))?;
+        Ok(rx)
     }
 }
 
@@ -189,6 +253,26 @@ mod tests {
         assert!(OffsetFile::open_existing(&p, 51).is_err());
         // Missing file is rejected.
         assert!(OffsetFile::open_existing(&dir.path().join("nope"), 1).is_err());
+    }
+
+    #[tokio::test]
+    async fn the_disk_writer_writes_blocks_in_place_and_counts_them_only_after_writing() {
+        use crate::segments::Segment;
+        use crate::table::SegmentTable;
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path().join("f.bin");
+        let f = OffsetFile::create(&p, Some(100)).unwrap();
+        let table = SegmentTable::new(&[Segment { index: 0, start: 0, end: 99, downloaded: 0 }], true);
+        let seg = table.all()[0].clone();
+        let w = DiskWriter::spawn(f.clone());
+        // Queue out of order; both complete, each counted exactly once.
+        let b = w.submit(40, vec![2u8; 60], seg.clone()).await.unwrap();
+        let a = w.submit(0, vec![1u8; 40], seg.clone()).await.unwrap();
+        a.await.unwrap().unwrap();
+        b.await.unwrap().unwrap();
+        assert_eq!(seg.written(), 100);
+        let bytes = std::fs::read(&p).unwrap();
+        assert!(bytes[..40].iter().all(|&x| x == 1) && bytes[40..].iter().all(|&x| x == 2));
     }
 
     #[test]

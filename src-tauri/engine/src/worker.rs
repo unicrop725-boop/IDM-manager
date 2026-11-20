@@ -22,6 +22,7 @@
 //! * 403 / 410: the link has probably expired: reported to the manager, which refreshes it.
 
 use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,16 +34,17 @@ use tokio::time::Instant;
 use tokio_util::sync::CancellationToken;
 use url::Url;
 
+use crate::adapters::AdapterInfo;
 use crate::error::{EngineError, RetryClass};
 use crate::http::{protocol_label, send_with_auth, HttpSession, H3_HEADER_TIMEOUT, HEADER_TIMEOUT};
 use crate::limiter::RateLimiter;
 use crate::netwatch::{FailLog, NetState};
 use crate::probe::parse_content_range_start;
 use crate::table::{SegState, SegmentTable};
-use crate::writer::OffsetFile;
+use crate::writer::DiskWriter;
 
-/// Network data is collected in memory and written to disk in blocks of at least this size ...
-const FLUSH_SIZE: usize = 256 * 1024;
+/// Network data is collected in memory and handed to the disk writer in blocks of this size (1 MiB) ...
+const FLUSH_SIZE: usize = 1024 * 1024;
 /// ... or after this long, so progress stays smooth on slow connections.
 const FLUSH_INTERVAL: Duration = Duration::from_millis(200);
 
@@ -181,10 +183,106 @@ impl SourceSet {
     }
 }
 
+// ---- network adapters (Turbo Mode) -----------------------------------------------------------
+
+/// One network adapter a download may use, with live counters.
+pub struct AdapterSlot {
+    pub info: AdapterInfo,
+    /// Connections currently bound to this adapter.
+    active: AtomicUsize,
+    /// Consecutive failed attempts (the adapter may have lost its link).
+    fails: AtomicU32,
+    benched_until_ms: AtomicU64,
+    /// Bytes received through this adapter during this run.
+    pub bytes: AtomicU64,
+}
+
+impl AdapterSlot {
+    pub fn active(&self) -> usize {
+        self.active.load(Ordering::SeqCst)
+    }
+}
+
+pub struct AdapterGuard<'a>(&'a AdapterSlot);
+
+impl Drop for AdapterGuard<'_> {
+    fn drop(&mut self) {
+        self.0.active.fetch_sub(1, Ordering::SeqCst);
+    }
+}
+
+/// The adapters connections are spread over. With fewer than two adapters nothing is bound and the
+/// OS picks the route, exactly as before Turbo Mode existed.
+#[derive(Default)]
+pub struct AdapterSet {
+    pub slots: Vec<AdapterSlot>,
+    /// Turbo Mode switch. Shared with the engine, so it can be flipped while a download runs: new
+    /// connections follow it immediately, existing ones keep their adapter until they reconnect.
+    enabled: Arc<AtomicBool>,
+}
+
+impl AdapterSet {
+    pub fn new(list: Vec<AdapterInfo>, enabled: Arc<AtomicBool>) -> Self {
+        Self {
+            enabled,
+            slots: list
+                .into_iter()
+                .map(|info| AdapterSlot {
+                    info,
+                    active: AtomicUsize::new(0),
+                    fails: AtomicU32::new(0),
+                    benched_until_ms: AtomicU64::new(0),
+                    bytes: AtomicU64::new(0),
+                })
+                .collect(),
+        }
+    }
+
+    /// Bonding needs Turbo Mode on and at least two networks.
+    pub fn is_bonded(&self) -> bool {
+        self.slots.len() >= 2 && self.enabled.load(Ordering::SeqCst)
+    }
+
+    /// Choose the adapter for the next connection: not benched, fewest connections, fewest failures.
+    /// Work stealing then shifts load towards the faster adapter by itself: it finishes its segments
+    /// sooner, so it is the one asking for more work.
+    pub fn acquire(&self, now_ms: u64) -> Option<(usize, AdapterGuard<'_>)> {
+        if !self.is_bonded() {
+            return None;
+        }
+        let key = |s: &AdapterSlot| {
+            (
+                s.benched_until_ms.load(Ordering::SeqCst) > now_ms,
+                s.active.load(Ordering::SeqCst),
+                s.fails.load(Ordering::SeqCst),
+            )
+        };
+        let idx = (0..self.slots.len()).min_by_key(|&i| (key(&self.slots[i]), i))?;
+        self.slots[idx].active.fetch_add(1, Ordering::SeqCst);
+        Some((idx, AdapterGuard(&self.slots[idx])))
+    }
+
+    pub fn note_failure(&self, idx: usize, now_ms: u64) {
+        let s = &self.slots[idx];
+        if s.fails.fetch_add(1, Ordering::SeqCst) + 1 >= BENCH_AFTER_FAILURES {
+            s.benched_until_ms.store(now_ms + BENCH_FOR_MS, Ordering::SeqCst);
+        }
+    }
+
+    pub fn note_success(&self, idx: usize) {
+        let s = &self.slots[idx];
+        s.fails.store(0, Ordering::SeqCst);
+        s.benched_until_ms.store(0, Ordering::SeqCst);
+    }
+}
+
 #[derive(Clone)]
 pub struct WorkerCtx {
     pub sources: Arc<SourceSet>,
-    pub file: OffsetFile,
+    /// Which adapters connections are bound to (Turbo Mode); empty = no binding.
+    pub adapters: Arc<AdapterSet>,
+    /// The dedicated disk writer: connections queue blocks here instead of writing themselves.
+    pub writer: DiskWriter,
     /// Value for `If-Range`, so a changed file is detected instead of silently mixed in.
     pub validator: Option<String>,
     pub global_limiter: Arc<RateLimiter>,
@@ -248,28 +346,29 @@ fn exit_for_cancel(ctx: &WorkerCtx) -> WorkerExit {
 }
 
 /// Clients of one worker, built on first use. A fresh client means a fresh TCP/QUIC connection.
+/// The key is (source, adapter): a connection bound to another adapter needs its own client.
 #[derive(Default)]
 struct Clients {
-    tcp: HashMap<usize, Client>,
-    h3: HashMap<usize, Client>,
+    tcp: HashMap<(usize, Option<usize>), Client>,
+    h3: HashMap<(usize, Option<usize>), Client>,
 }
 
 impl Clients {
-    fn tcp(&mut self, idx: usize, s: &HttpSession) -> Result<Client, EngineError> {
-        if let Some(c) = self.tcp.get(&idx) {
+    fn tcp(&mut self, idx: usize, adapter: Option<usize>, local: Option<IpAddr>, s: &HttpSession) -> Result<Client, EngineError> {
+        if let Some(c) = self.tcp.get(&(idx, adapter)) {
             return Ok(c.clone());
         }
-        let c = s.client()?;
-        self.tcp.insert(idx, c.clone());
+        let c = s.client_bound(local)?;
+        self.tcp.insert((idx, adapter), c.clone());
         Ok(c)
     }
 
-    fn h3(&mut self, idx: usize, s: &HttpSession) -> Result<Client, EngineError> {
-        if let Some(c) = self.h3.get(&idx) {
+    fn h3(&mut self, idx: usize, adapter: Option<usize>, local: Option<IpAddr>, s: &HttpSession) -> Result<Client, EngineError> {
+        if let Some(c) = self.h3.get(&(idx, adapter)) {
             return Ok(c.clone());
         }
-        let c = s.client_h3()?;
-        self.h3.insert(idx, c.clone());
+        let c = s.client_h3(local)?;
+        self.h3.insert((idx, adapter), c.clone());
         Ok(c)
     }
 }
@@ -290,31 +389,39 @@ async fn segment_loop(ctx: &WorkerCtx, seg: &Arc<SegState>) -> Result<WorkerExit
         // Where does this connection go, and over which transport?
         let (idx, _slot) = ctx.sources.acquire(ctx.table.now_ms());
         let src = &ctx.sources.sources[idx];
+        // Turbo Mode: which network adapter does this connection leave from?
+        let adapter = ctx.adapters.acquire(ctx.table.now_ms());
+        let aidx = adapter.as_ref().map(|(i, _)| *i);
+        let aslot = aidx.map(|i| &ctx.adapters.slots[i]);
+        let local = aslot.map(|s| s.info.ip);
         let mut use_h3 = src.session.h3_usable(&src.url);
         let client = if use_h3 {
-            match clients.h3(idx, &src.session) {
+            match clients.h3(idx, aidx, local, &src.session) {
                 Ok(c) => c,
                 Err(_) => {
                     src.session.h3_failed(); // cannot even build a QUIC client: TCP it is
                     use_h3 = false;
-                    clients.tcp(idx, &src.session)?
+                    clients.tcp(idx, aidx, local, &src.session)?
                 }
             }
         } else {
-            clients.tcp(idx, &src.session)?
+            clients.tcp(idx, aidx, local, &src.session)?
         };
 
         // `answered` flips once the server has sent response headers; a failure before that on
         // HTTP/3 means QUIC itself does not work here.
         let answered = AtomicBool::new(false);
         let result = if ranged {
-            fetch_range(ctx, src, &client, seg, offset, &token, use_h3, &answered).await
+            fetch_range(ctx, src, aslot, &client, seg, offset, &token, use_h3, &answered).await
         } else {
-            fetch_all(ctx, src, &client, seg, &token, use_h3, &answered).await
+            fetch_all(ctx, src, aslot, &client, seg, &token, use_h3, &answered).await
         };
         let err = match result {
             Ok(()) => {
                 ctx.sources.note_success(idx);
+                if let Some(a) = aidx {
+                    ctx.adapters.note_success(a);
+                }
                 return Ok(WorkerExit::Finished);
             }
             Err(EngineError::Stopped) => {
@@ -343,6 +450,9 @@ async fn segment_loop(ctx: &WorkerCtx, seg: &Arc<SegState>) -> Result<WorkerExit
             // We made progress, so this is a fresh problem, not a continuing one.
             (net_fail, server_fail, client_fail) = (0, 0, 0);
             ctx.sources.note_success(idx);
+            if let Some(a) = aidx {
+                ctx.adapters.note_success(a);
+            }
         }
         let delay = match err.retry_class() {
             RetryClass::Network => {
@@ -353,6 +463,11 @@ async fn segment_loop(ctx: &WorkerCtx, seg: &Arc<SegState>) -> Result<WorkerExit
                 // the download down.
                 if !progressed {
                     ctx.fails.record();
+                    // An adapter that cannot connect (cable out, tether unplugged) is benched so the
+                    // other networks carry the download.
+                    if let Some(a) = aidx {
+                        ctx.adapters.note_failure(a, ctx.table.now_ms());
+                    }
                 }
                 ctx.sources.note_failure(idx, ctx.table.now_ms());
                 if net_fail >= 2 {
@@ -367,6 +482,13 @@ async fn segment_loop(ctx: &WorkerCtx, seg: &Arc<SegState>) -> Result<WorkerExit
             }
             RetryClass::Server => {
                 server_fail += 1;
+                // 429 / 503 mean "too many connections / slow down": the manager halves the
+                // connection count right away. Other 5xx count as ordinary failures.
+                if matches!(err, EngineError::Http(429 | 503)) {
+                    ctx.fails.throttle();
+                } else {
+                    ctx.fails.record();
+                }
                 ctx.sources.note_failure(idx, ctx.table.now_ms());
                 if server_fail > ctx.retry.max_server_retries {
                     return Err(err);
@@ -384,6 +506,7 @@ async fn segment_loop(ctx: &WorkerCtx, seg: &Arc<SegState>) -> Result<WorkerExit
             RetryClass::Fatal => return Err(err),
         };
         drop(_slot); // do not hold the source's slot while sleeping
+        drop(adapter);
 
         // Back off. Deliberate idling is not a stall, and the wait ends early if the network
         // comes back or the connection is closed by the monitor / user.
@@ -445,6 +568,7 @@ fn note_response(ctx: &WorkerCtx, src: &Source, resp: &reqwest::Response, use_h3
 async fn fetch_range(
     ctx: &WorkerCtx,
     src: &Source,
+    adapter: Option<&AdapterSlot>,
     client: &Client,
     seg: &Arc<SegState>,
     offset: u64,
@@ -482,13 +606,14 @@ async fn fetch_range(
         }
         _ => return Err(status_error(seg, &resp)),
     }
-    stream_body(ctx, seg, token, offset, resp).await
+    stream_body(ctx, seg, adapter, token, offset, resp).await
 }
 
 /// Single connection for servers that cannot resume. Any interruption restarts from byte 0.
 async fn fetch_all(
     ctx: &WorkerCtx,
     src: &Source,
+    adapter: Option<&AdapterSlot>,
     client: &Client,
     seg: &Arc<SegState>,
     token: &CancellationToken,
@@ -503,7 +628,7 @@ async fn fetch_all(
     if !resp.status().is_success() {
         return Err(status_error(seg, &resp));
     }
-    stream_body(ctx, seg, token, 0, resp).await
+    stream_body(ctx, seg, adapter, token, 0, resp).await
 }
 
 /// Write the response body into the file, claiming bytes from the segment as they arrive.
@@ -512,19 +637,19 @@ async fn fetch_all(
 async fn stream_body(
     ctx: &WorkerCtx,
     seg: &Arc<SegState>,
+    adapter: Option<&AdapterSlot>,
     token: &CancellationToken,
     mut offset: u64,
     resp: reqwest::Response,
 ) -> Result<(), EngineError> {
     let mut stream = resp.bytes_stream();
-    let mut buf: Vec<u8> = Vec::with_capacity(FLUSH_SIZE + 64 * 1024);
-    let mut buf_start = offset;
+    let mut out = OutBuf::new(offset);
     let mut last_flush = Instant::now();
 
     loop {
         let next = tokio::select! {
             _ = token.cancelled() => {
-                flush(ctx, seg, &mut buf, &mut buf_start).await?;
+                flush(ctx, seg, &mut out, true).await?;
                 return Err(EngineError::Stopped);
             }
             r = tokio::time::timeout(ctx.retry.stall_timeout, stream.next()) => r,
@@ -532,15 +657,15 @@ async fn stream_body(
 
         match next {
             Err(_) => {
-                flush(ctx, seg, &mut buf, &mut buf_start).await?;
+                flush(ctx, seg, &mut out, true).await?;
                 return Err(EngineError::Network("the connection stalled".into()));
             }
             Ok(Some(Err(e))) => {
-                flush(ctx, seg, &mut buf, &mut buf_start).await?;
+                flush(ctx, seg, &mut out, true).await?;
                 return Err(e.into());
             }
             Ok(None) => {
-                flush(ctx, seg, &mut buf, &mut buf_start).await?;
+                flush(ctx, seg, &mut out, true).await?;
                 let limit = seg.limit();
                 return if limit == u64::MAX || offset >= limit {
                     Ok(())
@@ -566,43 +691,83 @@ async fn stream_body(
                     };
                     seg.end_idle(ctx.table.now_ms());
                     if !allowed {
-                        flush(ctx, seg, &mut buf, &mut buf_start).await?;
+                        flush(ctx, seg, &mut out, true).await?;
                         return Err(EngineError::Stopped);
                     }
-                    buf.extend_from_slice(&chunk[..n]);
+                    out.buf.extend_from_slice(&chunk[..n]);
                     offset += n as u64;
+                    if let Some(a) = adapter {
+                        a.bytes.fetch_add(n as u64, Ordering::Relaxed);
+                    }
                 }
                 let reached_end = n < chunk.len() || offset >= seg.limit();
-                if reached_end || buf.len() >= FLUSH_SIZE || last_flush.elapsed() >= FLUSH_INTERVAL {
-                    flush(ctx, seg, &mut buf, &mut buf_start).await?;
-                    last_flush = Instant::now();
-                }
                 if reached_end {
+                    // Done with this connection: wait until everything is really on its way to the
+                    // disk, so the segment's counters are exact before we report back.
+                    flush(ctx, seg, &mut out, true).await?;
                     return Ok(());
+                }
+                if out.buf.len() >= FLUSH_SIZE || last_flush.elapsed() >= FLUSH_INTERVAL {
+                    // Pipelined: queue the block and keep reading while the writer thread writes it.
+                    flush(ctx, seg, &mut out, false).await?;
+                    last_flush = Instant::now();
                 }
             }
         }
     }
 }
 
-/// Write the buffer to the file at `buf_start`, then advance the segment's written counter.
-async fn flush(ctx: &WorkerCtx, seg: &SegState, buf: &mut Vec<u8>, buf_start: &mut u64) -> Result<(), EngineError> {
-    if buf.is_empty() {
-        return Ok(());
+/// What a connection has collected but not yet handed over, plus the one block it has queued.
+struct OutBuf {
+    buf: Vec<u8>,
+    /// File offset of `buf[0]`.
+    start: u64,
+    /// The block this connection queued last; resolves when the writer thread has written it.
+    pending: Option<tokio::sync::oneshot::Receiver<std::io::Result<()>>>,
+}
+
+impl OutBuf {
+    fn new(start: u64) -> Self {
+        Self { buf: Vec::with_capacity(FLUSH_SIZE + 64 * 1024), start, pending: None }
     }
-    let data = std::mem::replace(buf, Vec::with_capacity(FLUSH_SIZE + 64 * 1024));
-    let n = data.len() as u64;
-    let at = *buf_start;
-    let file = ctx.file.clone();
-    // While the disk writes (which can take a long time on a slow or busy disk) this connection
-    // is not reading, but it is not stalled either: the stall detector must not count the time.
+}
+
+/// Wait for the block queued earlier to be written (and surface its disk error, if any). While the
+/// disk works this connection is not reading, but it is not stalled either: the stall detector must
+/// not count that time.
+async fn await_pending(ctx: &WorkerCtx, seg: &SegState, out: &mut OutBuf) -> Result<(), EngineError> {
+    let Some(rx) = out.pending.take() else { return Ok(()) };
     seg.begin_idle();
-    // Disk writes are blocking calls: keep them off the async threads (rule 4).
-    let written = tokio::task::spawn_blocking(move || file.write_all_at(at, &data)).await;
+    let r = rx.await;
     seg.end_idle(ctx.table.now_ms());
-    written.map_err(|e| EngineError::Other(format!("disk writer crashed: {e}")))??;
-    seg.add_written(n);
-    *buf_start += n;
+    match r {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => Err(e.into()),
+        Err(_) => Err(EngineError::Other("the disk writer stopped unexpectedly".into())),
+    }
+}
+
+/// Hand the collected bytes to the dedicated disk writer. The writer advances the segment's
+/// `written` counter only after the block was written, so the checkpoint rule "persisted progress
+/// never exceeds what is on disk" still holds.
+///
+/// `wait = false`: queue the block and return, so the connection keeps reading the network while the
+/// disk writes (at most one block per connection is in flight; the next flush first waits for it).
+/// `wait = true`: also wait for the write to finish. Used whenever the connection is about to end.
+async fn flush(ctx: &WorkerCtx, seg: &Arc<SegState>, out: &mut OutBuf, wait: bool) -> Result<(), EngineError> {
+    if !out.buf.is_empty() {
+        await_pending(ctx, seg, out).await?; // one block in flight per connection; reports its error
+        let data = std::mem::replace(&mut out.buf, Vec::with_capacity(FLUSH_SIZE + 64 * 1024));
+        let at = out.start;
+        out.start += data.len() as u64;
+        seg.begin_idle(); // the queue can be full when the disk is slow: waiting here is not a stall
+        let queued = ctx.writer.submit(at, data, seg.clone()).await;
+        seg.end_idle(ctx.table.now_ms());
+        out.pending = Some(queued?);
+    }
+    if wait {
+        await_pending(ctx, seg, out).await?;
+    }
     Ok(())
 }
 

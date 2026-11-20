@@ -1,6 +1,7 @@
 //! HTTP plumbing: client construction, redirects (max 10), cookies, custom headers, referer,
 //! user-agent and Basic/Digest authentication.
 
+use std::net::IpAddr;
 use std::sync::atomic::{AtomicU32, AtomicU8, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -13,6 +14,7 @@ use tokio_util::sync::CancellationToken;
 use url::Url;
 
 use crate::auth::{AuthManager, Credentials};
+use crate::dns::{CachedResolver, DnsCache, Family};
 use crate::error::EngineError;
 
 pub const MAX_REDIRECTS: usize = 10;
@@ -195,22 +197,38 @@ impl HttpSession {
         }
     }
 
-    fn builder(&self) -> ClientBuilder {
+    /// `local`: bind the connection to this local address (multi-network bonding); `None` lets the
+    /// OS choose the adapter.
+    fn builder(&self, local: Option<IpAddr>) -> ClientBuilder {
         let ua = self.opts.user_agent.clone().unwrap_or_else(|| DEFAULT_USER_AGENT.to_string());
-        Client::builder()
+        let b = Client::builder()
             .user_agent(ua)
             .redirect(redirect::Policy::limited(MAX_REDIRECTS))
             .cookie_provider(self.jar.clone())
             .connect_timeout(CONNECT_TIMEOUT)
+            // Connection optimisation: keep-alive probes keep NAT mappings open and detect dead
+            // peers; no Nagle delay; shared DNS cache (single-flight, serves stale on failure).
+            // Dual-stack destinations are raced IPv4 vs IPv6 by the connector (Happy Eyeballs).
             .tcp_keepalive(Some(Duration::from_secs(30)))
+            .tcp_nodelay(true)
             .pool_idle_timeout(Duration::from_secs(30))
+            .dns_resolver(Arc::new(CachedResolver::new(DnsCache::global().clone(), Family::of_local(local))));
+        match local {
+            Some(ip) => b.local_address(ip),
+            None => b,
+        }
     }
 
     /// Build a **new client with its own connection pool**. Each segment gets its own client so
     /// that N segments really are N parallel TCP connections, even over HTTP/2 (which would
     /// otherwise multiplex them all onto a single connection). Cookies are shared via the jar.
     pub fn client(&self) -> Result<Client, EngineError> {
-        self.builder()
+        self.client_bound(None)
+    }
+
+    /// Like [`client`](Self::client), but every connection leaves from `local` (an adapter's address).
+    pub fn client_bound(&self, local: Option<IpAddr>) -> Result<Client, EngineError> {
+        self.builder(local)
             .build()
             .map_err(|e| EngineError::Other(format!("could not set up the network client: {e}")))
     }
@@ -282,8 +300,8 @@ impl HttpSession {
     /// A client that speaks HTTP/3 only (QUIC over UDP). Verified against the Windows / system
     /// certificate store, like the TCP client.
     #[cfg(all(feature = "http3", reqwest_unstable))]
-    pub fn client_h3(&self) -> Result<Client, EngineError> {
-        self.builder()
+    pub fn client_h3(&self, local: Option<IpAddr>) -> Result<Client, EngineError> {
+        self.builder(local)
             .use_rustls_tls()
             .http3_prior_knowledge()
             .build()
@@ -291,7 +309,7 @@ impl HttpSession {
     }
 
     #[cfg(not(all(feature = "http3", reqwest_unstable)))]
-    pub fn client_h3(&self) -> Result<Client, EngineError> {
+    pub fn client_h3(&self, _local: Option<IpAddr>) -> Result<Client, EngineError> {
         Err(EngineError::Other("HTTP/3 support is not compiled into this build".into()))
     }
 

@@ -52,6 +52,7 @@ impl Mode {
 
 struct Scenario {
     name: &'static str,
+    /// One-line description (printed with `--describe`).
     what: &'static str,
     size: u64,
     server: fn() -> ServerConfig,
@@ -197,23 +198,9 @@ async fn run_once(sc: &Scenario, mode: Mode) -> Result<Sample, String> {
         net.up.store(false, Ordering::SeqCst);
         net.changed.notify_one();
         tokio::time::sleep(outage).await;
-        let back = Instant::now();
         server.set_offline(false);
         net.up.store(true, Ordering::SeqCst);
         net.changed.notify_one();
-        // How long until data flows again? (Diagnostic, printed to stderr.)
-        let before = engine.info(&info.id).map(|i| i.downloaded).unwrap_or(0);
-        while engine.info(&info.id).map(|i| i.downloaded <= before).unwrap_or(false) {
-            if back.elapsed() > Duration::from_secs(60) {
-                break;
-            }
-            poll().await;
-        }
-        eprintln!(
-            "      (outage over: data flowing again after {:.2}s; whole download so far {:.2}s)",
-            back.elapsed().as_secs_f64(),
-            t0.elapsed().as_secs_f64()
-        );
     }
 
     loop {
@@ -267,6 +254,12 @@ async fn main() {
     let runs: usize = arg(&args, "--runs").and_then(|v| v.parse().ok()).unwrap_or(3).max(1);
     let only = arg(&args, "--only"); // e.g. --only B
     let out_path = arg(&args, "--out");
+    if args.iter().any(|a| a == "--describe") {
+        for sc in scenarios() {
+            println!("{}\n    {}", sc.name, sc.what);
+        }
+        return;
+    }
 
     let mut table = String::new();
     table.push_str("| Scenario | single connection | 8 fixed connections | adaptive (Phase 2) | adaptive vs 8 fixed |\n");

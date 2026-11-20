@@ -12,8 +12,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ theme, onToggleTheme }) => {
     try {
       const win = getCurrentWindow();
       await win.minimize();
-    } catch {
-      // In browser preview
+    } catch (e) {
+      console.error("Window minimize error:", e);
     }
   };
 
@@ -21,8 +21,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ theme, onToggleTheme }) => {
     try {
       const win = getCurrentWindow();
       await win.toggleMaximize();
-    } catch {
-      // In browser preview
+    } catch (e) {
+      console.error("Window toggleMaximize error:", e);
     }
   };
 
@@ -30,8 +30,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({ theme, onToggleTheme }) => {
     try {
       const win = getCurrentWindow();
       await win.close();
-    } catch {
-      // In browser preview
+    } catch (e) {
+      console.error("Window close error:", e);
     }
   };
 
@@ -50,12 +50,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({ theme, onToggleTheme }) => {
         </span>
       </div>
 
+      {/* Middle Draggable Area */}
+      <div data-tauri-drag-region className="flex-1 h-full cursor-default" />
+
       {/* Right: Theme Toggle + Window Controls */}
-      <div className="flex items-center gap-1 -mr-1">
+      <div className="flex items-center gap-1 -mr-1 z-10 relative pointer-events-auto" data-tauri-drag-region="false">
         <button
+          type="button"
           onClick={onToggleTheme}
           title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
-          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
         >
           {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </button>
@@ -63,25 +67,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({ theme, onToggleTheme }) => {
         <div className="h-3.5 w-[1px] bg-[var(--border-subtle)] mx-1" />
 
         <button
+          type="button"
           onClick={handleMinimize}
           title="Minimize"
-          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
         >
           <Minus className="w-3.5 h-3.5" />
         </button>
 
         <button
+          type="button"
           onClick={handleMaximize}
           title="Maximize"
-          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
         >
           <Square className="w-3 h-3" />
         </button>
 
         <button
+          type="button"
           onClick={handleClose}
           title="Close"
-          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 hover:text-red-400 text-[var(--text-secondary)] transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-red-500/20 hover:text-red-400 text-[var(--text-secondary)] transition-colors cursor-pointer"
         >
           <X className="w-3.5 h-3.5" />
         </button>

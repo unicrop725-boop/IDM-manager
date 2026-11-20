@@ -49,7 +49,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   const rowVirtualizer = useVirtualizer({
     count: downloads.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 42,
+    estimateSize: () => 48,
     overscan: 12,
   });
 
@@ -153,7 +153,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--bg-app)] select-none overflow-hidden">
       {/* Table Header */}
-      <div className="h-9 w-full flex items-center px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] text-xs font-medium text-[var(--text-secondary)] select-none flex-shrink-0">
+      <div className="h-10 w-full flex items-center px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] text-xs font-medium text-[var(--text-secondary)] select-none flex-shrink-0">
         <div className="w-8 flex items-center justify-center">#</div>
         <div
           onClick={() => onSort("name")}

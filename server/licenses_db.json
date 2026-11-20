@@ -1,0 +1,92 @@
+{
+  "orders": {
+    "order_90355f16ca3fd595": {
+      "orderId": "order_90355f16ca3fd595",
+      "email": "buyer@example.com",
+      "amount": 99900,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795194563341
+    },
+    "order_02571d9f71c3cf48": {
+      "orderId": "order_02571d9f71c3cf48",
+      "email": "buyer@example.com",
+      "amount": 99900,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795196051870
+    },
+    "order_3ab96a334e532c19": {
+      "orderId": "order_3ab96a334e532c19",
+      "email": "buyer@example.com",
+      "amount": 99900,
+      "currency": "INR",
+      "status": "created",
+      "createdAt": 1795196417818
+    }
+  },
+  "licenses": {
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy05NUJDMjI3MC1CREVGM0MwQSIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NDU2M30.xMtaK-KChE8JbsLyjNkyvc49I2x3UHWc6t5PMq7q477VVBsjjqnhfUGHiHXS8EmcOeSnpE5chquHjJKw8KF1Bg": {
+      "keyId": "FG-PRO-95BC2270-BDEF3C0A",
+      "email": "buyer@example.com",
+      "paymentId": "pay_6c74948f38c6",
+      "issuedAt": 1795194563346,
+      "tier": "lifetime",
+      "maxDevices": 2
+    },
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy0zOTU0QTFDNy0xRjA1REE5QSIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NjA1MX0.yPyM0Zx2nIcSma5wlO97Z1D4dTZuz5IW_OLGDgygE1-fsumNzGAQr49G8w6RndrDy3uUFK4uYL0qA4GeqH3uBg": {
+      "keyId": "FG-PRO-3954A1C7-1F05DA9A",
+      "email": "buyer@example.com",
+      "paymentId": "pay_f32617934195",
+      "issuedAt": 1795196051873,
+      "tier": "lifetime",
+      "maxDevices": 2
+    },
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy1EQjE3NDQ2OS1CMDUxNDk0OCIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NjQxN30.oQlpPQ0RGQQqjcsK2uZZMFH17xE46W8kI_NlVqBCJwP2ORUbCA5PGeETVqORIHdH2j7Utp4hBj30hyccrhNkDQ": {
+      "keyId": "FG-PRO-DB174469-B0514948",
+      "email": "buyer@example.com",
+      "paymentId": "pay_a9bfe8d34ab0",
+      "issuedAt": 1795196417822,
+      "tier": "lifetime",
+      "maxDevices": 2
+    }
+  },
+  "activations": {
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy05NUJDMjI3MC1CREVGM0MwQSIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NDU2M30.xMtaK-KChE8JbsLyjNkyvc49I2x3UHWc6t5PMq7q477VVBsjjqnhfUGHiHXS8EmcOeSnpE5chquHjJKw8KF1Bg": [
+      {
+        "machineId": "HWID-PC-2",
+        "machineName": "Laptop ThinkPad",
+        "activatedAt": 1795194563350
+      },
+      {
+        "machineId": "HWID-PC-3",
+        "machineName": "Office Computer",
+        "activatedAt": 1795194563352
+      }
+    ],
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy0zOTU0QTFDNy0xRjA1REE5QSIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NjA1MX0.yPyM0Zx2nIcSma5wlO97Z1D4dTZuz5IW_OLGDgygE1-fsumNzGAQr49G8w6RndrDy3uUFK4uYL0qA4GeqH3uBg": [
+      {
+        "machineId": "HWID-PC-2",
+        "machineName": "Laptop ThinkPad",
+        "activatedAt": 1795196051876
+      },
+      {
+        "machineId": "HWID-PC-3",
+        "machineName": "Office Computer",
+        "activatedAt": 1795196051878
+      }
+    ],
+    "FG1.eyJrZXlJZCI6IkZHLVBSTy1EQjE3NDQ2OS1CMDUxNDk0OCIsImVtYWlsIjoiYnV5ZXJAZXhhbXBsZS5jb20iLCJ0aWVyIjoibGlmZXRpbWUiLCJtYXhEZXZpY2VzIjoyLCJpc3N1ZWRBdCI6MTc5NTE5NjQxN30.oQlpPQ0RGQQqjcsK2uZZMFH17xE46W8kI_NlVqBCJwP2ORUbCA5PGeETVqORIHdH2j7Utp4hBj30hyccrhNkDQ": [
+      {
+        "machineId": "HWID-PC-2",
+        "machineName": "Laptop ThinkPad",
+        "activatedAt": 1795196417825
+      },
+      {
+        "machineId": "HWID-PC-3",
+        "machineName": "Office Computer",
+        "activatedAt": 1795196417827
+      }
+    ]
+  }
+}

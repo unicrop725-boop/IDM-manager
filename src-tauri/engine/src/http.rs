@@ -111,6 +111,8 @@ pub struct HttpOptions {
     pub cookies: Option<String>,
     pub username: Option<String>,
     pub password: Option<String>,
+    /// Optional HTTP/SOCKS5 proxy, e.g. "http://127.0.0.1:8080" or "socks5://127.0.0.1:1080".
+    pub proxy: Option<String>,
 }
 
 impl HttpOptions {
@@ -201,7 +203,7 @@ impl HttpSession {
     /// OS choose the adapter.
     fn builder(&self, local: Option<IpAddr>) -> ClientBuilder {
         let ua = self.opts.user_agent.clone().unwrap_or_else(|| DEFAULT_USER_AGENT.to_string());
-        let b = Client::builder()
+        let mut b = Client::builder()
             .user_agent(ua)
             .redirect(redirect::Policy::limited(MAX_REDIRECTS))
             .cookie_provider(self.jar.clone())
@@ -213,10 +215,18 @@ impl HttpSession {
             .tcp_nodelay(true)
             .pool_idle_timeout(Duration::from_secs(30))
             .dns_resolver(Arc::new(CachedResolver::new(DnsCache::global().clone(), Family::of_local(local))));
-        match local {
-            Some(ip) => b.local_address(ip),
-            None => b,
+        if let Some(ip) = local {
+            b = b.local_address(ip);
         }
+        if let Some(proxy_str) = &self.opts.proxy {
+            let p_trim = proxy_str.trim();
+            if !p_trim.is_empty() {
+                if let Ok(proxy) = reqwest::Proxy::all(p_trim) {
+                    b = b.proxy(proxy);
+                }
+            }
+        }
+        b
     }
 
     /// Build a **new client with its own connection pool**. Each segment gets its own client so
@@ -431,6 +441,7 @@ mod tests {
             cookies: Some("sid=1".into()),
             referer: Some("https://page.example/".into()),
             user_agent: Some("UA/1".into()),
+            proxy: None,
             headers: vec![
                 ("Authorization".into(), "Bearer x".into()),
                 ("X-Api-Key".into(), "k".into()),

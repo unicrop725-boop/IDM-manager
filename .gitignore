@@ -5,3 +5,11 @@ target/
 .DS_Store
 # Local test data
 /testdata/
+.chrome_debug_prof/
+.tmp_chrome_profile/
+*.m4s
+*.mpd
+*.m3u8
+*.flowget.part
+*.tmp
+.tmp_*

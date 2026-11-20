@@ -12,6 +12,8 @@ use crate::segments::Segment;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DownloadState {
+    /// In a queue waiting for an available slot or scheduled time.
+    Queued,
     /// Contacting the server to learn size / range support.
     Probing,
     Downloading,
@@ -54,6 +56,14 @@ pub struct AddRequest {
     pub speed_limit: Option<u64>,
     /// Add to the list without starting.
     pub start_paused: bool,
+    /// Add to the queue without starting immediately.
+    pub start_queued: bool,
+    /// Target category (e.g. "Music", "Compressed", "Videos", etc.).
+    pub category: Option<String>,
+    /// Queue identifier (e.g. "main").
+    pub queue_id: Option<String>,
+    /// Order index inside the queue.
+    pub queue_order: Option<i32>,
     /// Other places that hold the **same file**. Each is verified (same size and ETag, supports
     /// ranges) before use; verified mirrors serve different segments at the same time.
     pub mirrors: Vec<String>,
@@ -123,6 +133,12 @@ pub struct DownloadRecord {
     pub created_at: i64,
     #[serde(default)]
     pub completed_at: Option<i64>,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub queue_id: Option<String>,
+    #[serde(default)]
+    pub queue_order: Option<i32>,
 }
 
 impl DownloadRecord {
@@ -196,4 +212,7 @@ pub struct DownloadInfo {
     pub protocol: Option<String>,
     /// How each mirror the user supplied was judged.
     pub mirrors: Vec<MirrorReport>,
+    pub category: Option<String>,
+    pub queue_id: Option<String>,
+    pub queue_order: Option<i32>,
 }

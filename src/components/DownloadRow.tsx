@@ -4,6 +4,7 @@ import type { DownloadInfo, DownloadState } from "../types";
 import { formatBytes, formatEta, formatSpeed, isUnbounded } from "../format";
 
 const STATE_LABEL: Record<DownloadState, string> = {
+  queued: "Queued",
   probing: "Connecting",
   downloading: "Downloading",
   paused: "Paused",
@@ -16,6 +17,7 @@ const STATE_LABEL: Record<DownloadState, string> = {
 };
 
 const STATE_COLOR: Record<DownloadState, string> = {
+  queued: "bg-purple-500/20 text-purple-300",
   probing: "bg-sky-500/20 text-sky-300",
   downloading: "bg-emerald-500/20 text-emerald-300",
   paused: "bg-amber-500/20 text-amber-300",

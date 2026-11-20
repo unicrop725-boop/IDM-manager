@@ -1,6 +1,7 @@
-// Mirrors the Rust types in src-tauri/engine/src/{model,events}.rs (camelCase over JSON).
+// Mirrors the Rust types in src-tauri/engine/src/{model,events}.rs and src-tauri/src/db.rs (camelCase over JSON).
 
 export type DownloadState =
+  | "queued"
   | "probing"
   | "downloading"
   | "paused"
@@ -74,6 +75,9 @@ export interface DownloadInfo {
   /** "HTTP/3", "HTTP/2" or "HTTP/1.1" (latest response). */
   protocol: string | null;
   mirrors: MirrorReport[];
+  category?: string | null;
+  queueId?: string | null;
+  queueOrder?: number | null;
   /** Live only (from progress events): speed per network adapter in Turbo Mode. */
   adapters?: AdapterProgress[];
   /** Live only: connections the engine is currently trying to keep busy (AIMD). */
@@ -98,15 +102,59 @@ export interface AddRequest {
   connections?: number;
   checksum?: string;
   saveDir?: string;
+  fileName?: string;
+  category?: string;
+  queueId?: string;
+  queueOrder?: number;
+  startPaused?: boolean;
+  startQueued?: boolean;
+  proxy?: string;
   referer?: string;
   userAgent?: string;
   cookies?: string;
   username?: string;
   password?: string;
   speedLimit?: number;
-  startPaused?: boolean;
   /** Other links to the same file; verified (same size and ETag) before use. */
   mirrors?: string[];
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  extensions: string[];
+  defaultFolder: string;
+  isBuiltin: boolean;
+}
+
+export interface QueueSchedule {
+  enabled: boolean;
+  startTime?: string | null;
+  stopTime?: string | null;
+  daysOfWeek: number[];
+  actionAfterCompletion: "none" | "shutdown" | "sleep" | "hibernate" | "exitApp" | "runProgram" | string;
+  runProgramPath?: string | null;
+  wifiOnly: boolean;
+  nightOnly: boolean;
+  nightStartHour?: number | null;
+  nightEndHour?: number | null;
+}
+
+export interface QueueInfo {
+  id: string;
+  name: string;
+  maxConcurrent: number;
+  isRunning: boolean;
+  schedule?: QueueSchedule | null;
+  createdAt: number;
+}
+
+export interface DuplicateCheckResult {
+  hasDuplicate: boolean;
+  urlMatch?: DownloadInfo | null;
+  fileExists: boolean;
+  existingFilePath?: string | null;
+  suggestedFileName: string;
 }
 
 export interface Settings {
@@ -116,6 +164,72 @@ export interface Settings {
   maxConnections: number;
   downloadDir: string;
   online: boolean;
-  /** Turbo Mode: use every active network adapter at once. */
   turboMode: boolean;
+  proxy?: string | null;
+  startWithWindows: boolean;
+  fileTypes: string;
+  language: string;
+  theme: string;
+  autoExtract: boolean;
+  virusScan: boolean;
+  openFolderOnComplete: boolean;
+  batterySaver?: boolean;
+  smartNaming?: boolean;
+  portableMode?: boolean;
+  mobileSharingEnabled?: boolean;
+  bandwidthMonitorEnabled?: boolean;
+}
+
+export interface MediaFormatOption {
+  formatId: string;
+  qualityLabel: string;
+  resolution?: string;
+  ext: string;
+  fileSizeApprox?: number;
+  isAudioOnly: boolean;
+}
+
+export interface MediaResolveResult {
+  isSupported: boolean;
+  isDrm: boolean;
+  drmMessage?: string;
+  title?: string;
+  thumbnail?: string;
+  duration?: number;
+  formats: MediaFormatOption[];
+  manifestType?: string;
+}
+
+export interface BatchExpandResult {
+  urls: string[];
+  total: number;
+}
+
+export interface GrabbedAsset {
+  url: string;
+  fileName: string;
+  category: string;
+  size?: number | null;
+  selected: boolean;
+}
+
+export interface GrabSiteRequest {
+  url: string;
+  depth: number;
+  categories: string[];
+  customExtensions?: string[];
+}
+
+export interface TrialAndLicenseStatus {
+  isLicensed: boolean;
+  isTrial: boolean;
+  isExpired: boolean;
+  daysRemaining: number;
+  trialStartedAt: number;
+  maxConnections: number;
+  turboModeAllowed: boolean;
+  mediaDownloadAllowed: boolean;
+  licenseKey?: string | null;
+  licenseEmail?: string | null;
+  licenseTier?: string | null;
 }

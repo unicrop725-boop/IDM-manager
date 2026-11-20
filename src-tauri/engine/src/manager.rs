@@ -266,6 +266,9 @@ impl Entry {
             note: if active { live.note.clone() } else { None },
             protocol: if active { live.protocol.clone() } else { None },
             mirrors: r.mirror_report.clone(),
+            category: r.category.clone(),
+            queue_id: r.queue_id.clone(),
+            queue_order: r.queue_order,
         }
     }
 }
@@ -602,16 +605,25 @@ impl Engine {
             checksum_verified: None,
             mirrors,
             mirror_report: Vec::new(),
-            state: if req.start_paused { DownloadState::Paused } else { DownloadState::Probing },
+            state: if req.start_queued {
+                DownloadState::Queued
+            } else if req.start_paused {
+                DownloadState::Paused
+            } else {
+                DownloadState::Probing
+            },
             error: None,
             created_at: now_secs(),
             completed_at: None,
+            category: req.category,
+            queue_id: req.queue_id.or_else(|| Some("main".to_string())),
+            queue_order: req.queue_order.or(Some(0)),
         };
         let entry = Entry::new(record);
         self.inner.entries.lock().unwrap().insert(entry.id.clone(), entry.clone());
         self.inner.emit_updated(&entry);
         self.inner.persist(&entry);
-        if !req.start_paused {
+        if !req.start_paused && !req.start_queued {
             self.start_run(&entry).await;
         }
         Ok(entry.info())
@@ -630,8 +642,59 @@ impl Engine {
                 self.inner.set_state(&e, DownloadState::Paused, None);
                 Ok(())
             }
+            DownloadState::Queued => {
+                self.inner.set_state(&e, DownloadState::Paused, None);
+                Ok(())
+            }
             DownloadState::Paused => Ok(()),
             _ => Err(EngineError::InvalidState("Only a running download can be paused.".into())),
+        }
+    }
+
+    /// Mark a download as queued (ready to run when queue slot opens).
+    pub async fn mark_queued(&self, id: &str) -> Result<(), EngineError> {
+        let e = self.get(id)?;
+        if e.state().is_active() {
+            self.stop(&e, REASON_PAUSE).await;
+        }
+        self.inner.set_state(&e, DownloadState::Queued, None);
+        Ok(())
+    }
+
+    /// Update category, queue or order metadata.
+    pub fn set_download_meta(
+        &self,
+        id: &str,
+        category: Option<String>,
+        queue_id: Option<String>,
+        queue_order: Option<i32>,
+    ) -> Result<DownloadInfo, EngineError> {
+        let e = self.get(id)?;
+        {
+            let mut r = e.record.lock().unwrap();
+            if category.is_some() {
+                r.category = category;
+            }
+            if queue_id.is_some() {
+                r.queue_id = queue_id;
+            }
+            if let Some(o) = queue_order {
+                r.queue_order = Some(o);
+            }
+        }
+        self.inner.emit_updated(&e);
+        self.inner.persist(&e);
+        Ok(e.info())
+    }
+
+    pub fn record(&self, id: &str) -> Option<DownloadRecord> {
+        self.get(id).ok().map(|e| e.snapshot())
+    }
+
+    /// Mark a download completed (used for testing state machine / scheduler).
+    pub fn mark_completed_for_test(&self, id: &str) {
+        if let Ok(e) = self.get(id) {
+            self.inner.set_state(&e, DownloadState::Completed, None);
         }
     }
 

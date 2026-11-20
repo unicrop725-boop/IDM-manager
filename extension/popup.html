@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 280px;
+      margin: 0;
+      padding: 12px;
+      background: #16161A;
+      color: #F4F4F5;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      user-select: none;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #2A2A32;
+      padding-bottom: 8px;
+    }
+    .title {
+      font-weight: 700;
+      font-size: 13px;
+      background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 18px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #26262E; transition: .2s; border-radius: 18px;
+      border: 1px solid #2A2A32;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px;
+      background-color: #F4F4F5; transition: .2s; border-radius: 50%;
+    }
+    input:checked + .slider { background: #8B5CF6; border-color: #8B5CF6; }
+    input:checked + .slider:before { transform: translateX(16px); }
+    .input-group {
+      margin-bottom: 10px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 10px;
+      color: #A1A1AA;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+    .input-field {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      background: #1E1E24;
+      border: 1px solid #2A2A32;
+      border-radius: 6px;
+      color: #F4F4F5;
+      font-size: 11px;
+      outline: none;
+    }
+    .input-field:focus { border-color: #8B5CF6; }
+    .btn {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 11px;
+      margin-top: 6px;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .status-bar {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #2A2A32;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      color: #A1A1AA;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">FlowGet Integration</div>
+    <span style="font-size: 10px; color: #71717A;">v1.0</span>
+  </div>
+
+  <div class="toggle-row">
+    <span>Intercept Downloads</span>
+    <label class="switch">
+      <input type="checkbox" id="intercept-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="input-group">
+    <label>Captured File Types</label>
+    <input type="text" id="file-types-input" class="input-field" placeholder="zip, rar, exe, iso, mp4, etc.">
+  </div>
+
+  <div class="input-group">
+    <label>Minimum Size (KB)</label>
+    <input type="number" id="min-size-input" class="input-field" placeholder="0 (all sizes)">
+  </div>
+
+  <button id="grab-tab-btn" class="btn">Grab URL from Active Tab</button>
+
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <span>Native Host Connected (Ready)</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

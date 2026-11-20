@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 interface SpeedTestModalProps {
   onClose: () => void;
+  theme?: "dark" | "light";
 }
 
 interface SpeedHistoryItem {
@@ -14,7 +15,12 @@ interface SpeedHistoryItem {
   uploadSpeed: number;
 }
 
-export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
+export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: propTheme }) => {
+  // Determine if dark mode is active
+  const isDark = propTheme
+    ? propTheme === "dark"
+    : !document.documentElement.classList.contains("light");
+
   const [tab, setTab] = useState<"gauge" | "history">("gauge");
   const [testing, setTesting] = useState(false);
   const [phase, setPhase] = useState<"idle" | "ping" | "download" | "upload" | "finished">("idle");
@@ -102,7 +108,6 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
     startTest();
   }, []);
 
-  // Max scale calibrated to 200 Mbps (or dynamic)
   const maxScale = 200;
   const currentSpeed =
     phase === "download"
@@ -113,20 +118,11 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
       ? downloadSpeed
       : 0;
 
-  // Percentage from 0 to 1
   const speedRatio = Math.min(1, Math.max(0, currentSpeed / maxScale));
-
-  // Gauge angles:
-  // Sweep spans 270 degrees.
-  // 0% -> 135 deg (bottom-left)
-  // 50% -> 270 deg (top center)
-  // 80% -> 351 deg (right side, exactly matching the screenshot)
-  // 100% -> 405 deg (bottom-right)
   const needleAngle = 135 + speedRatio * 270;
 
-  // Arc length for 270 degrees on radius 125
   const arcRadius = 125;
-  const fullArcLength = 2 * Math.PI * arcRadius * (270 / 360); // ~589
+  const fullArcLength = 2 * Math.PI * arcRadius * (270 / 360);
   const arcDashOffset = fullArcLength * (1 - speedRatio);
 
   // Outer radial tick marks (16 ticks)
@@ -142,33 +138,61 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
   });
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-200">
-      <div className="w-[500px] rounded-3xl bg-[#090F17] border border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)] overflow-hidden flex flex-col text-xs text-slate-300">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-200">
+      <div
+        className={`w-[500px] rounded-3xl border shadow-2xl overflow-hidden flex flex-col text-xs transition-colors duration-200 ${
+          isDark
+            ? "bg-[#090F17] border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)] text-slate-300"
+            : "bg-white border-slate-200 shadow-2xl text-slate-700"
+        }`}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-800/80 bg-[#0B131F]/90">
+        <div
+          className={`flex items-center justify-between px-5 py-3.5 border-b transition-colors duration-200 ${
+            isDark
+              ? "bg-[#0B131F]/90 border-slate-800/80"
+              : "bg-slate-50 border-slate-200"
+          }`}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-            <span className="text-white font-bold text-sm tracking-wide">Internet Speed Test</span>
+            <div className={`w-2.5 h-2.5 rounded-full ${isDark ? "bg-cyan-400 animate-ping" : "bg-teal-500 animate-ping"}`} />
+            <span className={`font-bold text-sm tracking-wide ${isDark ? "text-white" : "text-slate-900"}`}>
+              Internet Speed Test
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-[#060B12] rounded-xl p-0.5 border border-slate-800">
+            <div
+              className={`flex items-center rounded-xl p-0.5 border ${
+                isDark ? "bg-[#060B12] border-slate-800" : "bg-slate-100 border-slate-200"
+              }`}
+            >
               <button
+                type="button"
                 onClick={() => setTab("gauge")}
                 className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   tab === "gauge"
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
-                    : "text-slate-400 hover:text-white"
+                    ? isDark
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                      : "bg-white text-teal-700 border border-slate-200 shadow-sm"
+                    : isDark
+                    ? "text-slate-400 hover:text-white"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 Speed Dial
               </button>
               <button
+                type="button"
                 onClick={() => setTab("history")}
                 className={`px-3 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                   tab === "history"
-                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
-                    : "text-slate-400 hover:text-white"
+                    ? isDark
+                      ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm"
+                      : "bg-white text-teal-700 border border-slate-200 shadow-sm"
+                    : isDark
+                    ? "text-slate-400 hover:text-white"
+                    : "text-slate-500 hover:text-slate-900"
                 }`}
               >
                 History ({history.length})
@@ -176,15 +200,20 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
             </div>
 
             <button
+              type="button"
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
+                isDark
+                  ? "hover:bg-slate-800 text-slate-400 hover:text-white"
+                  : "hover:bg-slate-200 text-slate-500 hover:text-slate-900"
+              }`}
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Tab 1: Sci-Fi Neon Speedometer Dial */}
+        {/* Tab 1: Speedometer Dial */}
         {tab === "gauge" && (
           <div className="p-6 flex flex-col items-center justify-center space-y-6">
             {/* Circular Speedometer Stage */}
@@ -198,29 +227,29 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                     <stop offset="100%" stopColor="#EA580C" />
                   </linearGradient>
 
-                  {/* Inner Neon Ring Gradient: Cyan to Magenta */}
+                  {/* Inner Neon Ring Gradient */}
                   <linearGradient id="innerNeonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#06B6D4" />
-                    <stop offset="50%" stopColor="#8B5CF6" />
-                    <stop offset="100%" stopColor="#EC4899" />
-                  </linearGradient>
-
-                  {/* Laser Needle Gradient */}
-                  <linearGradient id="laserNeedleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#10B981" />
-                    <stop offset="70%" stopColor="#22C55E" />
-                    <stop offset="100%" stopColor="#4ADE80" />
+                    <stop offset="0%" stopColor={isDark ? "#06B6D4" : "#0D9488"} />
+                    <stop offset="50%" stopColor={isDark ? "#8B5CF6" : "#6366F1"} />
+                    <stop offset="100%" stopColor={isDark ? "#EC4899" : "#A855F7"} />
                   </linearGradient>
 
                   {/* Center Glow Filter */}
                   <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="5" result="blur" />
+                    <feGaussianBlur stdDeviation={isDark ? "5" : "3"} result="blur" />
                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
                   </filter>
                 </defs>
 
-                {/* Background Dark Circle Track */}
-                <circle cx="160" cy="160" r="148" fill="#070D14" stroke="#0F172A" strokeWidth="2" />
+                {/* Background Circle Track */}
+                <circle
+                  cx="160"
+                  cy="160"
+                  r="148"
+                  fill={isDark ? "#070D14" : "#F8FAFC"}
+                  stroke={isDark ? "#0F172A" : "#E2E8F0"}
+                  strokeWidth="2"
+                />
 
                 {/* Outer Radial Ticks */}
                 {ticks.map((t) => (
@@ -230,9 +259,13 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                     y1={t.y1}
                     x2={t.x2}
                     y2={t.y2}
-                    stroke={t.isMajor ? "#06B6D4" : "#EC4899"}
+                    stroke={
+                      isDark
+                        ? t.isMajor ? "#06B6D4" : "#EC4899"
+                        : t.isMajor ? "#0D9488" : "#94A3B8"
+                    }
                     strokeWidth={t.isMajor ? "2" : "1.2"}
-                    strokeOpacity={t.isMajor ? "0.9" : "0.5"}
+                    strokeOpacity={t.isMajor ? (isDark ? "0.9" : "1") : (isDark ? "0.5" : "0.7")}
                     strokeLinecap="round"
                   />
                 ))}
@@ -241,7 +274,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                 <path
                   d="M 71.6 248.4 A 125 125 0 1 1 248.4 248.4"
                   fill="none"
-                  stroke="#1E293B"
+                  stroke={isDark ? "#1E293B" : "#E2E8F0"}
                   strokeWidth="8"
                   strokeLinecap="round"
                 />
@@ -256,10 +289,10 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                   strokeDasharray={fullArcLength}
                   strokeDashoffset={arcDashOffset}
                   className="transition-all duration-150 ease-out"
-                  filter="drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))"
+                  filter={isDark ? "drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))" : "drop-shadow(0 0 4px rgba(245, 158, 11, 0.4))"}
                 />
 
-                {/* Inner Glowing Dual-Neon Ring (Cyan -> Magenta) */}
+                {/* Inner Glowing Dual-Neon Ring */}
                 <circle
                   cx="160"
                   cy="160"
@@ -268,11 +301,19 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                   stroke="url(#innerNeonGrad)"
                   strokeWidth="3.5"
                   filter="url(#neonGlow)"
-                  className="opacity-90"
+                  className={isDark ? "opacity-90" : "opacity-80"}
                 />
 
                 {/* Center Pivot Background Halo */}
-                <circle cx="160" cy="160" r="18" fill="#0A141F" stroke="#14B8A6" strokeWidth="2" opacity="0.8" />
+                <circle
+                  cx="160"
+                  cy="160"
+                  r="18"
+                  fill={isDark ? "#0A141F" : "#FFFFFF"}
+                  stroke={isDark ? "#14B8A6" : "#0D9488"}
+                  strokeWidth="2"
+                  opacity={isDark ? "0.8" : "0.95"}
+                />
               </svg>
 
               {/* Animated Laser Needle (Framer Motion) */}
@@ -286,41 +327,67 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                   className="absolute left-[160px] top-[157.5px] h-[5px] rounded-r-full origin-left flex items-center"
                   style={{
                     width: "122px",
-                    background: "linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, #10B981 40%, #4ADE80 100%)",
-                    boxShadow: "0 0 14px #22C55E, 0 0 28px rgba(34, 197, 94, 0.7)",
+                    background: isDark
+                      ? "linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, #10B981 40%, #4ADE80 100%)"
+                      : "linear-gradient(90deg, rgba(13, 148, 136, 0.2) 0%, #059669 40%, #10B981 100%)",
+                    boxShadow: isDark
+                      ? "0 0 14px #22C55E, 0 0 28px rgba(34, 197, 94, 0.7)"
+                      : "0 0 10px rgba(5, 150, 105, 0.6)",
                   }}
                 >
-                  {/* Bright glowing needle tip */}
-                  <div className="absolute right-0 w-2 h-2 rounded-full bg-white shadow-[0_0_10px_#FFFFFF]" />
+                  {/* Glowing needle tip */}
+                  <div className={`absolute right-0 w-2.5 h-2.5 rounded-full ${isDark ? "bg-white shadow-[0_0_10px_#FFFFFF]" : "bg-emerald-200 shadow-[0_0_6px_#059669]"}`} />
                 </div>
               </motion.div>
 
               {/* Center Pivot Dot */}
-              <div className="absolute top-[150px] left-[150px] w-5 h-5 rounded-full bg-[#0E1A26] border-2 border-emerald-400 flex items-center justify-center shadow-[0_0_12px_#10B981]">
-                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-sm" />
+              <div
+                className={`absolute top-[150px] left-[150px] w-5 h-5 rounded-full flex items-center justify-center border-2 shadow-sm ${
+                  isDark
+                    ? "bg-[#0E1A26] border-emerald-400 shadow-[0_0_12px_#10B981]"
+                    : "bg-white border-emerald-600 shadow-md"
+                }`}
+              >
+                <div className={`w-1.5 h-1.5 rounded-full ${isDark ? "bg-white" : "bg-emerald-600"}`} />
               </div>
 
-              {/* Digital Speed Readout (Futuristic Stylized Text) */}
+              {/* Digital Speed Readout */}
               <div className="absolute top-[182px] flex flex-col items-center pointer-events-none">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-3xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 drop-shadow-[0_0_15px_rgba(245,158,11,0.7)] font-mono">
+                  <span
+                    className={`text-3xl font-black tracking-widest font-mono ${
+                      isDark
+                        ? "text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 drop-shadow-[0_0_15px_rgba(245,158,11,0.7)]"
+                        : "text-amber-600 drop-shadow-sm"
+                    }`}
+                  >
                     {currentSpeed.toFixed(0)}
                   </span>
-                  <span className="text-xs font-extrabold tracking-wider text-cyan-300 uppercase drop-shadow-[0_0_8px_rgba(6,182,212,0.8)] font-mono">
+                  <span
+                    className={`text-xs font-extrabold tracking-wider uppercase font-mono ${
+                      isDark
+                        ? "text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]"
+                        : "text-teal-700"
+                    }`}
+                  >
                     MBPS
                   </span>
                 </div>
               </div>
 
-              {/* Circular Start / Action Button (Nestled at the bottom opening) */}
+              {/* Circular Start / Action Button */}
               <div className="absolute bottom-2 flex flex-col items-center">
                 <button
                   type="button"
                   onClick={startTest}
                   disabled={testing}
-                  className="w-18 h-18 rounded-full bg-[#08121C] border-2 border-teal-500/70 hover:border-teal-300 shadow-[0_0_22px_rgba(20,184,166,0.35)] active:scale-95 disabled:opacity-75 transition-all flex flex-col items-center justify-center text-white cursor-pointer group"
+                  className={`w-18 h-18 rounded-full border-2 active:scale-95 disabled:opacity-75 transition-all flex flex-col items-center justify-center cursor-pointer group ${
+                    isDark
+                      ? "bg-[#08121C] border-teal-500/70 hover:border-teal-300 shadow-[0_0_22px_rgba(20,184,166,0.35)] text-white"
+                      : "bg-white border-teal-600 hover:bg-teal-50 shadow-lg text-teal-800"
+                  }`}
                 >
-                  <span className="text-sm font-bold tracking-wider text-white group-hover:text-cyan-300 transition-colors">
+                  <span className={`text-sm font-bold tracking-wider transition-colors ${isDark ? "text-white group-hover:text-cyan-300" : "text-teal-800"}`}>
                     {testing ? "..." : "Start"}
                   </span>
                 </button>
@@ -329,57 +396,81 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
 
             {/* Test Status Indicator */}
             <div className="text-center font-medium">
-              {phase === "idle" && <span className="text-slate-400">Click Start to begin speed test</span>}
-              {phase === "ping" && <span className="text-cyan-400 animate-pulse font-semibold">Testing Latency & Jitter...</span>}
+              {phase === "idle" && (
+                <span className={isDark ? "text-slate-400" : "text-slate-500"}>Click Start to begin speed test</span>
+              )}
+              {phase === "ping" && (
+                <span className={`animate-pulse font-semibold ${isDark ? "text-cyan-400" : "text-teal-600"}`}>
+                  Testing Latency & Jitter...
+                </span>
+              )}
               {phase === "download" && (
-                <span className="text-emerald-400 font-bold animate-pulse drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
+                <span className={`font-bold animate-pulse ${isDark ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "text-emerald-600"}`}>
                   Testing Download Speed...
                 </span>
               )}
               {phase === "upload" && (
-                <span className="text-sky-400 font-bold animate-pulse drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">
+                <span className={`font-bold animate-pulse ${isDark ? "text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" : "text-sky-600"}`}>
                   Testing Upload Speed...
                 </span>
               )}
               {phase === "finished" && (
-                <span className="text-teal-300 font-bold drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]">
+                <span className={`font-bold ${isDark ? "text-teal-300 drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]" : "text-teal-700"}`}>
                   Test Complete
                 </span>
               )}
             </div>
 
-            {/* Metric Cards (Ping, Download, Upload) with Glassmorphism */}
+            {/* Metric Cards (Ping, Download, Upload) */}
             <div className="w-full grid grid-cols-3 gap-3">
               {/* Ping */}
-              <div className="p-3.5 rounded-2xl bg-[#0B1420]/80 border border-purple-500/30 text-center space-y-1 shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-purple-400">
+              <div
+                className={`p-3.5 rounded-2xl border text-center space-y-1 transition-colors ${
+                  isDark
+                    ? "bg-[#0B1420]/80 border-purple-500/30 text-white"
+                    : "bg-slate-50 border-slate-200 text-slate-900 shadow-sm"
+                }`}
+              >
+                <div className={`flex items-center justify-center gap-1.5 ${isDark ? "text-purple-400" : "text-purple-600"}`}>
                   <Activity className="w-4 h-4" />
-                  <span className="text-slate-400 font-medium">Ping</span>
+                  <span className={isDark ? "text-slate-400" : "text-slate-500"}>Ping</span>
                 </div>
-                <div className="text-base font-extrabold text-white font-mono">
-                  {pingMs} <span className="text-xs font-normal text-slate-500">ms</span>
+                <div className="text-base font-extrabold font-mono">
+                  {pingMs} <span className="text-xs font-normal opacity-60">ms</span>
                 </div>
               </div>
 
               {/* Download */}
-              <div className="p-3.5 rounded-2xl bg-[#0B1420]/80 border border-emerald-500/30 text-center space-y-1 shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-emerald-400">
+              <div
+                className={`p-3.5 rounded-2xl border text-center space-y-1 transition-colors ${
+                  isDark
+                    ? "bg-[#0B1420]/80 border-emerald-500/30 text-emerald-400"
+                    : "bg-slate-50 border-slate-200 text-emerald-600 shadow-sm"
+                }`}
+              >
+                <div className={`flex items-center justify-center gap-1.5 ${isDark ? "text-emerald-400" : "text-emerald-600"}`}>
                   <ArrowDown className="w-4 h-4" />
-                  <span className="text-slate-400 font-medium">Download</span>
+                  <span className={isDark ? "text-slate-400" : "text-slate-500"}>Download</span>
                 </div>
-                <div className="text-base font-extrabold text-emerald-400 font-mono">
-                  {downloadSpeed.toFixed(1)} <span className="text-xs font-normal text-slate-500">Mbps</span>
+                <div className="text-base font-extrabold font-mono">
+                  {downloadSpeed.toFixed(1)} <span className="text-xs font-normal opacity-60">Mbps</span>
                 </div>
               </div>
 
               {/* Upload */}
-              <div className="p-3.5 rounded-2xl bg-[#0B1420]/80 border border-cyan-500/30 text-center space-y-1 shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-cyan-400">
+              <div
+                className={`p-3.5 rounded-2xl border text-center space-y-1 transition-colors ${
+                  isDark
+                    ? "bg-[#0B1420]/80 border-cyan-500/30 text-cyan-400"
+                    : "bg-slate-50 border-slate-200 text-cyan-700 shadow-sm"
+                }`}
+              >
+                <div className={`flex items-center justify-center gap-1.5 ${isDark ? "text-cyan-400" : "text-cyan-600"}`}>
                   <ArrowUp className="w-4 h-4" />
-                  <span className="text-slate-400 font-medium">Upload</span>
+                  <span className={isDark ? "text-slate-400" : "text-slate-500"}>Upload</span>
                 </div>
-                <div className="text-base font-extrabold text-cyan-400 font-mono">
-                  {uploadSpeed.toFixed(1)} <span className="text-xs font-normal text-slate-500">Mbps</span>
+                <div className="text-base font-extrabold font-mono">
+                  {uploadSpeed.toFixed(1)} <span className="text-xs font-normal opacity-60">Mbps</span>
                 </div>
               </div>
             </div>
@@ -389,13 +480,13 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
         {/* Tab 2: History */}
         {tab === "history" && (
           <div className="p-5 space-y-3 max-h-80 overflow-y-auto">
-            <div className="flex items-center justify-between text-xs text-slate-400">
+            <div className="flex items-center justify-between text-xs opacity-75">
               <span>Past Tests ({history.length})</span>
               {history.length > 0 && (
                 <button
                   type="button"
                   onClick={clearHistory}
-                  className="flex items-center gap-1 text-rose-400 hover:text-rose-300 text-[11px] cursor-pointer"
+                  className="flex items-center gap-1 text-rose-500 hover:text-rose-400 text-[11px] cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Clear History
@@ -404,7 +495,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
             </div>
 
             {history.length === 0 ? (
-              <div className="py-12 text-center text-xs text-slate-600">
+              <div className="py-12 text-center text-xs opacity-50">
                 No past speed test records found.
               </div>
             ) : (
@@ -412,24 +503,28 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
                 {history.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3.5 rounded-xl bg-[#0B1420] border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors"
+                    className={`p-3.5 rounded-xl border flex items-center justify-between text-xs transition-colors ${
+                      isDark
+                        ? "bg-[#0B1420] border-slate-800 hover:border-slate-700"
+                        : "bg-slate-50 border-slate-200 hover:border-slate-300"
+                    }`}
                   >
                     <div>
-                      <div className="font-semibold text-white">
+                      <div className={`font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>
                         {new Date(item.timestamp).toLocaleString()}
                       </div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] opacity-60">
                         Ping: {item.pingMs} ms
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-right">
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">Download</div>
-                        <div className="font-mono font-bold text-emerald-400">{item.downloadSpeed} Mbps</div>
+                        <div className="text-[10px] opacity-50 uppercase tracking-wider">Download</div>
+                        <div className="font-mono font-bold text-emerald-500">{item.downloadSpeed} Mbps</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-500 uppercase tracking-wider">Upload</div>
-                        <div className="font-mono font-bold text-cyan-400">{item.uploadSpeed} Mbps</div>
+                        <div className="text-[10px] opacity-50 uppercase tracking-wider">Upload</div>
+                        <div className="font-mono font-bold text-cyan-500">{item.uploadSpeed} Mbps</div>
                       </div>
                     </div>
                   </div>
@@ -440,8 +535,14 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose }) => {
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-800/80 bg-[#0B131F]/90">
-          <span className="text-[11px] text-slate-500 font-mono">
+        <div
+          className={`flex items-center justify-between px-5 py-3.5 border-t transition-colors ${
+            isDark
+              ? "bg-[#0B131F]/90 border-slate-800/80"
+              : "bg-slate-50 border-slate-200"
+          }`}
+        >
+          <span className="text-[11px] opacity-60 font-mono">
             {phase === "finished" ? `Jitter: ${jitterMs}ms` : "Server: Mumbai (CDN Edge)"}
           </span>
           <button

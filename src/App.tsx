@@ -958,7 +958,7 @@ export default function App() {
 
       {/* Speed Test Modal */}
       {isSpeedTestOpen && (
-        <SpeedTestModal onClose={() => setIsSpeedTestOpen(false)} />
+        <SpeedTestModal theme={theme} onClose={() => setIsSpeedTestOpen(false)} />
       )}
 
       {/* Bandwidth Breakdown Modal */}

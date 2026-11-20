@@ -519,6 +519,14 @@ export const api = {
     isTauri ? invoke<void>("open_folder", { path }) : Promise.resolve(),
   openFile: (path: string) =>
     isTauri ? invoke<void>("open_file", { path }) : Promise.resolve(),
+  pickFolder: (initialDir?: string) =>
+    isTauri
+      ? invoke<string | null>("pick_folder", { initialDir })
+      : Promise.resolve("C:\\Downloads"),
+  updateDownloadPath: (id: string, newPath: string) =>
+    isTauri
+      ? invoke<void>("update_download_path", { id, newPath })
+      : Promise.resolve(),
   getStartWithWindows: () =>
     isTauri ? invoke<boolean>("get_start_with_windows") : Promise.resolve(true),
   setStartWithWindows: (enabled: boolean) =>

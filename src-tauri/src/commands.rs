@@ -572,6 +572,43 @@ pub fn open_file(path: String) -> CmdResult<()> {
 }
 
 #[tauri::command]
+pub async fn pick_folder(initial_dir: Option<String>) -> CmdResult<Option<String>> {
+    tokio::task::spawn_blocking(move || {
+        let init = initial_dir.unwrap_or_default();
+        let script = format!(
+            r#"Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Select download destination folder'; if ('{init}' -ne '' -and (Test-Path '{init}')) {{ $f.SelectedPath = '{init}' }}; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {{ Write-Output $f.SelectedPath }}"#,
+            init = init.replace('\'', "''")
+        );
+        let output = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .output();
+        match output {
+            Ok(out) => {
+                let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if path.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(path))
+                }
+            }
+            Err(e) => Err(format!("Could not open folder picker: {e}")),
+        }
+    })
+    .await
+    .map_err(|e| format!("Task error: {e}"))?
+}
+
+#[tauri::command]
+pub async fn update_download_path(
+    _state: State<'_, AppState>,
+    id: String,
+    new_path: String,
+) -> CmdResult<()> {
+    println!("[commands] Updating target path for download {}: {}", id, new_path);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn get_start_with_windows() -> bool {
     #[cfg(target_os = "windows")]
     {

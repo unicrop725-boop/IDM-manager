@@ -182,6 +182,8 @@ pub fn run() {
             commands::scan_file_defender,
             commands::open_folder,
             commands::open_file,
+            commands::pick_folder,
+            commands::update_download_path,
             commands::get_start_with_windows,
             commands::set_start_with_windows,
             commands::get_settings,

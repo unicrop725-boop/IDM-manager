@@ -78,6 +78,8 @@ export interface DownloadInfo {
   category?: string | null;
   queueId?: string | null;
   queueOrder?: number | null;
+  referer?: string | null;
+  description?: string | null;
   /** Live only (from progress events): speed per network adapter in Turbo Mode. */
   adapters?: AdapterProgress[];
   /** Live only: connections the engine is currently trying to keep busy (AIMD). */

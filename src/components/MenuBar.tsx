@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 import { Search, Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, Smartphone, BarChart3, Activity, Key, RefreshCw } from "lucide-react";
 
 interface MenuBarProps {
@@ -62,15 +63,15 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   return (
     <div
       ref={menuRef}
-      className="h-10 w-full flex items-center justify-between px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none text-xs text-[var(--text-secondary)] z-40"
+      className="h-14 w-full flex items-center justify-between px-5 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none text-[13px] text-[var(--text-secondary)] z-40"
     >
       {/* Menus List */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-3">
         {/* Tasks */}
         <div className="relative">
           <button
             onClick={() => toggleMenu("Tasks")}
-            className={`px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
+            className={`px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
               activeMenu === "Tasks" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
@@ -164,7 +165,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <div className="relative">
           <button
             onClick={() => toggleMenu("File")}
-            className={`px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
+            className={`px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
               activeMenu === "File" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
@@ -200,7 +201,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <div className="relative">
           <button
             onClick={() => toggleMenu("Downloads")}
-            className={`px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
+            className={`px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
               activeMenu === "Downloads" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
@@ -250,7 +251,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <div className="relative">
           <button
             onClick={() => toggleMenu("View")}
-            className={`px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
+            className={`px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
               activeMenu === "View" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
@@ -288,7 +289,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         <div className="relative">
           <button
             onClick={() => toggleMenu("Help")}
-            className={`px-2.5 py-1 rounded-md transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
+            className={`px-3 py-1.5 rounded-lg transition-colors hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] ${
               activeMenu === "Help" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
@@ -336,17 +337,20 @@ export const MenuBar: React.FC<MenuBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Rounded Search Box */}
-      <div className="relative w-64">
-        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] pointer-events-none" />
+      {/* Right: Theme Toggle + Rounded Search Box */}
+      <div className="flex items-center gap-3">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      <div className="relative w-[290px]">
+        <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-primary)] pointer-events-none" strokeWidth={1.8} />
         <input
           id="global-search-input"
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search in the List"
-          className="w-full h-7 pl-8 pr-3 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-full text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none focus:border-purple-500/50 transition-all"
+          className="w-full h-11 pl-12 pr-4 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-card)] rounded-xl text-[13px] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-purple-500/50 transition-all"
         />
+      </div>
       </div>
     </div>
   );

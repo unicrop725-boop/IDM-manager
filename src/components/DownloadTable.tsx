@@ -8,16 +8,17 @@ import {
   AlertTriangle,
   WifiOff,
   Music,
-  Archive,
-  Film,
-  Terminal,
+  FileArchive,
+  Video,
+  AppWindow,
+  Cpu,
   FileText,
-  Smartphone,
   Image as ImageIcon,
   File,
 } from "lucide-react";
 import { DownloadInfo } from "../types";
-import { formatBytes, formatEta, formatDate, getFileTypeLabel, FileCategoryType } from "../format";
+import { formatBytes, formatDate, getFileTypeLabel, FileCategoryType } from "../format";
+import { Checkbox } from "./Checkbox";
 import { ContextMenuPosition } from "./ContextMenu";
 
 export type SortField = "name" | "size" | "status" | "eta" | "date";
@@ -32,7 +33,19 @@ interface DownloadTableProps {
   sortField: SortField;
   sortOrder: SortOrder;
   onSort: (field: SortField) => void;
+  allSelected?: boolean;
+  onToggleSelectAll?: () => void;
 }
+
+const formatTimeLeft = (secs: number | null | undefined): string => {
+  if (secs == null || !isFinite(secs) || secs <= 0) return "0 Sec";
+  const s = Math.round(secs);
+  if (s < 60) return `${s} Sec`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} Min ${s % 60} Sec`;
+  const h = Math.floor(m / 60);
+  return `${h} Hr ${m % 60} Min`;
+};
 
 export const DownloadTable: React.FC<DownloadTableProps> = ({
   downloads,
@@ -43,13 +56,15 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   sortField,
   sortOrder,
   onSort,
+  allSelected = false,
+  onToggleSelectAll,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
     count: downloads.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 48,
+    estimateSize: () => 60,
     overscan: 12,
   });
 
@@ -65,23 +80,24 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   };
 
   const renderTypeIcon = (type: FileCategoryType) => {
+    const cls = "w-[22px] h-[22px] flex-shrink-0 text-[var(--text-primary)] opacity-80";
     switch (type) {
       case "Music":
-        return <Music className="w-4 h-4 text-purple-400 flex-shrink-0" />;
+        return <Music className={cls} strokeWidth={1.4} />;
       case "Archive":
-        return <Archive className="w-4 h-4 text-amber-400 flex-shrink-0" />;
+        return <FileArchive className={cls} strokeWidth={1.4} />;
       case "Video":
-        return <Film className="w-4 h-4 text-rose-400 flex-shrink-0" />;
+        return <Video className={cls} strokeWidth={1.4} />;
       case "Program":
-        return <Terminal className="w-4 h-4 text-blue-400 flex-shrink-0" />;
+        return <AppWindow className={cls} strokeWidth={1.4} />;
       case "App":
-        return <Smartphone className="w-4 h-4 text-teal-400 flex-shrink-0" />;
+        return <Cpu className={cls} strokeWidth={1.4} />;
       case "Document":
-        return <FileText className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
+        return <FileText className={cls} strokeWidth={1.4} />;
       case "Image":
-        return <ImageIcon className="w-4 h-4 text-indigo-400 flex-shrink-0" />;
+        return <ImageIcon className={cls} strokeWidth={1.4} />;
       default:
-        return <File className="w-4 h-4 text-[var(--text-secondary)] flex-shrink-0" />;
+        return <File className={cls} strokeWidth={1.4} />;
     }
   };
 
@@ -92,21 +108,16 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
 
     switch (d.state) {
       case "completed":
-        return <span className="text-[var(--text-secondary)]">Complete</span>;
+        return <span className="text-[13px] text-[var(--text-primary)]">Complete</span>;
       case "downloading":
       case "probing":
       case "verifying":
         return (
-          <div className="w-full pr-4 flex flex-col gap-1">
-            <div className="flex items-center justify-between text-[11px] font-mono">
-              <span className="text-teal-400 font-medium">{pct.toFixed(1)}%</span>
-              <span className="text-[var(--text-secondary)]">
-                {formatBytes(d.downloaded)} / {formatBytes(d.totalSize)}
-              </span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-[var(--bg-hover)] overflow-hidden">
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[13px] text-[var(--text-primary)]">{Math.round(pct)}%</span>
+            <div className="w-28 h-1.5 rounded-full bg-[var(--bg-hover)] overflow-hidden">
               <div
-                className="h-full rounded-full gradient-accent transition-all duration-200"
+                className="h-full rounded-full bg-gradient-to-r from-teal-400 to-purple-500 transition-all duration-200"
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -114,8 +125,10 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
         );
       case "paused":
         return (
-          <div className="flex items-center gap-1.5 text-amber-400">
-            <Pause className="w-3.5 h-3.5 fill-current" />
+          <div className="flex items-center gap-2 text-[13px] text-[var(--text-primary)]">
+            <span className="w-4 h-4 rounded-[4px] border border-[var(--text-secondary)] flex items-center justify-center">
+              <Pause className="w-2.5 h-2.5" />
+            </span>
             <span>Paused</span>
           </div>
         );
@@ -153,39 +166,44 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--bg-app)] select-none overflow-hidden">
       {/* Table Header */}
-      <div className="h-10 w-full flex items-center px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] text-xs font-medium text-[var(--text-secondary)] select-none flex-shrink-0">
-        <div className="w-8 flex items-center justify-center">#</div>
+      <div className="h-12 w-full flex items-center px-4 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[13px] text-[var(--text-secondary)] select-none flex-shrink-0">
+        <div className="w-10 flex items-center">
+          <Checkbox
+            checked={allSelected && downloads.length > 0}
+            onChange={() => onToggleSelectAll?.()}
+          />
+        </div>
         <div
           onClick={() => onSort("name")}
-          className="flex-1 flex items-center gap-1.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors px-2"
+          className="flex-1 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors pl-12"
         >
           <span>Name</span>
           {renderSortIcon("name")}
         </div>
         <div
           onClick={() => onSort("size")}
-          className="w-24 flex items-center gap-1.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors px-2 justify-end"
+          className="w-28 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Size</span>
           {renderSortIcon("size")}
         </div>
         <div
           onClick={() => onSort("status")}
-          className="w-48 flex items-center gap-1.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors px-2"
+          className="w-44 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Status</span>
           {renderSortIcon("status")}
         </div>
         <div
           onClick={() => onSort("eta")}
-          className="w-24 flex items-center gap-1.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors px-2 justify-end"
+          className="w-36 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Time Left</span>
           {renderSortIcon("eta")}
         </div>
         <div
           onClick={() => onSort("date")}
-          className="w-36 flex items-center gap-1.5 cursor-pointer hover:text-[var(--text-primary)] transition-colors px-2 justify-end"
+          className="w-40 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Last Modification</span>
           {renderSortIcon("date")}
@@ -229,7 +247,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                     onContextMenu({ x: e.clientX, y: e.clientY, download: d });
                   }}
                   onClick={(e) => onToggleSelect(d.id, e.shiftKey)}
-                  className={`flex items-center px-3 border-b border-[var(--border-subtle)] text-xs cursor-default transition-colors ${
+                  className={`flex items-center px-4 text-[13px] cursor-default transition-colors ${
                     isSelected
                       ? "bg-[var(--bg-hover)] text-[var(--text-primary)]"
                       : "hover:bg-[var(--bg-card)] text-[var(--text-primary)]"
@@ -237,45 +255,43 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                 >
                   {/* Checkbox */}
                   <div
-                    className="w-8 flex items-center justify-center"
+                    className="w-10 flex items-center"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={isSelected}
                       onChange={(e) => onToggleSelect(d.id, (e.nativeEvent as MouseEvent).shiftKey)}
-                      className="w-3.5 h-3.5 rounded border-[var(--border-subtle)] bg-[var(--bg-card)] accent-purple-600 cursor-pointer"
                     />
                   </div>
 
-                  {/* Name + Icon + Type label */}
-                  <div className="flex-1 flex items-center gap-2 px-2 min-w-0 pr-4">
+                  {/* Icon + Name + Category */}
+                  <div className="flex-1 flex items-center gap-4 min-w-0 pr-4 pl-1">
                     {renderTypeIcon(typeLabel)}
-                    <span className="truncate font-medium text-[var(--text-primary)]" title={d.fileName}>
-                      {d.fileName}
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[10px] bg-[var(--bg-hover)] text-[var(--text-secondary)] flex-shrink-0 font-normal">
-                      {typeLabel}
-                    </span>
+                    <div className="min-w-0 flex flex-col">
+                      <span className="truncate font-medium text-[var(--text-primary)]" title={d.fileName}>
+                        {d.fileName}
+                      </span>
+                      <span className="text-[11px] text-[var(--text-secondary)]">{typeLabel}</span>
+                    </div>
                   </div>
 
                   {/* Size */}
-                  <div className="w-24 text-right px-2 font-mono text-[var(--text-secondary)]">
+                  <div className="w-28 text-[var(--text-primary)]">
                     {formatBytes(d.totalSize)}
                   </div>
 
                   {/* Status */}
-                  <div className="w-48 px-2 flex items-center">
+                  <div className="w-44 flex items-center">
                     {renderStatus(d)}
                   </div>
 
                   {/* Time Left */}
-                  <div className="w-24 text-right px-2 font-mono text-[var(--text-secondary)]">
-                    {d.state === "downloading" ? formatEta(d.etaSecs) : "--"}
+                  <div className="w-36 text-[var(--text-primary)]">
+                    {d.state === "downloading" ? formatTimeLeft(d.etaSecs) : "0 Sec"}
                   </div>
 
                   {/* Last Modification */}
-                  <div className="w-36 text-right px-2 text-[var(--text-secondary)] text-[11px] truncate">
+                  <div className="w-40 text-[var(--text-secondary)] text-[12px] truncate">
                     {formatDate(d.completedAt || d.createdAt)}
                   </div>
                 </div>

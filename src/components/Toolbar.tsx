@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import {
   Link2,
-  ArrowDown,
+  CloudDownload,
   Play,
-  Pause,
-  Octagon,
+  Square,
+  TimerOff,
   Trash2,
   Settings,
-  ListOrdered,
+  Copy,
   CalendarClock,
-  Share2,
+  Forward,
+  type LucideIcon,
 } from "lucide-react";
 
 interface ToolbarProps {
@@ -27,6 +28,26 @@ interface ToolbarProps {
   onOpenSchedule: () => void;
   onShare: () => void;
 }
+
+interface ToolButtonProps {
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  color: string;
+}
+
+const ToolButton: React.FC<ToolButtonProps> = ({ icon: Icon, label, onClick, disabled, color }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    className="flex flex-col items-center justify-center w-[76px] h-[68px] rounded-xl text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:opacity-45 disabled:hover:bg-transparent transition-colors cursor-pointer group"
+  >
+    <Icon className={`w-7 h-7 ${color} group-hover:scale-110 transition-transform`} strokeWidth={1.7} />
+    <span className="text-[12px] mt-1.5">{label}</span>
+  </button>
+);
 
 export const Toolbar: React.FC<ToolbarProps> = ({
   onQuickAddUrl,
@@ -57,117 +78,43 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   return (
-    <div className="h-20 w-full flex items-center px-4 gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none">
-      {/* Left: Add URL Input Pill */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-shrink-0">
-        <div className="relative flex items-center w-80">
-          <Link2 className="w-4.5 h-4.5 absolute left-3.5 text-[var(--text-secondary)] pointer-events-none" />
+    <div className="h-[84px] w-full flex items-center px-4 gap-5 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none">
+      {/* Left: Add URL Input */}
+      <form onSubmit={handleSubmit} className="flex-1 min-w-[320px] max-w-[560px]">
+        <div className="flex items-center w-full h-12 pl-4 pr-1.5 rounded-xl bg-[var(--bg-card)]">
+          <Link2 className="w-5 h-5 text-[var(--text-secondary)] flex-shrink-0" strokeWidth={1.5} />
           <input
             type="text"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
-            placeholder="Add Url or paste link..."
-            className="w-full h-10 pl-10 pr-3 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-full text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:outline-none focus:border-purple-500/50 transition-all shadow-inner"
+            placeholder="Add Url"
+            className="flex-1 min-w-0 h-full ml-3 bg-transparent text-[13px] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none"
           />
+          <button
+            type="submit"
+            title="Download URL"
+            className="w-9 h-9 rounded-xl gradient-accent hover:opacity-90 active:scale-95 text-white flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
+          >
+            <CloudDownload className="w-5 h-5" strokeWidth={1.8} />
+          </button>
         </div>
-        <button
-          type="submit"
-          title="Download URL"
-          className="w-10 h-10 rounded-full gradient-accent hover:opacity-90 active:scale-95 text-white flex items-center justify-center shadow-md transition-all flex-shrink-0 cursor-pointer"
-        >
-          <ArrowDown className="w-4.5 h-4.5 stroke-[2.5]" />
-        </button>
       </form>
 
-      <div className="h-10 w-[1px] bg-[var(--border-subtle)] mx-1" />
+      <div className="h-9 w-[1px] bg-[var(--border-subtle)] flex-shrink-0" />
 
-      {/* Action Buttons with icon on top, small label below */}
-      <div className="flex items-center gap-1.5">
-        {/* Resume */}
-        <button
-          type="button"
-          onClick={onResume}
-          disabled={!canResume}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-all group cursor-pointer"
-        >
-          <Play className="w-4.5 h-4.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Resume</span>
-        </button>
+      {/* Action Buttons: large icon on top, small label below */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <ToolButton icon={Play} label="Resume" color="text-emerald-400" onClick={onResume} disabled={!canResume} />
+        <ToolButton icon={Square} label="Stop" color="text-amber-400" onClick={onPause} disabled={!canPause} />
+        <ToolButton icon={TimerOff} label="Stop All" color="text-rose-400" onClick={onStopAll} />
 
-        {/* Stop */}
-        <button
-          type="button"
-          onClick={onPause}
-          disabled={!canPause}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-all group cursor-pointer"
-        >
-          <Pause className="w-4.5 h-4.5 text-amber-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Stop</span>
-        </button>
+        <div className="h-9 w-[1px] bg-[var(--border-subtle)] mx-2" />
 
-        {/* Stop All */}
-        <button
-          type="button"
-          onClick={onStopAll}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] transition-all group cursor-pointer"
-        >
-          <Octagon className="w-4.5 h-4.5 text-rose-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Stop All</span>
-        </button>
-
-        {/* Delete */}
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={!hasSelection}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-all group cursor-pointer"
-        >
-          <Trash2 className="w-4.5 h-4.5 text-rose-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Delete</span>
-        </button>
-
-        <div className="h-8 w-[1px] bg-[var(--border-subtle)] mx-1" />
-
-        {/* Options */}
-        <button
-          type="button"
-          onClick={onOpenOptions}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] transition-all group cursor-pointer"
-        >
-          <Settings className="w-4.5 h-4.5 text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] group-hover:rotate-45 transition-all" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Options</span>
-        </button>
-
-        {/* Queues */}
-        <button
-          type="button"
-          onClick={onOpenQueues}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] transition-all group cursor-pointer"
-        >
-          <ListOrdered className="w-4.5 h-4.5 text-purple-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Queues</span>
-        </button>
-
-        {/* Schedule */}
-        <button
-          type="button"
-          onClick={onOpenSchedule}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] transition-all group cursor-pointer"
-        >
-          <CalendarClock className="w-4.5 h-4.5 text-teal-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Schedule</span>
-        </button>
-
-        {/* Share */}
-        <button
-          type="button"
-          onClick={onShare}
-          disabled={!hasSelection}
-          className="flex flex-col items-center justify-center w-16 h-14 rounded-xl hover:bg-[var(--bg-hover)] disabled:opacity-30 disabled:hover:bg-transparent transition-all group cursor-pointer"
-        >
-          <Share2 className="w-4.5 h-4.5 text-sky-400 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] font-medium text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] mt-1.5">Share</span>
-        </button>
+        <ToolButton icon={Trash2} label="Delete" color="text-red-400" onClick={onDelete} disabled={!hasSelection} />
+        <ToolButton icon={Settings} label="Options" color="text-sky-400" onClick={onOpenOptions} />
+        <ToolButton icon={Copy} label="Queues" color="text-purple-400" onClick={onOpenQueues} />
+        <ToolButton icon={CalendarClock} label="Schedule" color="text-teal-400" onClick={onOpenSchedule} />
+        <ToolButton icon={Forward} label="Share" color="text-blue-400" onClick={onShare} disabled={!hasSelection} />
       </div>
     </div>
   );

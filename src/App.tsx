@@ -756,7 +756,7 @@ export default function App() {
       className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none relative"
     >
       {/* 1. Custom Frameless Title Bar */}
-      <TitleBar theme={theme} onToggleTheme={toggleTheme} />
+      <TitleBar />
 
       {/* 2. Menu Bar with Dropdowns and Live Search */}
       <MenuBar
@@ -828,6 +828,8 @@ export default function App() {
             sortField={sortField}
             sortOrder={sortOrder}
             onSort={handleSort}
+            allSelected={selectedIds.size === filteredAndSortedDownloads.length && filteredAndSortedDownloads.length > 0}
+            onToggleSelectAll={handleToggleSelectAll}
           />
         </main>
       </div>

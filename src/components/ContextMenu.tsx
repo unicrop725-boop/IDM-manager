@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 import {
+
+  FileText,
+  FileSymlink,
+  FilePen,
+  FileDown,
   FolderOpen,
-  ExternalLink,
-  Edit3,
-  RotateCcw,
-  Play,
-  Pause,
+  CirclePlay,
+  CircleStop,
   RefreshCw,
   ListPlus,
-  ListMinus,
-  FileText,
+  CircleMinus,
+  Info,
   ChevronRight,
   ShieldAlert,
   Archive,
   Globe,
   Share2,
+  type LucideIcon,
 } from "lucide-react";
 import { DownloadInfo, QueueInfo } from "../types";
 
@@ -45,6 +48,28 @@ interface ContextMenuProps {
   onShare?: (d: DownloadInfo) => void;
 }
 
+interface ItemProps {
+  icon: LucideIcon;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  trailing?: React.ReactNode;
+}
+
+const Item: React.FC<ItemProps> = ({ icon: Icon, label, onClick, disabled, trailing }) => (
+  <button
+    disabled={disabled}
+    onClick={onClick}
+    className="w-full text-left px-4 py-[7px] flex items-center gap-3.5 text-[12px] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] disabled:text-[var(--text-disabled)] disabled:hover:bg-transparent transition-colors"
+  >
+    <Icon className="w-[15px] h-[15px] flex-shrink-0" strokeWidth={1.5} />
+    <span className="flex-1 truncate">{label}</span>
+    {trailing}
+  </button>
+);
+
+const Divider: React.FC = () => <div className="h-[1px] bg-[var(--border-subtle)] mx-4 my-1.5" />;
+
 export const ContextMenu: React.FC<ContextMenuProps> = ({
   position,
   queues,
@@ -74,10 +99,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const isArchive = d.fileName.match(/\.(zip|rar|7z|tar|gz|bz2|xz)$/i) !== null;
 
   // Clamping within viewport
-  const menuWidth = 220;
-  const menuHeight = 360;
+  const menuWidth = 250;
+  const menuHeight = 440;
   const left = Math.min(position.x, window.innerWidth - menuWidth - 10);
   const top = Math.min(position.y, window.innerHeight - menuHeight - 10);
+
+  const run = (fn: (d: DownloadInfo) => void) => () => {
+    fn(d);
+    onClose();
+  };
 
   return (
     <div
@@ -91,155 +121,33 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div
         style={{ left: `${left}px`, top: `${top}px` }}
         onClick={(e) => e.stopPropagation()}
-        className="absolute w-56 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1.5 text-xs text-[var(--text-primary)] z-50 animate-in fade-in zoom-in-95 duration-150"
+        className="absolute w-60 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2.5 z-50 animate-in fade-in zoom-in-95 duration-150"
       >
-        {/* Open */}
-        <button
-          disabled={!isCompleted}
-          onClick={() => {
-            onOpen(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent flex items-center gap-2.5 transition-colors"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-purple-400" />
-          <span>Open</span>
-        </button>
-
-        {/* Open With */}
-        <button
-          disabled={!isCompleted}
-          onClick={() => {
-            onOpenWith(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent flex items-center gap-2.5 transition-colors"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-teal-400" />
-          <span>Open With...</span>
-        </button>
-
-        {/* Open Folder */}
-        <button
-          onClick={() => {
-            onOpenFolder(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors"
-        >
-          <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-          <span>Open Folder</span>
-        </button>
-
-        {/* Archive extract (if applicable) */}
+        <Item icon={FileText} label="Open" disabled={!isCompleted} onClick={run(onOpen)} />
+        <Item icon={FileSymlink} label="Open With" disabled={!isCompleted} onClick={run(onOpenWith)} />
+        <Item icon={FolderOpen} label="Open Folder" onClick={run(onOpenFolder)} />
         {isCompleted && isArchive && onExtractArchive && (
-          <button
-            onClick={() => {
-              onExtractArchive(d);
-              onClose();
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 text-teal-400 transition-colors"
-          >
-            <Archive className="w-3.5 h-3.5" />
-            <span>Extract Archive</span>
-          </button>
+          <Item icon={Archive} label="Extract Archive" onClick={run(onExtractArchive)} />
         )}
-
-        {/* Virus scan (if completed) */}
         {isCompleted && onDefenderScan && (
-          <button
-            onClick={() => {
-              onDefenderScan(d);
-              onClose();
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 text-blue-400 transition-colors"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Scan with Defender</span>
-          </button>
+          <Item icon={ShieldAlert} label="Scan with Defender" onClick={run(onDefenderScan)} />
         )}
 
-        <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
+        <Divider />
 
-        {/* Move / Rename */}
-        <button
-          onClick={() => {
-            onMoveRename(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors"
-        >
-          <Edit3 className="w-3.5 h-3.5 text-blue-400" />
-          <span>Move / Rename...</span>
-        </button>
+        <Item icon={FilePen} label="Move/Rename" onClick={run(onMoveRename)} />
+        <Item icon={FileDown} label="Redownload" onClick={run(onRedownload)} />
 
-        {/* Redownload */}
-        <button
-          onClick={() => {
-            onRedownload(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-teal-400" />
-          <span>Redownload</span>
-        </button>
+        <Divider />
 
-        <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
-
-        {/* Resume Download */}
-        <button
-          disabled={!canResume}
-          onClick={() => {
-            onResume(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent flex items-center gap-2.5 transition-colors"
-        >
-          <Play className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Resume Download</span>
-        </button>
-
-        {/* Stop Download */}
-        <button
-          disabled={!isDownloading}
-          onClick={() => {
-            onStop(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent flex items-center gap-2.5 transition-colors"
-        >
-          <Pause className="w-3.5 h-3.5 text-amber-400" />
-          <span>Stop Download</span>
-        </button>
-
-        {/* Refresh Download Address */}
-        <button
-          onClick={() => {
-            onRefreshAddress(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Refresh Download Address</span>
-        </button>
-
-        {/* Grab URL from browser */}
+        <Item icon={CirclePlay} label="Resume Download" disabled={!canResume} onClick={run(onResume)} />
+        <Item icon={CircleStop} label="Stop Download" disabled={!isDownloading} onClick={run(onStop)} />
+        <Item icon={RefreshCw} label="Refresh Download Address" onClick={run(onRefreshAddress)} />
         {onGrabUrlFromBrowser && (
-          <button
-            onClick={() => {
-              onGrabUrlFromBrowser(d);
-              onClose();
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 text-purple-400 transition-colors"
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Grab URL from browser</span>
-          </button>
+          <Item icon={Globe} label="Grab URL from browser" onClick={run(onGrabUrlFromBrowser)} />
         )}
 
-        <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
+        <Divider />
 
         {/* Add to queue submenu */}
         <div
@@ -247,18 +155,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
           onMouseEnter={() => setShowQueueSubmenu(true)}
           onMouseLeave={() => setShowQueueSubmenu(false)}
         >
-          <button className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center justify-between transition-colors">
-            <div className="flex items-center gap-2.5">
-              <ListPlus className="w-3.5 h-3.5 text-purple-400" />
-              <span>Add to queue</span>
-            </div>
-            <ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-          </button>
-
+          <Item
+            icon={ListPlus}
+            label="Add to queue"
+            trailing={<ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
+          />
           {showQueueSubmenu && (
-            <div className="absolute left-full top-0 ml-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
+            <div className="absolute left-full top-0 ml-1 w-48 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2 z-50">
               {queues.length === 0 ? (
-                <div className="px-3 py-1.5 text-[11px] text-[var(--text-disabled)]">No queues created</div>
+                <div className="px-4 py-1.5 text-[11px] text-[var(--text-disabled)]">No queues created</div>
               ) : (
                 queues.map((q) => (
                   <button
@@ -267,7 +172,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
                       onAddToQueue(d, q.id);
                       onClose();
                     }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center justify-between text-xs transition-colors"
+                    className="w-full text-left px-4 py-[7px] hover:bg-[var(--bg-hover)] flex items-center justify-between text-[12px] transition-colors"
                   >
                     <span className="truncate">{q.name}</span>
                     {d.queueId === q.id && <span className="text-[10px] text-purple-400">Current</span>}
@@ -277,47 +182,12 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             </div>
           )}
         </div>
+        <Item icon={CircleMinus} label="Delete from Queue" disabled={!d.queueId} onClick={run(onDeleteFromQueue)} />
 
-        {/* Delete from Queue */}
-        <button
-          disabled={!d.queueId}
-          onClick={() => {
-            onDeleteFromQueue(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] disabled:opacity-35 disabled:hover:bg-transparent flex items-center gap-2.5 transition-colors"
-        >
-          <ListMinus className="w-3.5 h-3.5 text-rose-400" />
-          <span>Delete from Queue</span>
-        </button>
+        <Divider />
 
-        <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
-
-        {/* Share */}
-        {onShare && (
-          <button
-            onClick={() => {
-              onShare(d);
-              onClose();
-            }}
-            className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 text-purple-400 transition-colors"
-          >
-            <Share2 className="w-3.5 h-3.5" />
-            <span>Share...</span>
-          </button>
-        )}
-
-        {/* Properties */}
-        <button
-          onClick={() => {
-            onProperties(d);
-            onClose();
-          }}
-          className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2.5 transition-colors"
-        >
-          <FileText className="w-3.5 h-3.5 text-[var(--text-secondary)]" />
-          <span>Properties</span>
-        </button>
+        {onShare && <Item icon={Share2} label="Share" onClick={run(onShare)} />}
+        <Item icon={Info} label="Properties" onClick={run(onProperties)} />
       </div>
     </div>
   );

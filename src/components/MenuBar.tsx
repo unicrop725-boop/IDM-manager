@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ThemeToggle } from "./ThemeToggle";
-import { Search, Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, Smartphone, BarChart3, Activity, Key, RefreshCw } from "lucide-react";
+import { Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, Smartphone, BarChart3, Activity, Key, RefreshCw } from "lucide-react";
 
 interface MenuBarProps {
   searchQuery: string;
@@ -63,7 +63,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   return (
     <div
       ref={menuRef}
-      className="h-14 w-full flex items-center justify-between px-5 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none text-[13px] text-[var(--text-secondary)] z-40"
+      className="h-14 w-full flex items-center justify-between px-5 grad-bar-down select-none text-[13px] text-[var(--text-secondary)] z-40"
     >
       {/* Menus List */}
       <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             Tasks
           </button>
           {activeMenu === "Tasks" && (
-            <div className="absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
+            <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
               <button
                 onClick={() => {
                   onOpenAddModal();
@@ -172,7 +172,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             File
           </button>
           {activeMenu === "File" && (
-            <div className="absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
+            <div className="dd-anim absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
               <button
                 onClick={() => {
                   onOpenDiskCleaner();
@@ -208,7 +208,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             Downloads
           </button>
           {activeMenu === "Downloads" && (
-            <div className="absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
+            <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
               <button
                 onClick={() => {
                   onDeleteSelected();
@@ -258,7 +258,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             View
           </button>
           {activeMenu === "View" && (
-            <div className="absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
+            <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
               <button
                 onClick={() => {
                   onToggleTheme();
@@ -296,7 +296,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
             Help
           </button>
           {activeMenu === "Help" && (
-            <div className="absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
+            <div className="dd-anim absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
               {onOpenUpdate && (
                 <button
                   onClick={() => {
@@ -340,15 +340,21 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       {/* Right: Theme Toggle + Rounded Search Box */}
       <div className="flex items-center gap-3">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-      <div className="relative w-[290px]">
-        <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-primary)] pointer-events-none" strokeWidth={1.8} />
+      <div className="fancy-field relative w-[290px] h-10">
+        <svg
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 fill-[var(--text-secondary)] pointer-events-none"
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+        >
+          <path d="M21.53 20.47l-3.66-3.66C19.195 15.24 20 13.214 20 11c0-4.97-4.03-9-9-9s-9 4.03-9 9 4.03 9 9 9c2.215 0 4.24-.804 5.808-2.13l3.66 3.66c.147.146.34.22.53.22s.385-.073.53-.22c.295-.293.295-.767.002-1.06zM3.5 11c0-4.135 3.365-7.5 7.5-7.5s7.5 3.365 7.5 7.5-3.365 7.5-7.5 7.5-7.5-3.365-7.5-7.5z" />
+        </svg>
         <input
           id="global-search-input"
-          type="text"
+          type="search"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search in the List"
-          className="w-full h-11 pl-12 pr-4 bg-[var(--bg-card)] hover:bg-[var(--bg-hover)] focus:bg-[var(--bg-card)] rounded-xl text-[13px] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:ring-1 focus:ring-purple-500/50 transition-all"
+          className="fancy-input"
         />
       </div>
       </div>

@@ -1,5 +1,6 @@
 import React from "react";
-import { X, Pause, Play, Ban, EyeOff, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { ModalCorner } from "./NotchCorner";
+import { Pause, Play, Ban, EyeOff, Zap, CheckCircle2, AlertCircle } from "lucide-react";
 import { DownloadInfo } from "../types";
 import { formatBytes, formatSpeed, formatEta, isUnbounded } from "../format";
 
@@ -28,19 +29,14 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[560px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[560px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm truncate pr-4">
             <Zap className="w-4 h-4 text-purple-400 flex-shrink-0" />
             <span className="truncate">{d.fileName}</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content Body */}

@@ -166,7 +166,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--bg-app)] select-none overflow-hidden">
       {/* Table Header */}
-      <div className="h-12 w-full flex items-center px-4 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[13px] text-[var(--text-secondary)] select-none flex-shrink-0">
+      <div className="h-12 w-full flex items-center px-4 grad-bar-down text-[13px] text-[var(--text-secondary)] select-none flex-shrink-0">
         <div className="w-10 flex items-center">
           <Checkbox
             checked={allSelected && downloads.length > 0}

@@ -78,22 +78,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   return (
-    <div className="h-[84px] w-full flex items-center px-4 gap-5 border-b border-[var(--border-subtle)] bg-[var(--bg-panel)] select-none">
+    <div className="h-[84px] w-full flex items-center px-4 gap-5 grad-bar-down select-none">
       {/* Left: Add URL Input */}
       <form onSubmit={handleSubmit} className="flex-1 min-w-[320px] max-w-[560px]">
-        <div className="flex items-center w-full h-12 pl-4 pr-1.5 rounded-xl bg-[var(--bg-card)]">
+        <div className="fancy-field flex items-center w-full h-12 pl-4 pr-1.5">
           <Link2 className="w-5 h-5 text-[var(--text-secondary)] flex-shrink-0" strokeWidth={1.5} />
           <input
             type="text"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="Add Url"
-            className="flex-1 min-w-0 h-full ml-3 bg-transparent text-[13px] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none"
+            className="fancy-input !pl-3"
           />
           <button
             type="submit"
             title="Download URL"
-            className="w-9 h-9 rounded-xl gradient-accent hover:opacity-90 active:scale-95 text-white flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
+            className="w-9 h-9 rounded-md gradient-accent hover:opacity-90 active:scale-95 text-white flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
           >
             <CloudDownload className="w-5 h-5" strokeWidth={1.8} />
           </button>

@@ -1,5 +1,7 @@
+import { Select } from "./Select";
+import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
-import { X, Clock, Wifi, Moon } from "lucide-react";
+import { Clock, Wifi, Moon } from "lucide-react";
 import type { QueueInfo, QueueSchedule } from "../types";
 
 interface Props {
@@ -93,16 +95,14 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none">
-      <div className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-900 shadow-2xl text-xs text-zinc-300">
+      <div className="notch-card w-full max-w-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <Clock size={16} className="text-amber-400" />
             <span>{isEditing ? `Queue Settings - ${queue.name}` : "Create New Queue"}</span>
           </div>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200">
-            <X size={16} />
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
@@ -115,66 +115,66 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
           {/* Name & Concurrent limit */}
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2">
-              <label className="mb-1 block font-medium text-zinc-400">Queue Name</label>
+              <label className="mb-1 block font-medium text-[var(--text-secondary)]">Queue Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Night Queue, Movies"
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-zinc-200 outline-none focus:border-sky-500 transition"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-sky-500 transition"
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block font-medium text-zinc-400">Max Concurrent</label>
+              <label className="mb-1 block font-medium text-[var(--text-secondary)]">Max Concurrent</label>
               <input
                 type="number"
                 min={1}
                 max={16}
                 value={maxConcurrent}
                 onChange={(e) => setMaxConcurrent(parseInt(e.target.value, 10) || 1)}
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-zinc-200 outline-none focus:border-sky-500 transition"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-sky-500 transition"
               />
             </div>
           </div>
 
           {/* Scheduler Section */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-3">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5 space-y-3">
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 font-medium text-white cursor-pointer">
+              <label className="flex items-center gap-2 font-medium text-[var(--text-primary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={scheduleEnabled}
                   onChange={(e) => setScheduleEnabled(e.target.checked)}
-                  className="rounded border-white/20 text-sky-500"
+                  className="rounded border-[var(--text-disabled)] text-sky-500"
                 />
                 <span>Enable Scheduler</span>
               </label>
-              <span className="text-[11px] text-zinc-500">Automate start/stop and post-actions</span>
+              <span className="text-[11px] text-[var(--text-secondary)]">Automate start/stop and post-actions</span>
             </div>
 
             {scheduleEnabled && (
-              <div className="pt-2 space-y-3 border-t border-white/5">
+              <div className="pt-2 space-y-3 border-t border-[var(--border-subtle)]">
                 {/* Time picker */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="mb-1 block text-zinc-400">Start Time (HH:MM:SS)</label>
+                    <label className="mb-1 block text-[var(--text-secondary)]">Start Time (HH:MM:SS)</label>
                     <input
                       type="text"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
                       placeholder="e.g. 19:30:00 or 19:30"
-                      className="w-full rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 font-mono text-[11px] text-zinc-200 outline-none focus:border-sky-500"
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 font-mono text-[11px] text-[var(--text-primary)] outline-none focus:border-sky-500"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-zinc-400">Stop Time (optional)</label>
+                    <label className="mb-1 block text-[var(--text-secondary)]">Stop Time (optional)</label>
                     <input
                       type="text"
                       value={stopTime}
                       onChange={(e) => setStopTime(e.target.value)}
                       placeholder="e.g. 06:00:00"
-                      className="w-full rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 font-mono text-[11px] text-zinc-200 outline-none focus:border-sky-500"
+                      className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 font-mono text-[11px] text-[var(--text-primary)] outline-none focus:border-sky-500"
                     />
                   </div>
                 </div>
@@ -182,7 +182,7 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                 {/* Days of week */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-zinc-400">Active Days</label>
+                    <label className="text-[var(--text-secondary)]">Active Days</label>
                     <div className="flex gap-2 text-[10px] text-sky-400">
                       <button type="button" onClick={handleSelectAllDays} className="hover:underline">
                         All
@@ -206,7 +206,7 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                           className={`flex-1 rounded-md py-1.5 font-medium transition ${
                             active
                               ? "bg-sky-500 text-black font-semibold"
-                              : "border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10"
+                              : "border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                           }`}
                         >
                           {d.label}
@@ -220,15 +220,15 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
           </div>
 
           {/* Action After Completion */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-3">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5 space-y-3">
             <div>
-              <label className="mb-1 block font-medium text-zinc-300">
+              <label className="mb-1 block font-medium text-[var(--text-secondary)]">
                 Action after queue completion
               </label>
-              <select
+              <Select
                 value={action}
                 onChange={(e) => setAction(e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-zinc-200 outline-none focus:border-sky-500 transition"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-sky-500 transition"
               >
                 <option value="none">None (Leave computer running)</option>
                 <option value="sleep">Sleep computer</option>
@@ -236,53 +236,53 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                 <option value="hibernate">Hibernate computer</option>
                 <option value="exitApp">Exit FlowGet app</option>
                 <option value="runProgram">Run external program</option>
-              </select>
+              </Select>
             </div>
 
             {action === "runProgram" && (
               <div>
-                <label className="mb-1 block text-zinc-400">Executable or script path</label>
+                <label className="mb-1 block text-[var(--text-secondary)]">Executable or script path</label>
                 <input
                   type="text"
                   value={programPath}
                   onChange={(e) => setProgramPath(e.target.value)}
                   placeholder="C:\Scripts\notify.bat or custom.exe"
-                  className="w-full rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-zinc-200 font-mono text-[11px] outline-none focus:border-sky-500"
+                  className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2.5 py-1.5 text-[var(--text-primary)] font-mono text-[11px] outline-none focus:border-sky-500"
                 />
               </div>
             )}
           </div>
 
           {/* Network and Night Restrictions */}
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 space-y-2.5">
-            <label className="flex items-center gap-2 font-medium text-zinc-300 cursor-pointer">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3.5 space-y-2.5">
+            <label className="flex items-center gap-2 font-medium text-[var(--text-secondary)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={wifiOnly}
                 onChange={(e) => setWifiOnly(e.target.checked)}
-                className="rounded border-white/20 text-sky-500"
+                className="rounded border-[var(--text-disabled)] text-sky-500"
               />
               <Wifi size={14} className="text-sky-400" />
               <span>Download only on Wi-Fi</span>
             </label>
-            <p className="pl-6 text-[11px] text-zinc-500">
+            <p className="pl-6 text-[11px] text-[var(--text-secondary)]">
               Pauses or waits if connected via Ethernet, cellular data, or if Wi-Fi is disconnected.
             </p>
 
-            <div className="pt-2 border-t border-white/5">
-              <label className="flex items-center gap-2 font-medium text-zinc-300 cursor-pointer">
+            <div className="pt-2 border-t border-[var(--border-subtle)]">
+              <label className="flex items-center gap-2 font-medium text-[var(--text-secondary)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={nightOnly}
                   onChange={(e) => setNightOnly(e.target.checked)}
-                  className="rounded border-white/20 text-sky-500"
+                  className="rounded border-[var(--text-disabled)] text-sky-500"
                 />
                 <Moon size={14} className="text-violet-400" />
                 <span>Download only at night</span>
               </label>
 
               {nightOnly && (
-                <div className="mt-2 pl-6 flex items-center gap-2 text-zinc-400">
+                <div className="mt-2 pl-6 flex items-center gap-2 text-[var(--text-secondary)]">
                   <span>Between</span>
                   <input
                     type="number"
@@ -290,7 +290,7 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                     max={23}
                     value={nightStartHour}
                     onChange={(e) => setNightStartHour(parseInt(e.target.value, 10) || 0)}
-                    className="w-14 rounded border border-white/10 bg-black/40 px-2 py-1 text-center text-zinc-200"
+                    className="w-14 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-1 text-center text-[var(--text-primary)]"
                   />
                   <span>:00 and</span>
                   <input
@@ -299,7 +299,7 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                     max={23}
                     value={nightEndHour}
                     onChange={(e) => setNightEndHour(parseInt(e.target.value, 10) || 6)}
-                    className="w-14 rounded border border-white/10 bg-black/40 px-2 py-1 text-center text-zinc-200"
+                    className="w-14 rounded border border-[var(--border-subtle)] bg-[var(--bg-card)] px-2 py-1 text-center text-[var(--text-primary)]"
                   />
                   <span>:00</span>
                 </div>
@@ -308,11 +308,11 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border-subtle)]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-zinc-300 hover:bg-white/10 transition"
+              className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-2 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition"
             >
               Cancel
             </button>

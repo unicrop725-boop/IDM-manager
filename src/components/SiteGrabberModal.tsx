@@ -1,5 +1,7 @@
+import { Select } from "./Select";
+import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
-import { X, Globe, Search, Download, CheckSquare, Square, Folder } from "lucide-react";
+import { Globe, Search, Download, CheckSquare, Square, Folder } from "lucide-react";
 import { api } from "../api";
 import type { GrabbedAsset } from "../types";
 
@@ -106,7 +108,8 @@ export default function SiteGrabberModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-3xl rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-[var(--text-primary)] max-h-[88vh]">
+      <div className="notch-card relative w-full max-w-3xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-[var(--text-primary)] max-h-[88vh]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-3">
@@ -118,12 +121,6 @@ export default function SiteGrabberModal({
               <p className="text-xs text-[var(--text-secondary)]">Explore a website and download all matching files</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content */}
@@ -146,7 +143,7 @@ export default function SiteGrabberModal({
               <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 Crawl Depth
               </label>
-              <select
+              <Select
                 value={depth}
                 onChange={(e) => setDepth(Number(e.target.value))}
                 className="w-full h-9 px-3 text-xs rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-teal-500/50"
@@ -154,7 +151,7 @@ export default function SiteGrabberModal({
                 <option value={1}>1 (Current Page Only)</option>
                 <option value={2}>2 (Direct Links)</option>
                 <option value={3}>3 (2 Clicks Deep)</option>
-              </select>
+              </Select>
             </div>
           </div>
 

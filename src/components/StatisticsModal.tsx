@@ -1,4 +1,5 @@
-import { X, BarChart3, TrendingUp, Calendar, Globe, HardDrive, Zap } from "lucide-react";
+import { ModalCorner } from "./NotchCorner";
+import { BarChart3, TrendingUp, Calendar, Globe, HardDrive, Zap } from "lucide-react";
 import { formatBytes } from "../format";
 import type { DownloadInfo } from "../types";
 
@@ -46,19 +47,14 @@ export default function StatisticsModal({ downloads, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[580px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)] max-h-[85vh]">
+      <div className="notch-card w-[580px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)] max-h-[85vh]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <BarChart3 className="w-4 h-4 text-purple-400" />
             <span>Download Statistics Dashboard</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content */}

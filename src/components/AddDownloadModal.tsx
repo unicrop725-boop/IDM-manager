@@ -1,5 +1,7 @@
+import { Select } from "./Select";
+import { ModalCorner } from "./NotchCorner";
 import { useState, useEffect } from "react";
-import { X, ChevronDown, ChevronUp, Download, Link2, Folder, ListOrdered, Film, AlertTriangle, Sparkles, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Film, AlertTriangle, Sparkles, Wand2 } from "lucide-react";
 import { api } from "../api";
 import { cleanFileName } from "../utils/smartNaming";
 import type { AddRequest, Category, DuplicateCheckResult, QueueInfo, MediaResolveResult } from "../types";
@@ -114,6 +116,15 @@ export default function AddDownloadModal({
       .catch(() => {});
   }, [url]);
 
+  const browseSaveDir = async () => {
+    try {
+      const picked = await api.pickFolder(saveDir);
+      if (picked) setSaveDir(picked);
+    } catch (e) {
+      console.error("Browse folder error:", e);
+    }
+  };
+
   const handleCategoryChange = (catId: string) => {
     setSelectedCategory(catId);
     const cat = categories.find((c) => c.id === catId);
@@ -215,19 +226,14 @@ export default function AddDownloadModal({
       )}
 
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm select-none animate-in fade-in duration-150">
-        <div className="w-full max-w-xl rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden flex flex-col">
+        <div className="notch-card w-full max-w-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden flex flex-col">
+          <ModalCorner onClose={onClose} />
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--bg-card)] px-5 py-3.5">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
               <Download className="w-4 h-4 text-purple-400" />
               <span>Add Download</span>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
@@ -286,7 +292,7 @@ export default function AddDownloadModal({
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">Available Qualities</label>
-                    <select
+                    <Select
                       value={selectedFormatId}
                       onChange={(e) => setSelectedFormatId(e.target.value)}
                       className="w-full h-8 px-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] text-xs outline-none focus:border-purple-500/50"
@@ -296,11 +302,11 @@ export default function AddDownloadModal({
                           {f.qualityLabel} ({f.ext.toUpperCase()})
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">Format Conversion (ffmpeg)</label>
-                    <select
+                    <Select
                       value={convertTo}
                       onChange={(e) => setConvertTo(e.target.value as any)}
                       className="w-full h-8 px-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] text-xs outline-none focus:border-purple-500/50"
@@ -309,7 +315,7 @@ export default function AddDownloadModal({
                       <option value="mp4">Convert to MP4</option>
                       <option value="mp3">Convert to MP3 (Audio 320k)</option>
                       <option value="m4a">Convert to M4A (AAC Audio)</option>
-                    </select>
+                    </Select>
                   </div>
                 </div>
               </div>
@@ -343,7 +349,7 @@ export default function AddDownloadModal({
 
               <div>
                 <label className="mb-1.5 block font-medium text-[var(--text-primary)]">Category</label>
-                <select
+                <Select
                   value={selectedCategory}
                   onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full h-9 px-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] outline-none focus:border-purple-500/50 transition-colors cursor-pointer"
@@ -353,7 +359,7 @@ export default function AddDownloadModal({
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -367,8 +373,18 @@ export default function AddDownloadModal({
                     type="text"
                     value={saveDir}
                     onChange={(e) => setSaveDir(e.target.value)}
-                    className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] outline-none focus:border-purple-500/50 font-mono text-[11px] truncate transition-colors"
+                    className="w-full h-9 pl-9 pr-24 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] outline-none focus:border-purple-500/50 font-mono text-[11px] truncate transition-colors"
                   />
+
+                  <button
+                    type="button"
+                    onClick={browseSaveDir}
+                    title="Choose a folder"
+                    className="absolute right-1.5 h-7 px-2.5 rounded-md gradient-accent text-white text-[11px] font-medium flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    <span>Browse</span>
+                  </button>
                 </div>
               </div>
 
@@ -376,7 +392,7 @@ export default function AddDownloadModal({
                 <label className="mb-1.5 block font-medium text-[var(--text-primary)]">Queue</label>
                 <div className="relative flex items-center">
                   <ListOrdered className="w-4 h-4 absolute left-3 text-[var(--text-disabled)] pointer-events-none" />
-                  <select
+                  <Select
                     value={selectedQueue}
                     onChange={(e) => setSelectedQueue(e.target.value)}
                     className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] outline-none focus:border-purple-500/50 transition-colors cursor-pointer"
@@ -386,7 +402,7 @@ export default function AddDownloadModal({
                         {q.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
             </div>

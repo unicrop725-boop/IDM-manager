@@ -24,7 +24,7 @@ export const FooterBar: React.FC<FooterBarProps> = ({
   const toMbs = (bps: number) => ((bps * 8) / (1024 * 1024)).toFixed(2);
 
   return (
-    <footer className="h-12 w-full flex items-center justify-between px-5 border-t border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-secondary)] select-none z-30">
+    <footer className="h-12 w-full flex items-center justify-between px-5 grad-bar-up text-[var(--text-secondary)] select-none z-30">
       {/* Left: Select All Checkbox + Count */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-4 group">

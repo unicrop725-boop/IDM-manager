@@ -1,5 +1,7 @@
+import { Select } from "./Select";
+import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
-import { X, Trash2, CheckCircle2, HardDrive, Clock } from "lucide-react";
+import { Trash2, CheckCircle2, HardDrive, Clock } from "lucide-react";
 import { DownloadInfo } from "../types";
 import { formatBytes } from "../format";
 
@@ -83,19 +85,14 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[520px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[520px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm">
             <HardDrive className="w-4 h-4 text-teal-400" />
             <span>Disk Space Cleaner</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content */}
@@ -172,7 +169,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
                 <div className="flex items-center gap-2 pl-7 pt-1 text-[11px]">
                   <Clock className="w-3.5 h-3.5 text-[var(--text-disabled)]" />
                   <span className="text-[var(--text-secondary)]">Older than:</span>
-                  <select
+                  <Select
                     value={olderThanDays}
                     onChange={(e) => setOlderThanDays(Number(e.target.value))}
                     className="px-2 py-1 rounded-lg bg-[var(--bg-panel)] border border-[var(--border-subtle)] text-[var(--text-primary)] outline-none cursor-pointer"
@@ -182,7 +179,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
                     <option value={30}>30 Days (1 Month)</option>
                     <option value={90}>90 Days (3 Months)</option>
                     <option value={0}>All Finished Downloads</option>
-                  </select>
+                  </Select>
                 </div>
               </div>
 

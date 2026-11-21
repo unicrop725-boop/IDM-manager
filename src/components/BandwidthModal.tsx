@@ -1,4 +1,5 @@
-import { X, Activity, Monitor, HardDrive } from "lucide-react";
+import { ModalCorner } from "./NotchCorner";
+import { Activity, Monitor, HardDrive } from "lucide-react";
 import { formatSpeed } from "../format";
 import type { AdapterInfo, DownloadInfo } from "../types";
 
@@ -19,19 +20,14 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[500px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[500px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <Activity className="w-4 h-4 text-purple-400" />
             <span>Per-App Bandwidth View</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content */}

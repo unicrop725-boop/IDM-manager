@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans: "Outfit Variable", "Outfit", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --font-mono: "Outfit Variable", "Outfit", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+}
+
 @layer base {
   :root {
     --bg-app: #0F0F12;
@@ -13,6 +18,11 @@
     --accent-purple: #8B5CF6;
     --accent-teal: #2DD4BF;
     --accent-gradient: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+    --field-bg: #202027;
+    --field-glow: #2C2C36;
+    --field-bg-hover: #282832;
+    --field-glow-hover: rgba(139, 92, 246, 0.35);
+    --field-ring: rgba(22, 22, 26, 0.92);
   }
 
   :root.light {
@@ -27,6 +37,11 @@
     --accent-purple: #7C3AED;
     --accent-teal: #0D9488;
     --accent-gradient: linear-gradient(135deg, #7C3AED 0%, #0D9488 100%);
+    --field-bg: #EEF0F3;
+    --field-glow: #D9DEE5;
+    --field-bg-hover: #E6E9EE;
+    --field-glow-hover: rgba(124, 58, 237, 0.30);
+    --field-ring: rgba(245, 245, 245, 0.92);
   }
 }
 
@@ -35,7 +50,7 @@ body {
   padding: 0;
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Outfit Variable', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   user-select: none;
   overflow: hidden;
   height: 100vh;
@@ -143,4 +158,504 @@ body {
   background-position: center;
   background-size: 12px 12px;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cc3f' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 12.5 9.5 18 20 6'/></svg>");
+}
+
+/* ===== Speed test arc gauge ===== */
+@property --spd-progress {
+  syntax: "<number>";
+  initial-value: 0;
+  inherits: false;
+}
+
+.spd-stage {
+  position: relative;
+  width: 400px;
+  height: 300px;
+  --spd-arc: 270deg;
+  --spd-start: 50deg;
+  --spd-end: calc(var(--spd-start) + var(--spd-progress) * var(--spd-arc));
+  transition: --spd-progress 0.25s ease-out;
+}
+
+.spd-progress-fill {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  background-color: var(--spd-track, #c4c8c7);
+  background-image: conic-gradient(
+    from 175deg,
+    transparent 0deg,
+    transparent var(--spd-start),
+    oklch(from var(--spd-color) calc(l * 1.2) calc(c * 0.25) h) var(--spd-start),
+    oklch(from var(--spd-color) calc(l * 0.9) calc(c * 1.1) h) var(--spd-end),
+    rgba(150, 150, 150, 0.8) calc(var(--spd-end) + 1deg),
+    transparent calc(var(--spd-end) + 10deg)
+  );
+  transform: translateY(45px);
+}
+
+.spd-progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: conic-gradient(
+    from 175deg,
+    transparent calc(var(--spd-end) - 1deg),
+    rgba(255, 255, 255, 0.55) var(--spd-end),
+    transparent calc(var(--spd-end) + 1deg)
+  );
+}
+
+.spd-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background-color: oklch(from var(--spd-color) l c h / 20%);
+  border: 1px solid oklch(from var(--spd-color) calc(l * 0.9) c h / 30%);
+}
+
+/* ===== Notched cards (modals, widgets) ===== */
+.notch-card {
+  position: relative;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: rgba(0, 0, 0, 0.35) -2px 4px 14px;
+}
+
+/* keep header content clear of the notch */
+.notch-card > .notch-corner + * {
+  padding-right: 76px;
+  /* starts at the card colour so the notch's concave corners blend in */
+  background: linear-gradient(
+    to bottom,
+    var(--card-bg, var(--bg-panel)),
+    color-mix(in srgb, var(--card-bg, var(--bg-panel)), var(--text-primary) 6%)
+  );
+}
+
+/* friendlier, rounder inner elements */
+.notch-card .rounded-xl {
+  border-radius: 18px;
+}
+.notch-card .rounded-lg {
+  border-radius: 14px;
+}
+
+.notch-corner {
+  --notch-gap: 6px;
+  --notch-size: 44px;
+  --notch-inset: 8px;
+  --notch-radius: calc((var(--notch-size) + var(--notch-inset) + var(--notch-gap)) / 2);
+  --notch-bg: color-mix(in srgb, var(--card-bg, var(--bg-panel)), var(--text-primary) 9%);
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--notch-gap);
+  padding: var(--notch-inset) var(--notch-inset) var(--notch-gap) var(--notch-gap);
+  background-color: var(--notch-bg);
+  border-bottom-left-radius: var(--notch-radius);
+}
+
+.notch-corner i[data-corner] {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  z-index: 2;
+  background-color: var(--notch-bg);
+  pointer-events: none;
+}
+.notch-corner i[data-corner]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-top-right-radius: var(--notch-radius);
+  background-color: var(--card-bg, var(--bg-panel));
+  z-index: -1;
+}
+.notch-corner i[data-corner="tl"] {
+  top: 0;
+  right: 100%;
+}
+.notch-corner i[data-corner="br"] {
+  right: 0;
+  top: 100%;
+}
+
+.notch-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--notch-size);
+  height: var(--notch-size);
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  color: var(--text-primary);
+  background-color: color-mix(in srgb, var(--notch-bg), var(--text-primary) 7%);
+  box-shadow: rgba(0, 0, 0, 0.12) 0 1px 3px, rgba(27, 31, 35, 0.2) 0 0 0 1px;
+  transition: all 0.4s ease;
+}
+.notch-action:hover {
+  background: var(--accent-gradient);
+  color: #fff;
+}
+
+/* Outfit everywhere, including form controls and numeric readouts */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glowing input field */
+.fancy-field {
+  background-color: var(--field-bg);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 0 5px var(--field-glow), 0 0 0 var(--field-ring-w, 6px) var(--field-ring);
+  transition: 0.3s ease;
+}
+.fancy-field:focus-within {
+  border-color: color-mix(in srgb, var(--accent-purple) 70%, transparent);
+}
+.fancy-input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  line-height: 28px;
+  padding: 0 1rem 0 2.5rem;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+.fancy-input::placeholder {
+  color: #777;
+}
+.fancy-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Glowing fields inside notched cards / modals */
+.notch-card {
+  --field-ring-w: 3px;
+}
+.notch-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+.notch-card textarea,
+.notch-card select,
+.notch-card .select-trigger {
+  background-color: var(--field-bg);
+  color: var(--text-primary);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  box-shadow: 0 0 5px var(--field-glow), 0 0 0 var(--field-ring-w) var(--field-ring);
+  outline: none;
+  transition: 0.3s ease;
+}
+.notch-card input::placeholder,
+.notch-card textarea::placeholder {
+  color: #777;
+}
+.notch-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.notch-card textarea:focus,
+.notch-card select:focus,
+.notch-card .select-trigger:focus {
+  border-color: color-mix(in srgb, var(--accent-purple) 70%, transparent);
+}
+.notch-card select option {
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+}
+
+/* Hover: lift the field and tint the glow with the accent colour */
+.fancy-field:hover,
+.notch-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):hover,
+.notch-card textarea:hover,
+.notch-card select:hover,
+.notch-card .select-trigger:hover {
+  background-color: var(--field-bg-hover);
+  box-shadow: 0 0 10px var(--field-glow-hover), 0 0 0 var(--field-ring-w, 6px) var(--field-ring);
+}
+
+/* Larger type inside cards / modals (scales the Tailwind text sizes used there) */
+.notch-card.text-xs, .notch-card .text-xs { font-size: 14px; line-height: 1.45; }
+.notch-card.text-sm, .notch-card .text-sm { font-size: 16px; line-height: 1.45; }
+.notch-card .text-base { font-size: 18px; }
+.notch-card .text-lg { font-size: 20px; }
+.notch-card .text-\[9px\] { font-size: 11px; }
+.notch-card .text-\[10px\] { font-size: 12px; }
+.notch-card .text-\[11px\] { font-size: 13px; }
+.notch-card .text-\[12px\] { font-size: 14px; }
+.notch-card .text-\[13px\] { font-size: 15px; }
+.notch-card input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.notch-card textarea,
+.notch-card select,
+.notch-card .select-trigger {
+  font-size: 14px;
+}
+
+/* ===== No divider lines: separate areas with soft gradients instead ===== */
+.notch-card .border-t,
+.notch-card .border-b,
+.notch-card .border-l,
+.notch-card .border-r {
+  border-width: 0;
+}
+.notch-card .divide-y > * {
+  border-width: 0;
+}
+/* footer bar */
+.notch-card > .border-t {
+  background: linear-gradient(
+    to bottom,
+    var(--card-bg, var(--bg-panel)),
+    color-mix(in srgb, var(--card-bg, var(--bg-panel)), var(--text-primary) 7%)
+  );
+}
+/* side column (e.g. Settings tabs) */
+.notch-card .border-r {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--card-bg, var(--bg-panel)), var(--text-primary) 8%),
+    var(--card-bg, var(--bg-panel))
+  );
+}
+
+/* main window bars */
+.grad-bar-down {
+  background: linear-gradient(to bottom, var(--bg-panel), color-mix(in srgb, var(--bg-panel), var(--text-primary) 5%));
+}
+.grad-bar-up {
+  background: linear-gradient(to top, var(--bg-panel), color-mix(in srgb, var(--bg-panel), var(--text-primary) 6%));
+}
+.grad-side {
+  background: linear-gradient(to right, var(--bg-panel), color-mix(in srgb, var(--bg-panel), var(--text-primary) 4%));
+}
+
+/* ===== Animated dropdown list (custom Select, menus) ===== */
+@keyframes dd-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dd-anim {
+  animation: dd-in 0.2s ease;
+}
+
+.select-list {
+  position: fixed;
+  z-index: 70;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.select-list--up {
+  transform: translateY(-100%) translateY(4px);
+}
+.select-list--open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.select-list--up.select-list--open {
+  transform: translateY(-100%);
+}
+.select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.select-item--active {
+  background: var(--bg-hover);
+  color: var(--accent-purple);
+}
+.select-item--selected {
+  color: var(--accent-purple);
+  background: color-mix(in srgb, var(--accent-purple) 14%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .select-list, .dd-anim { transition: none; animation: none; }
+}
+
+/* ===== Same inset checkbox for every native checkbox in the app ===== */
+input[type="checkbox"]:not(.fc-input):not(.opacity-0) {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  margin: 0;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background-color: #ffffff2b;
+  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, rgba(0, 0, 0, 0.21) 0px 0px 0px 24px inset,
+    #22cc3f 0px 0px 0px 0px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+  transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+input[type="checkbox"]:not(.fc-input):not(.opacity-0)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background-color: #e3e3e3;
+  box-shadow: transparent 0px 0px 0px 2px, rgba(0, 0, 0, 0.3) 0px 4px 4px;
+  transform: translate(-50%, -50%);
+  transition: background-color 0.3s ease-in-out;
+}
+input[type="checkbox"]:not(.fc-input):not(.opacity-0):checked {
+  background-color: #22cc3f;
+  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, #22cc3f 0px 0px 0px 2px inset,
+    #22cc3f 0px 0px 0px 24px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+}
+input[type="checkbox"]:not(.fc-input):not(.opacity-0):checked::after {
+  background-color: white;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px 12px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322cc3f' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'><polyline points='4 12.5 9.5 18 20 6'/></svg>");
+}
+input[type="checkbox"]:not(.fc-input):not(.opacity-0):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Red close button in modal notches */
+.notch-action--close {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45);
+}
+.notch-action--close:hover {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(249, 115, 22, 0.5);
+  transform: rotate(90deg);
+}
+
+/* ===== Tactile "key" buttons: raised at rest, pressed in on click ===== */
+:root {
+  --key-shade: rgba(0, 0, 0, 0.38);
+  --key-hi: rgba(255, 255, 255, 0.16);
+}
+:root.light {
+  --key-shade: rgba(0, 0, 0, 0.22);
+  --key-hi: rgba(255, 255, 255, 0.9);
+}
+
+/* neutral keys: toolbar buttons and secondary buttons (Cancel, Close, ...) */
+.key-btn,
+button.border.bg-\[var\(--bg-card\)\]:not(.select-trigger):not(.notch-action) {
+  box-shadow: var(--key-shade) 4px 4px 8px, var(--key-hi) 1.5px 1.5px 2px 0 inset,
+    rgba(0, 0, 0, 0.22) -3px -3px 8px 0 inset;
+  transition: 0.1s ease-in-out;
+}
+
+/* primary keys: filled gradient / colour buttons */
+.gradient-accent:is(button),
+button.bg-sky-500,
+button.bg-emerald-500 {
+  box-shadow: rgba(0, 0, 0, 0.35) 4px 4px 8px, rgba(255, 255, 255, 0.45) 1.5px 1.5px 2px 0 inset,
+    rgba(0, 0, 0, 0.25) -3px -3px 6px 0 inset;
+  transition: 0.1s ease-in-out;
+}
+
+/* pressed */
+.key-btn:not(:disabled):active,
+button.border.bg-\[var\(--bg-card\)\]:not(.select-trigger):not(.notch-action):not(:disabled):active,
+.gradient-accent:is(button):not(:disabled):active,
+button.bg-sky-500:not(:disabled):active,
+button.bg-emerald-500:not(:disabled):active {
+  box-shadow: rgba(0, 0, 0, 0) 0 0 0, rgba(0, 0, 0, 0.9) 0.5px 0.5px 4px inset,
+    rgba(0, 0, 0, 0.25) -3px -3px 8px 0 inset;
+  transform: translateY(0.5px);
+}
+.key-btn:not(:disabled):active > svg,
+.gradient-accent:is(button):not(:disabled):active > svg,
+button.bg-sky-500:not(:disabled):active > svg {
+  scale: 0.95;
+}
+.key-btn:not(:disabled):active > span,
+.gradient-accent:is(button):not(:disabled):active > span,
+button.bg-sky-500:not(:disabled):active > span {
+  display: inline-block;
+  transform: translateY(0.5px);
+}
+.key-btn:disabled,
+button:disabled.gradient-accent,
+button:disabled.bg-sky-500 {
+  box-shadow: none;
+}
+
+/* round notch buttons */
+.notch-action:not(:disabled):active {
+  box-shadow: rgba(0, 0, 0, 0) 0 0 0, rgba(0, 0, 0, 0.9) 0.5px 0.5px 4px inset,
+    rgba(0, 0, 0, 0.25) -3px -3px 8px 0 inset;
+  transform: translateY(0.5px) scale(0.96);
+}
+.notch-action--close:not(:disabled):hover:active {
+  transform: rotate(90deg) scale(0.94);
+}
+.key-btn {
+  background-color: var(--bg-card);
+}
+.key-btn:not(:disabled):hover {
+  background-color: var(--bg-hover);
+}
+
+/* Heartbeat line (Ping card) */
+.heartbeat-line {
+  --dasharray: 814;
+  stroke-dasharray: var(--dasharray);
+  animation: heartRate 4s infinite linear forwards;
+}
+@keyframes heartRate {
+  from { stroke-dashoffset: var(--dasharray); }
+  to { stroke-dashoffset: calc(var(--dasharray) * -1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heartbeat-line { animation: none; }
+}
+
+.heartbeat-strip {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 18%, #000 82%, transparent);
+}
+.heartbeat-line {
+  filter: drop-shadow(0 0 3px rgba(222, 98, 98, 0.7));
 }

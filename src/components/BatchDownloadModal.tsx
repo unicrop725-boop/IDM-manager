@@ -1,5 +1,7 @@
+import { Select } from "./Select";
+import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
-import { X, Layers, Sparkles, Folder, ListOrdered } from "lucide-react";
+import { Layers, Sparkles, Folder, FolderOpen, ListOrdered } from "lucide-react";
 import { api } from "../api";
 import type { Category, QueueInfo } from "../types";
 
@@ -37,6 +39,15 @@ export default function BatchDownloadModal({
         .map((s) => s.trim())
         .filter(Boolean);
       setExpandedUrls(raw);
+    }
+  };
+
+  const browseSaveDir = async () => {
+    try {
+      const picked = await api.pickFolder(saveDir);
+      if (picked) setSaveDir(picked);
+    } catch (e) {
+      console.error("Browse folder error:", e);
     }
   };
 
@@ -82,7 +93,8 @@ export default function BatchDownloadModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-[var(--text-primary)]">
+      <div className="notch-card relative w-full max-w-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-[var(--text-primary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-3">
@@ -94,12 +106,6 @@ export default function BatchDownloadModal({
               <p className="text-xs text-[var(--text-secondary)]">Paste multiple URLs or use patterns like file[001-100].jpg</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Body */}
@@ -162,7 +168,7 @@ export default function BatchDownloadModal({
               <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
                 Category
               </label>
-              <select
+              <Select
                 value={selectedCategory}
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="w-full h-9 px-3 text-xs rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
@@ -172,7 +178,7 @@ export default function BatchDownloadModal({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div>
@@ -181,7 +187,7 @@ export default function BatchDownloadModal({
               </label>
               <div className="flex items-center gap-1.5">
                 <ListOrdered className="w-4 h-4 text-[var(--text-secondary)]" />
-                <select
+                <Select
                   value={selectedQueue}
                   onChange={(e) => setSelectedQueue(e.target.value)}
                   className="w-full h-9 px-3 text-xs rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
@@ -191,7 +197,7 @@ export default function BatchDownloadModal({
                       {q.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           </div>
@@ -206,8 +212,18 @@ export default function BatchDownloadModal({
                 type="text"
                 value={saveDir}
                 onChange={(e) => setSaveDir(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
+                className="w-full h-9 pl-9 pr-24 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] text-xs text-[var(--text-primary)] focus:outline-none focus:border-purple-500/50"
               />
+
+              <button
+                type="button"
+                onClick={browseSaveDir}
+                title="Choose a folder"
+                className="absolute right-1.5 h-7 px-2.5 rounded-md gradient-accent text-white text-[11px] font-medium flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all cursor-pointer"
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                <span>Browse</span>
+              </button>
             </div>
           </div>
 

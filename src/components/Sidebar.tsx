@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   Rows2,
 } from "lucide-react";
+import { NotchCorner } from "./NotchCorner";
 import { DownloadInfo } from "../types";
 
 export type SidebarFilter =
@@ -96,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 
   return (
-    <aside className="w-60 h-full flex flex-col justify-between bg-[var(--bg-panel)] border-r border-[var(--border-subtle)] select-none text-[13px] text-[var(--text-secondary)]">
+    <aside className="w-60 h-full flex flex-col justify-between grad-side select-none text-[13px] text-[var(--text-secondary)]">
       {/* Top Section: Navigation Trees */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {/* ALL DOWNLOADS */}
@@ -156,20 +157,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Section: DISK SPACE WIDGET CARD */}
-      <div className="px-4 pt-4 pb-4 m-3 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-lg">
+      <div className="notch-card px-4 pt-4 pb-4 m-3 bg-[var(--bg-card)] border border-[var(--border-subtle)]">
+        <NotchCorner>
+          <button
+            onClick={onOpenDiskCleaner}
+            title="Disk details & cleanup"
+            aria-label="Disk details"
+            className="notch-action"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+        </NotchCorner>
         {/* Card Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5 text-[var(--text-primary)]">
             <Rows2 className="w-[18px] h-[18px]" strokeWidth={1.6} />
             <span className="text-[13px]">Disk Space</span>
           </div>
-          <button
-            onClick={onOpenDiskCleaner}
-            title="Disk details & cleanup"
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-          >
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Semicircle Gauge */}

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, FolderOpen, Copy, ExternalLink, Archive, Film, FileText, Music, Terminal, Smartphone, Image as ImageIcon, File } from "lucide-react";
+import { ModalCorner } from "./NotchCorner";
+import { FolderOpen, Copy, ExternalLink, Archive, Film, FileText, Music, Terminal, Smartphone, Image as ImageIcon, File } from "lucide-react";
 import { DownloadInfo } from "../types";
 import { formatBytes, formatDate, getFileTypeLabel, FileCategoryType } from "../format";
 import { api } from "../api";
@@ -107,19 +108,13 @@ export const PropertiesModal: React.FC<PropertiesModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[540px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[540px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Title Bar */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm truncate">
             <span>File Properties</span>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content Body */}

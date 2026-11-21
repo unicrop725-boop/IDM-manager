@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { X, RotateCcw, ArrowDown, ArrowUp, Activity, Trash2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { ModalCorner } from "./NotchCorner";
+import { RotateCcw, ArrowDown, ArrowUp, Activity, Trash2 } from "lucide-react";
 
 interface SpeedTestModalProps {
   onClose: () => void;
@@ -13,6 +13,29 @@ interface SpeedHistoryItem {
   pingMs: number;
   downloadSpeed: number;
   uploadSpeed: number;
+}
+
+/** Low speed = orange/yellow, high speed = green. */
+function getGaugeColor(ratio: number): string {
+  const r = Math.max(0, Math.min(1, ratio));
+  const stops = [
+    { pos: 0.0, c: [250, 127, 21] },
+    { pos: 0.3, c: [250, 196, 21] },
+    { pos: 0.65, c: [97, 213, 43] },
+    { pos: 1.0, c: [2, 140, 60] },
+  ];
+  let lo = stops[0];
+  let hi = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (r >= stops[i].pos && r <= stops[i + 1].pos) {
+      lo = stops[i];
+      hi = stops[i + 1];
+      break;
+    }
+  }
+  const t = hi.pos === lo.pos ? 0 : (r - lo.pos) / (hi.pos - lo.pos);
+  const ch = lo.c.map((v, i) => Math.round(v + t * (hi.c[i] - v)));
+  return `rgb(${ch[0]}, ${ch[1]}, ${ch[2]})`;
 }
 
 export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: propTheme }) => {
@@ -119,33 +142,44 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
       : 0;
 
   const speedRatio = Math.min(1, Math.max(0, currentSpeed / maxScale));
-  const needleAngle = 135 + speedRatio * 270;
+  const gaugeColor = getGaugeColor(speedRatio);
+  const speedLabel =
+    phase === "idle"
+      ? "Ready"
+      : phase === "ping"
+      ? "Testing..."
+      : speedRatio < 0.15
+      ? "Slow"
+      : speedRatio < 0.4
+      ? "Fair"
+      : speedRatio < 0.7
+      ? "Good"
+      : "Excellent";
 
-  const arcRadius = 125;
-  const fullArcLength = 2 * Math.PI * arcRadius * (270 / 360);
-  const arcDashOffset = fullArcLength * (1 - speedRatio);
-
-  // Outer radial tick marks (16 ticks)
-  const ticks = Array.from({ length: 16 }).map((_, i) => {
-    const angle = 135 + i * (270 / 15);
-    const rad = (angle * Math.PI) / 180;
-    const x1 = 160 + 138 * Math.cos(rad);
-    const y1 = 160 + 138 * Math.sin(rad);
-    const x2 = 160 + 148 * Math.cos(rad);
-    const y2 = 160 + 148 * Math.sin(rad);
-    const isMajor = i % 3 === 0;
-    return { x1, y1, x2, y2, angle, isMajor, key: i };
+  // Scale labels placed around the arc (angles match the bezel opening at the bottom)
+  const STAGE_CX = 200;
+  const STAGE_CY = 163;
+  const LABEL_RADIUS = 182;
+  const scaleLabels = [300, 252, 204, 156, 108, 60].map((deg, i) => {
+    const rad = (deg * Math.PI) / 180;
+    return {
+      key: i,
+      text: String(Math.round((i * maxScale) / 5)),
+      x: STAGE_CX + Math.sin(rad) * LABEL_RADIUS,
+      y: STAGE_CY + Math.cos(rad) * LABEL_RADIUS,
+    };
   });
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-200">
       <div
-        className={`w-[500px] rounded-3xl border shadow-2xl overflow-hidden flex flex-col text-xs transition-colors duration-200 ${
+        className={`notch-card w-[500px] border shadow-2xl overflow-hidden flex flex-col text-xs transition-colors duration-200 ${
           isDark
             ? "bg-[#090F17] border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)] text-slate-300"
             : "bg-white border-slate-200 shadow-2xl text-slate-700"
         }`}
       >
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div
           className={`flex items-center justify-between px-5 py-3.5 border-b transition-colors duration-200 ${
@@ -155,7 +189,10 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
           }`}
         >
           <div className="flex items-center gap-2.5">
-            <div className={`w-2.5 h-2.5 rounded-full ${isDark ? "bg-cyan-400 animate-ping" : "bg-teal-500 animate-ping"}`} />
+            <span className="relative flex w-2 h-2">
+              <span className="absolute inline-flex w-full h-full rounded-full bg-red-500/60 animate-ping" />
+              <span className="relative inline-flex w-2 h-2 rounded-full bg-red-500" />
+            </span>
             <span className={`font-bold text-sm tracking-wide ${isDark ? "text-white" : "text-slate-900"}`}>
               Internet Speed Test
             </span>
@@ -199,199 +236,142 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
-                isDark
-                  ? "hover:bg-slate-800 text-slate-400 hover:text-white"
-                  : "hover:bg-slate-200 text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
         {/* Tab 1: Speedometer Dial */}
         {tab === "gauge" && (
           <div className="p-6 flex flex-col items-center justify-center space-y-6">
-            {/* Circular Speedometer Stage */}
-            <div className="relative flex items-center justify-center w-[320px] h-[320px]">
-              <svg width="320" height="320" viewBox="0 0 320 320" className="overflow-visible">
-                <defs>
-                  {/* Outer Amber / Gold Glow Gradient */}
-                  <linearGradient id="amberGoldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#F59E0B" />
-                    <stop offset="50%" stopColor="#FBBF24" />
-                    <stop offset="100%" stopColor="#EA580C" />
-                  </linearGradient>
+            {/* Arc Gauge Stage */}
+            <div
+              className="spd-stage"
+              style={
+                {
+                  "--spd-progress": speedRatio,
+                  "--spd-color": gaugeColor,
+                  "--spd-track": isDark ? "#243044" : "#c4c8c7",
+                } as React.CSSProperties
+              }
+            >
+              <svg
+                viewBox="0 0 620 502"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="absolute top-0 overflow-visible"
+                style={{ left: 30, width: 340 }}
+              >
+                {/* Progress fill, clipped to the track shape */}
+                <g clipPath="url(#spd-big-chunk-mask)">
+                  <foreignObject width="620" height="502">
+                    <div className="spd-progress-fill" />
+                  </foreignObject>
+                </g>
 
-                  {/* Inner Neon Ring Gradient */}
-                  <linearGradient id="innerNeonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={isDark ? "#06B6D4" : "#0D9488"} />
-                    <stop offset="50%" stopColor={isDark ? "#8B5CF6" : "#6366F1"} />
-                    <stop offset="100%" stopColor={isDark ? "#EC4899" : "#A855F7"} />
-                  </linearGradient>
-
-                  {/* Center Glow Filter */}
-                  <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation={isDark ? "5" : "3"} result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                  </filter>
-                </defs>
-
-                {/* Background Circle Track */}
-                <circle
-                  cx="160"
-                  cy="160"
-                  r="148"
-                  fill={isDark ? "#070D14" : "#F8FAFC"}
-                  stroke={isDark ? "#0F172A" : "#E2E8F0"}
-                  strokeWidth="2"
-                />
-
-                {/* Outer Radial Ticks */}
-                {ticks.map((t) => (
-                  <line
-                    key={t.key}
-                    x1={t.x1}
-                    y1={t.y1}
-                    x2={t.x2}
-                    y2={t.y2}
-                    stroke={
-                      isDark
-                        ? t.isMajor ? "#06B6D4" : "#EC4899"
-                        : t.isMajor ? "#0D9488" : "#94A3B8"
-                    }
-                    strokeWidth={t.isMajor ? "2" : "1.2"}
-                    strokeOpacity={t.isMajor ? (isDark ? "0.9" : "1") : (isDark ? "0.5" : "0.7")}
-                    strokeLinecap="round"
+                {/* Track inner shadow */}
+                <g filter="url(#spd-inner-shadow)">
+                  <path
+                    d="M308.5 76C431.383 76 531 175.572 531 298.401C531 336.044 521.643 371.502 505.128 402.58C504.02 404.666 501.333 405.281 499.397 403.926L456.487 373.903C454.86 372.765 454.324 370.606 455.185 368.817C465.441 347.511 471.188 323.627 471.188 298.401C471.188 208.591 398.35 135.785 308.5 135.785C218.65 135.785 145.812 208.591 145.812 298.401C145.812 327.372 153.392 354.574 166.677 378.133C167.702 379.95 167.208 382.258 165.499 383.455L122.873 413.28C120.999 414.591 118.405 414.063 117.234 412.099C97.3965 378.828 86 339.945 86 298.401C86 175.572 185.617 76 308.5 76Z"
+                    fill="#C0C4C3"
                   />
-                ))}
+                </g>
 
-                {/* Outer Track Arc Background (270 deg) */}
-                <path
-                  d="M 71.6 248.4 A 125 125 0 1 1 248.4 248.4"
-                  fill="none"
-                  stroke={isDark ? "#1E293B" : "#E2E8F0"}
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                />
+                {/* Bezel */}
+                <g filter="url(#spd-bezel-shadow)">
+                  <path
+                    d="M308.5 20C462.311 20 587 144.712 587 298.551C587 349.01 573.586 396.334 550.13 437.152C540.926 453.168 519.207 454.633 506.147 441.571V441.571C495.726 431.148 494.489 414.851 501.456 401.861C517.96 371.09 527.321 335.914 527.321 298.551C527.321 177.677 429.352 79.6896 308.5 79.6896C187.648 79.6896 89.6786 177.677 89.6786 298.551C89.6786 340.154 101.285 379.045 121.435 412.163C129.406 425.264 128.613 442.406 117.771 453.251V453.251C105.204 465.82 84.4159 464.934 74.7381 450.024C46.4376 406.423 30 354.407 30 298.551C30 144.712 154.689 20 308.5 20Z"
+                    fill={isDark ? "#1B2433" : "#F5F5F3"}
+                  />
+                </g>
 
-                {/* Outer Amber Progress Arc (Filled dynamically) */}
-                <path
-                  d="M 71.6 248.4 A 125 125 0 1 1 248.4 248.4"
-                  fill="none"
-                  stroke="url(#amberGoldGrad)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={fullArcLength}
-                  strokeDashoffset={arcDashOffset}
-                  className="transition-all duration-150 ease-out"
-                  filter={isDark ? "drop-shadow(0 0 8px rgba(245, 158, 11, 0.6))" : "drop-shadow(0 0 4px rgba(245, 158, 11, 0.4))"}
-                />
+                {/* Outer colour ring */}
+                <g clipPath="url(#spd-inner-stroke-mask)">
+                  <g transform="matrix(-1.70441e-08 0.22579 -0.243711 -1.84148e-08 308.5 278.135)">
+                    <foreignObject x="-1052.47" y="-1052.47" width="2104.95" height="2104.95">
+                      <div
+                        style={{
+                          background:
+                            "conic-gradient(from 90deg,rgba(108, 84, 26, 1) 0deg,rgba(2, 126, 43, 1) 43.8398deg,rgba(97, 213, 43, 1) 136.398deg,rgba(250, 196, 21, 1) 245.769deg,rgba(250, 127, 21, 1) 276.374deg,rgba(254, 26, 4, 1) 299.674deg,rgba(108, 84, 26, 1) 360deg)",
+                          height: "100%",
+                          width: "100%",
+                        }}
+                      />
+                    </foreignObject>
+                  </g>
+                </g>
 
-                {/* Inner Glowing Dual-Neon Ring */}
-                <circle
-                  cx="160"
-                  cy="160"
-                  r="92"
-                  fill="none"
-                  stroke="url(#innerNeonGrad)"
-                  strokeWidth="3.5"
-                  filter="url(#neonGlow)"
-                  className={isDark ? "opacity-90" : "opacity-80"}
-                />
+                <defs>
+                  <filter id="spd-inner-shadow" x="86" y="76" width="445" height="342" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                    <feFlood floodOpacity="0" result="BackgroundImageFix" />
+                    <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+                    <feOffset dy="4" />
+                    <feGaussianBlur stdDeviation="6" />
+                    <feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1" />
+                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.35 0" />
+                  </filter>
 
-                {/* Center Pivot Background Halo */}
-                <circle
-                  cx="160"
-                  cy="160"
-                  r="18"
-                  fill={isDark ? "#0A141F" : "#FFFFFF"}
-                  stroke={isDark ? "#14B8A6" : "#0D9488"}
-                  strokeWidth="2"
-                  opacity={isDark ? "0.8" : "0.95"}
-                />
+                  <filter id="spd-bezel-shadow" x="0" y="0" width="617" height="502" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+                    <feFlood floodOpacity="0" result="BackgroundImageFix" />
+                    <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+                    <feOffset dy="10" />
+                    <feGaussianBlur stdDeviation="15" />
+                    <feComposite in2="hardAlpha" operator="out" />
+                    <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.2 0" />
+                    <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow" />
+                    <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
+                  </filter>
+
+                  <clipPath id="spd-big-chunk-mask">
+                    <path d="M308.5 76C431.383 76 531 175.572 531 298.401C531 336.044 521.643 371.502 505.128 402.58C504.02 404.666 501.333 405.281 499.397 403.926L456.487 373.903C454.86 372.765 454.324 370.606 455.185 368.817C465.441 347.511 471.188 323.627 471.188 298.401C471.188 208.591 398.35 135.785 308.5 135.785C218.65 135.785 145.812 208.591 145.812 298.401C145.812 327.372 153.392 354.574 166.677 378.133C167.702 379.95 167.208 382.258 165.499 383.455L122.873 413.28C120.999 414.591 118.405 414.063 117.234 412.099C97.3965 378.828 86 339.945 86 298.401C86 175.572 185.617 76 308.5 76Z" />
+                  </clipPath>
+
+                  <clipPath id="spd-inner-stroke-mask">
+                    <path d="M308.5 42C352.525 42 393.959 53.0975 430.16 72.6479C434.457 74.9684 435.482 80.6161 432.417 84.419V84.419C429.949 87.4808 425.63 88.2799 422.166 86.419C388.316 68.2318 349.612 57.9147 308.5 57.9147C175.624 57.9147 67.907 165.684 67.907 298.625C67.907 344.39 80.673 387.171 102.836 423.6C104.798 426.826 104.367 430.99 101.698 433.661V433.661C98.1223 437.238 92.1621 436.648 89.5235 432.332C65.7196 393.393 52 347.612 52 298.625C52 156.895 166.839 42 308.5 42ZM552.083 251.981C556.553 250.782 561.112 253.629 561.835 258.202C563.918 271.37 565 284.871 565 298.625C565 342.592 553.948 383.976 534.473 420.149C531.988 424.765 525.779 425.547 522.074 421.84V421.84C519.519 419.283 518.999 415.34 520.705 412.154C538.82 378.333 549.093 339.68 549.093 298.625C549.093 285.888 548.103 273.382 546.198 261.18C545.555 257.059 548.056 253.06 552.083 251.981V251.981ZM451.602 94.6439C454.231 91.3832 458.947 90.7155 462.296 93.2295C505.604 125.741 538.292 171.643 554.224 224.793C555.485 228.999 552.954 233.361 548.716 234.497V234.497C544.467 235.636 540.113 233.103 538.84 228.89C523.892 179.398 493.444 136.636 453.144 106.257C449.473 103.49 448.717 98.2234 451.602 94.6439V94.6439Z" />
+                  </clipPath>
+                </defs>
               </svg>
 
-              {/* Animated Laser Needle (Framer Motion) */}
-              <motion.div
-                className="absolute inset-0 pointer-events-none flex items-center justify-center"
-                animate={{ rotate: needleAngle }}
-                transition={{ type: "spring", stiffness: 90, damping: 14 }}
-              >
-                {/* Laser Needle Blade pointing to 3 o'clock (0 deg) */}
-                <div
-                  className="absolute left-[160px] top-[157.5px] h-[5px] rounded-r-full origin-left flex items-center"
-                  style={{
-                    width: "122px",
-                    background: isDark
-                      ? "linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, #10B981 40%, #4ADE80 100%)"
-                      : "linear-gradient(90deg, rgba(13, 148, 136, 0.2) 0%, #059669 40%, #10B981 100%)",
-                    boxShadow: isDark
-                      ? "0 0 14px #22C55E, 0 0 28px rgba(34, 197, 94, 0.7)"
-                      : "0 0 10px rgba(5, 150, 105, 0.6)",
-                  }}
+              {/* Scale labels around the arc */}
+              {scaleLabels.map((l) => (
+                <span
+                  key={l.key}
+                  className={`absolute w-10 h-10 -ml-5 -mt-5 flex items-center justify-center text-[12px] pointer-events-none ${
+                    isDark ? "text-slate-400" : "text-slate-500"
+                  }`}
+                  style={{ left: l.x, top: l.y }}
                 >
-                  {/* Glowing needle tip */}
-                  <div className={`absolute right-0 w-2.5 h-2.5 rounded-full ${isDark ? "bg-white shadow-[0_0_10px_#FFFFFF]" : "bg-emerald-200 shadow-[0_0_6px_#059669]"}`} />
-                </div>
-              </motion.div>
+                  {l.text}
+                </span>
+              ))}
 
-              {/* Center Pivot Dot */}
+              {/* Current value + status pill */}
               <div
-                className={`absolute top-[150px] left-[150px] w-5 h-5 rounded-full flex items-center justify-center border-2 shadow-sm ${
-                  isDark
-                    ? "bg-[#0E1A26] border-emerald-400 shadow-[0_0_12px_#10B981]"
-                    : "bg-white border-emerald-600 shadow-md"
-                }`}
+                className="absolute flex flex-col items-center gap-1 pointer-events-none"
+                style={{ left: STAGE_CX, top: STAGE_CY - 38, transform: "translateX(-50%)" }}
               >
-                <div className={`w-1.5 h-1.5 rounded-full ${isDark ? "bg-white" : "bg-emerald-600"}`} />
-              </div>
-
-              {/* Digital Speed Readout */}
-              <div className="absolute top-[182px] flex flex-col items-center pointer-events-none">
-                <div className="flex items-baseline gap-1.5">
-                  <span
-                    className={`text-3xl font-black tracking-widest font-mono ${
-                      isDark
-                        ? "text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-amber-200 drop-shadow-[0_0_15px_rgba(245,158,11,0.7)]"
-                        : "text-amber-600 drop-shadow-sm"
-                    }`}
-                  >
+                <div className="flex items-baseline gap-1">
+                  <span className={`text-[40px] leading-none font-semibold tabular-nums ${isDark ? "text-white" : "text-slate-800"}`}>
                     {currentSpeed.toFixed(0)}
                   </span>
-                  <span
-                    className={`text-xs font-extrabold tracking-wider uppercase font-mono ${
-                      isDark
-                        ? "text-cyan-300 drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]"
-                        : "text-teal-700"
-                    }`}
-                  >
-                    MBPS
-                  </span>
+                  <span className={`text-[12px] ${isDark ? "text-slate-400" : "text-slate-500"}`}>Mbps</span>
                 </div>
+                <span className={`spd-pill ${isDark ? "text-slate-200" : "text-slate-700"}`}>{speedLabel}</span>
               </div>
 
-              {/* Circular Start / Action Button */}
-              <div className="absolute bottom-2 flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={startTest}
-                  disabled={testing}
-                  className={`w-18 h-18 rounded-full border-2 active:scale-95 disabled:opacity-75 transition-all flex flex-col items-center justify-center cursor-pointer group ${
-                    isDark
-                      ? "bg-[#08121C] border-teal-500/70 hover:border-teal-300 shadow-[0_0_22px_rgba(20,184,166,0.35)] text-white"
-                      : "bg-white border-teal-600 hover:bg-teal-50 shadow-lg text-teal-800"
-                  }`}
-                >
-                  <span className={`text-sm font-bold tracking-wider transition-colors ${isDark ? "text-white group-hover:text-cyan-300" : "text-teal-800"}`}>
-                    {testing ? "..." : "Start"}
-                  </span>
-                </button>
-              </div>
+              {/* Start button in the opening of the arc */}
+              <button
+                type="button"
+                onClick={startTest}
+                disabled={testing}
+                className={`absolute w-[52px] h-[52px] -ml-[26px] rounded-full border-2 active:scale-95 disabled:opacity-75 transition-all flex items-center justify-center cursor-pointer group ${
+                  isDark
+                    ? "bg-[#08121C] border-teal-500/70 hover:border-teal-300 shadow-[0_0_18px_rgba(20,184,166,0.3)] text-white"
+                    : "bg-white border-teal-600 hover:bg-teal-50 shadow-lg text-teal-800"
+                }`}
+                style={{ left: STAGE_CX, top: 222 }}
+              >
+                <span className="text-[12px] font-bold tracking-wide">{testing ? "..." : "Start"}</span>
+              </button>
             </div>
 
             {/* Test Status Indicator */}
@@ -437,6 +417,20 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
                 </div>
                 <div className="text-base font-extrabold font-mono">
                   {pingMs} <span className="text-xs font-normal opacity-60">ms</span>
+                </div>
+                {/* Heartbeat strip */}
+                <div className="heartbeat-strip pt-0.5">
+                  <svg aria-hidden="true" viewBox="0 20 550 150" className="block w-full h-8">
+                    <path
+                      className="heartbeat-line"
+                      d="m0,130.08h44.51c7.08-3.45,11.54-24.65,19.42-24.81s13.23,22.54,21.03,24.81c10.03,2.92,29.69-14.6,39.91-12.4,4.58.98,9.34,12.36,14.02,12.4,3.54.03,7.25-9.31,10.79-9.17,3.24.13,6.17,7.93,9.17,9.17s9.68-1.48,12.4,0c2.4,1.3,3.45,10.3,5.93,9.17,3.23-1.48,2.82-103.01,8.09-103.01,6.96,0,12.35,137.53,16.72,137.53,3.9,0-.09-36.61,8.49-43.69,3.41-2.81,13.69,1.93,17.66,0,7.17-3.49,11.72-24.71,19.69-25.08,8.62-.4,15.39,22.86,23.73,25.08,8.99,2.38,26.51-12.76,35.6-10.79,5.58,1.21,11.46,15.82,17.12,15.1,3.88-.49,4.87-12.59,8.76-12.94,3.01-.28,5.7,7.46,8.49,8.63s9.75-1.43,12.54,0,4.03,9.39,7.01,9.71c4.98.54,2.64-103.55,8.63-103.55,5.16,0,8.8,111.51,12.94,111.64,5.02.16,5.01-15.2,9.3-17.8s15.02,2.06,19.42,0c7.39-3.46,12.74-25.17,20.9-25.08,8.97.09,13.68,25.85,22.38,28.04,9.17,2.31,25.4-15.93,34.79-14.83,4.95.58,11.31,10.3,16.04,11.87h44.51"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                      strokeWidth="7"
+                      fill="none"
+                      stroke="#DE6262"
+                    />
+                  </svg>
                 </div>
               </div>
 

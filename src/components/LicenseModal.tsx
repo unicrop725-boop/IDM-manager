@@ -1,8 +1,9 @@
+import { ModalCorner } from "./NotchCorner";
 // src/components/LicenseModal.tsx
 // License Management & Activation Modal
 
 import { useState } from "react";
-import { X, Key, CheckCircle, AlertTriangle, ShieldCheck, ExternalLink, Sparkles } from "lucide-react";
+import { Key, CheckCircle, AlertTriangle, ShieldCheck, ExternalLink, Sparkles } from "lucide-react";
 import { api } from "../api";
 import type { TrialAndLicenseStatus } from "../types";
 
@@ -59,16 +60,14 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none">
-      <div className="flex w-full max-w-md flex-col rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs">
+      <div className="notch-card flex w-full max-w-md flex-col border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-3.5 bg-[var(--bg-panel)]">
           <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
             <Key className="w-4 h-4 text-purple-400" />
             <span>FlowGet License & Subscription</span>
           </div>
-          <button onClick={onClose} className="text-[var(--text-secondary)] hover:text-white transition">
-            <X size={16} />
-          </button>
         </div>
 
         {/* Content */}

@@ -1,5 +1,6 @@
+import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
-import { X, Smartphone, Wifi, Send } from "lucide-react";
+import { Smartphone, Wifi, Send } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -33,19 +34,14 @@ export default function MobileSharingModal({ onClose, onSendLink, onAddUrl }: Pr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
-      <div className="w-[480px] rounded-2xl bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[480px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl flex flex-col overflow-hidden text-xs text-[var(--text-secondary)]">
+        <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <Smartphone className="w-4 h-4 text-purple-400" />
             <span>Mobile Link Sharing</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Content */}

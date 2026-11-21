@@ -121,7 +121,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       <div
         style={{ left: `${left}px`, top: `${top}px` }}
         onClick={(e) => e.stopPropagation()}
-        className="absolute w-60 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2.5 z-50 animate-in fade-in zoom-in-95 duration-150"
+        className="dd-anim absolute w-60 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2.5 z-50 animate-in fade-in zoom-in-95 duration-150"
       >
         <Item icon={FileText} label="Open" disabled={!isCompleted} onClick={run(onOpen)} />
         <Item icon={FileSymlink} label="Open With" disabled={!isCompleted} onClick={run(onOpenWith)} />

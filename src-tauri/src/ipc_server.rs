@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -248,6 +248,14 @@ impl IpcServer {
         };
         if let (Some(payload), Some(handle)) = (&reply.capture, &self.app_handle) {
             println!("[ipc_server] Received download capture for URL: {}", payload.url);
+            // Like IDM's pop-up: make sure the user sees the download dialog even if FlowGet is behind the browser.
+            if let Some(w) = handle.get_webview_window("main") {
+                let _ = w.show();
+                let _ = w.unminimize();
+                let _ = w.set_always_on_top(true);
+                let _ = w.set_always_on_top(false);
+                let _ = w.set_focus();
+            }
             let _ = handle.emit("browser-download-captured", payload);
         }
         write_reply(&mut socket, &reply).await;

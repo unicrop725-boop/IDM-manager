@@ -6,6 +6,22 @@ const DEFAULT_SETTINGS = {
   fileTypes: ["zip", "rar", "7z", "iso", "exe", "msi", "mp4", "mkv", "mp3", "pdf", "apk", "tar", "gz", "bz2", "bin"],
 };
 
+// Pages where the page itself is the thing to download (the app resolves it with yt-dlp).
+const VIDEO_PAGE_PATTERNS = [
+  "*://*.youtube.com/watch*",
+  "*://*.youtube.com/shorts/*",
+  "*://youtu.be/*",
+  "*://*.vimeo.com/*",
+  "*://*.dailymotion.com/video/*",
+  "*://*.facebook.com/*/videos/*",
+  "*://*.facebook.com/watch*",
+  "*://*.instagram.com/reel/*",
+  "*://*.instagram.com/p/*",
+  "*://*.tiktok.com/*/video/*",
+  "*://*.twitter.com/*/status/*",
+  "*://x.com/*/status/*",
+];
+
 const NATIVE_HOST_NAME = "com.flowget.app";
 const LOCAL_IPC_URL = "http://127.0.0.1:21588/api/download";
 
@@ -67,6 +83,14 @@ chrome.runtime.onInstalled.addListener(() => {
     contexts: ["link", "image", "video", "audio"],
   });
 
+  // On video pages (YouTube, Vimeo, ...) right-clicking the page offers the video itself.
+  chrome.contextMenus.create({
+    id: "flowget_download_page_video",
+    title: "Download this video with FlowGet",
+    contexts: ["page"],
+    documentUrlPatterns: VIDEO_PAGE_PATTERNS,
+  });
+
   chrome.contextMenus.create({
     id: "flowget_download_all",
     title: "Download all links on this page",
@@ -83,6 +107,11 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         referer: tab?.url || info.pageUrl || "",
         tabId: tab?.id,
       });
+    }
+  } else if (info.menuItemId === "flowget_download_page_video") {
+    const pageUrl = info.pageUrl || tab?.url;
+    if (pageUrl) {
+      await handleDirectDownload({ url: pageUrl, referer: pageUrl, tabId: tab?.id });
     }
   } else if (info.menuItemId === "flowget_download_all" && tab?.id) {
     chrome.tabs.sendMessage(tab.id, { type: "TRIGGER_BATCH_SCRAPER" }).catch(() => {});
@@ -145,6 +174,23 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   return false;
 });
 
+/** Small confirmation on the toolbar icon: green tick when FlowGet took the link, red "!" when it did not. */
+function showResult(ok) {
+  try {
+    chrome.action.setBadgeBackgroundColor({ color: ok ? "#16a34a" : "#dc2626" });
+    chrome.action.setBadgeText({ text: ok ? "OK" : "!" });
+    chrome.action.setTitle({
+      title: ok ? "Sent to FlowGet" : "FlowGet is not running - open the app and try again",
+    });
+    setTimeout(() => {
+      chrome.action.setBadgeText({ text: "" });
+      chrome.action.setTitle({ title: "FlowGet Download Integration" });
+    }, 3500);
+  } catch {
+    /* badge is only a courtesy */
+  }
+}
+
 async function handleDirectDownload({ url, fileName, referer, tabId }) {
   const cookies = await getCookiesForUrl(url);
   const payload = {
@@ -155,7 +201,8 @@ async function handleDirectDownload({ url, fileName, referer, tabId }) {
     referer: referer || "",
     userAgent: navigator.userAgent,
   };
-  await sendToFlowGet(payload);
+  const result = await sendToFlowGet(payload);
+  showResult(Boolean(result));
 }
 
 async function getCookiesForUrl(targetUrl) {

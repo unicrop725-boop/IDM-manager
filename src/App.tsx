@@ -265,6 +265,11 @@ export default function App() {
         setQueues((cur) => cur.map((item) => (item.id === q.id ? q : item)));
       }),
       listen<any>("browser-download-captured", ({ payload }) => {
+        // a video page sent from the browser menu: open the quality picker instead of the file dialog
+        if (payload.url && getVideoSite(payload.url)) {
+          window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
+          return;
+        }
         setQuickAddUrl(payload.url || "");
         setCapturedMeta({
           fileName: payload.fileName || "",

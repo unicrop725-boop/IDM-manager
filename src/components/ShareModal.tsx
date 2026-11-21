@@ -2,7 +2,6 @@ import React from "react";
 import { ModalCorner } from "./NotchCorner";
 import { useState } from "react";
 import { Share2, Mail, Copy, Check } from "lucide-react";
-import { siWhatsapp, siTelegram, siFacebook, siX, siReddit } from "simple-icons";
 import type { DownloadInfo } from "../types";
 
 interface Props {
@@ -10,7 +9,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Official brand logo (Simple Icons) drawn in its brand colour. */
+/** Official brand logo drawn in its brand colour. */
 function BrandIcon({ path, color, className = "w-4 h-4" }: { path: string; color: string; className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill={color} aria-hidden="true">
@@ -24,30 +23,49 @@ interface Network {
   label: string;
   hint: string;
   path: string;
-  /** brand colour; X is black, so it follows the theme text colour instead */
   color: string;
   open: (url: string, name: string, text: string) => string;
 }
 
 const NETWORKS: Network[] = [
   {
-    key: "whatsapp", label: "WhatsApp", hint: "Send via chat", path: siWhatsapp.path, color: `#${siWhatsapp.hex}`,
+    key: "whatsapp",
+    label: "WhatsApp",
+    hint: "Send via chat",
+    path: "M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771z",
+    color: "#25D366",
     open: (_u, _n, text) => `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,
   },
   {
-    key: "telegram", label: "Telegram", hint: "Share to message", path: siTelegram.path, color: `#${siTelegram.hex}`,
+    key: "telegram",
+    label: "Telegram",
+    hint: "Share to message",
+    path: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z",
+    color: "#24A1DE",
     open: (u, n) => `https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(n)}`,
   },
   {
-    key: "facebook", label: "Facebook", hint: "Post on your wall", path: siFacebook.path, color: `#${siFacebook.hex}`,
+    key: "facebook",
+    label: "Facebook",
+    hint: "Post on your wall",
+    path: "M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95C18.05 21.45 22 17.19 22 12z",
+    color: "#1877F2",
     open: (u) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}`,
   },
   {
-    key: "x", label: "X", hint: "Post a link", path: siX.path, color: "var(--text-primary)",
+    key: "x",
+    label: "X",
+    hint: "Post a link",
+    path: "M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z",
+    color: "var(--text-primary)",
     open: (u, n) => `https://twitter.com/intent/tweet?url=${encodeURIComponent(u)}&text=${encodeURIComponent(n)}`,
   },
   {
-    key: "reddit", label: "Reddit", hint: "Submit a link", path: siReddit.path, color: `#${siReddit.hex}`,
+    key: "reddit",
+    label: "Reddit",
+    hint: "Submit a link",
+    path: "M12 2C6.48 2 2 6.48 2 12c0 5.52 4.48 10 10 10s10-4.48 10-10c0-5.52-4.48-10-10-10zm5.01 14.75c-.85.85-2.34.92-3.01.92s-2.16-.07-3.01-.92c-.15-.15-.15-.39 0-.54.15-.15.39-.15.54 0 .61.61 1.79.71 2.47.71.69 0 1.86-.1 2.47-.71.15-.15.39-.15.54 0 .15.15.15.39 0 .54zm-6.26-3.75c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zm4.5 0c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25z",
+    color: "#FF4500",
     open: (u, n) => `https://www.reddit.com/submit?url=${encodeURIComponent(u)}&title=${encodeURIComponent(n)}`,
   },
 ];

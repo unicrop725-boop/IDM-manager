@@ -42,9 +42,10 @@ interface GroupHeaderProps {
   icon: LucideIcon;
   label: string;
   active: boolean;
-  expanded: boolean;
+  /** Only groups that have sub-items get an expand/collapse arrow. */
+  expanded?: boolean;
   onClick: () => void;
-  onToggle: () => void;
+  onToggle?: () => void;
 }
 
 const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, expanded, onClick, onToggle }) => (
@@ -60,15 +61,17 @@ const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, ex
       <Icon className="w-[22px] h-[22px] flex-shrink-0" strokeWidth={1.5} />
       <span className="text-[14px] font-medium">{label}</span>
     </div>
-    <span
-      onClick={(e) => {
-        e.stopPropagation();
-        onToggle();
-      }}
-      className="p-0.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
-    >
-      {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-    </span>
+    {onToggle && (
+      <span
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="p-0.5 rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer"
+      >
+        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      </span>
+    )}
   </div>
 );
 
@@ -79,8 +82,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenDiskCleaner,
 }) => {
   const [allExpanded, setAllExpanded] = useState(true);
-  const [unfinishedExpanded, setUnfinishedExpanded] = useState(false);
-  const [finishedExpanded, setFinishedExpanded] = useState(false);
 
   const categories = [
     { name: "Music", label: "Musics", icon: Music },
@@ -137,7 +138,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
 
           {allExpanded && (
-            <div className="mt-1 mb-1 pl-9 space-y-0.5">
+            <div className="mt-1 mb-1 pl-8 space-y-1">
               {categories.map((cat) => {
                 const isSelected = currentFilter.type === "category" && currentFilter.name.toLowerCase() === cat.name.toLowerCase();
                 const Icon = cat.icon;
@@ -145,13 +146,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     key={cat.name}
                     onClick={() => onSelectFilter({ type: "category", name: cat.name })}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-colors text-[13px] ${
+                    className={`flex items-center gap-3.5 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-[15px] ${
                       isSelected
                         ? "bg-[var(--bg-card)] text-[var(--text-primary)]"
                         : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
                     }`}
                   >
-                    <Icon className="w-[15px] h-[15px] flex-shrink-0" strokeWidth={1.6} />
+                    <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.6} />
                     <span>{cat.label}</span>
                   </div>
                 );
@@ -165,9 +166,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={FolderDown}
           label="Unfinished"
           active={currentFilter.type === "status" && currentFilter.status === "unfinished"}
-          expanded={unfinishedExpanded}
           onClick={() => onSelectFilter({ type: "status", status: "unfinished" })}
-          onToggle={() => setUnfinishedExpanded(!unfinishedExpanded)}
         />
 
         {/* FINISHED */}
@@ -175,9 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           icon={FolderCheck}
           label="Finished"
           active={currentFilter.type === "status" && currentFilter.status === "finished"}
-          expanded={finishedExpanded}
           onClick={() => onSelectFilter({ type: "status", status: "finished" })}
-          onToggle={() => setFinishedExpanded(!finishedExpanded)}
         />
       </div>
 

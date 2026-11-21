@@ -1,11 +1,14 @@
 import { Select } from "./Select";
+import { BACKGROUNDS } from "./BackgroundLayer";
+import type { DriveEntry } from "../types";
+import { driveTitle } from "../utils/drives";
+import { getLiquidImage, setLiquidImage, fileToLiquidDataUrl, liquidImageFromDrop } from "../utils/liquidImage";
 import { ModalCorner } from "./NotchCorner";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Settings as SettingsIcon,
   Folder,
   Shield,
-  FileCode,
   Zap,
   Globe,
   Save,
@@ -29,7 +32,7 @@ interface Props {
   onClose: () => void;
 }
 
-type TabType = "general" | "connection" | "proxy" | "categories" | "fileTypes" | "automation" | "smartFeatures";
+type TabType = "general" | "connection" | "proxy" | "categories" | "automation" | "smartFeatures";
 
 export default function SettingsModal({
   settings,
@@ -63,7 +66,6 @@ export default function SettingsModal({
   );
 
   // File types tab
-  const [fileTypes, setFileTypes] = useState(settings.fileTypes);
 
   // Automation tab
   const [autoExtract, setAutoExtract] = useState(settings.autoExtract);
@@ -77,6 +79,51 @@ export default function SettingsModal({
   const [mobileSharingEnabled, setMobileSharingEnabled] = useState(settings.mobileSharingEnabled ?? true);
   const [bandwidthMonitorEnabled, setBandwidthMonitorEnabled] = useState(settings.bandwidthMonitorEnabled ?? true);
   const [clipboardMonitor, setClipboardMonitor] = useState(settings.clipboardMonitor ?? true);
+  const [background, setBackground] = useState(settings.background ?? "flow");
+  const [defaultDrive, setDefaultDrive] = useState(settings.defaultDrive ?? "");
+  const [drives, setDrives] = useState<DriveEntry[]>([]);
+  useEffect(() => {
+    api.listDrives().then((list) => setDrives(Array.isArray(list) ? list : [])).catch(() => setDrives([]));
+  }, []);
+  const [liquidImage, setLiquidImageState] = useState<string | null>(() => getLiquidImage());
+  const [liquidError, setLiquidError] = useState("");
+
+  const [draggingImage, setDraggingImage] = useState(false);
+
+  /** A picture dropped anywhere on this dialog becomes the liquid background right away (never a download). */
+  const dropLiquidImage = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation(); // the window must not treat it as a download link
+    setDraggingImage(false);
+    const result = await liquidImageFromDrop(e.dataTransfer, true);
+    if (!result) return;
+    if ("error" in result) {
+      setLiquidError(result.error);
+      return;
+    }
+    setLiquidError("");
+    setLiquidImage(result.dataUrl);
+    setLiquidImageState(result.dataUrl);
+    setBackground("liquid");
+    try {
+      await api.setSetting("background", "liquid");
+      await onRefreshSettings();
+    } catch {
+      /* the choice is still applied when Save Settings is pressed */
+    }
+  };
+
+  const chooseLiquidImage = async (file: File | undefined) => {
+    if (!file) return;
+    setLiquidError("");
+    try {
+      const url = await fileToLiquidDataUrl(file);
+      setLiquidImage(url);
+      setLiquidImageState(url);
+    } catch (e) {
+      setLiquidError((e as Error).message);
+    }
+  };
 
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -90,7 +137,6 @@ export default function SettingsModal({
       await api.setSetting("download_dir", downloadDir);
       await api.setSetting("language", language);
       await api.setSetting("theme", theme);
-      await api.setSetting("file_types", fileTypes);
       await api.setSetting("proxy", proxy.trim());
       await api.setSetting("auto_extract", autoExtract ? "1" : "0");
       await api.setSetting("virus_scan", virusScan ? "1" : "0");
@@ -103,6 +149,8 @@ export default function SettingsModal({
       await api.setSetting("mobile_sharing_enabled", mobileSharingEnabled ? "1" : "0");
       await api.setSetting("bandwidth_monitor_enabled", bandwidthMonitorEnabled ? "1" : "0");
       await api.setSetting("clipboard_monitor", clipboardMonitor ? "1" : "0");
+      await api.setSetting("background", background);
+      await api.setSetting("default_drive", defaultDrive);
 
       // Update active i18n
       updateI18nLanguage(language as any);
@@ -136,7 +184,19 @@ export default function SettingsModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none">
-      <div className="notch-card flex h-[560px] w-full max-w-2xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden">
+      <div
+        onDragEnter={(e) => { e.preventDefault(); setDraggingImage(true); }}
+        onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDraggingImage(true); }}
+        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDraggingImage(false); }}
+        onDrop={(e) => void dropLiquidImage(e)}
+        className="notch-card flex h-[560px] w-full max-w-2xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden"
+      >
+        {draggingImage && (
+          <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-purple-400 bg-[var(--bg-panel)]/90 text-purple-300">
+            <span className="text-base font-semibold">Drop the image here</span>
+            <span className="text-[12px] text-[var(--text-secondary)]">It becomes your Liquid background</span>
+          </div>
+        )}
         <ModalCorner onClose={onClose} />
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-3.5">
@@ -156,7 +216,7 @@ export default function SettingsModal({
                 activeTab === "general" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Folder size={14} /> General
+              <Folder size={17} /> General
             </button>
             <button
               onClick={() => setActiveTab("connection")}
@@ -164,7 +224,7 @@ export default function SettingsModal({
                 activeTab === "connection" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Zap size={14} /> Connection
+              <Zap size={17} /> Connection
             </button>
             <button
               onClick={() => setActiveTab("proxy")}
@@ -172,7 +232,7 @@ export default function SettingsModal({
                 activeTab === "proxy" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Globe size={14} /> Proxy
+              <Globe size={17} /> Proxy
             </button>
             <button
               onClick={() => setActiveTab("categories")}
@@ -180,15 +240,7 @@ export default function SettingsModal({
                 activeTab === "categories" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Folder size={14} /> Default Folders
-            </button>
-            <button
-              onClick={() => setActiveTab("fileTypes")}
-              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
-                activeTab === "fileTypes" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
-              }`}
-            >
-              <FileCode size={14} /> File Types
+              <Folder size={17} /> Default Folders
             </button>
             <button
               onClick={() => setActiveTab("automation")}
@@ -196,7 +248,7 @@ export default function SettingsModal({
                 activeTab === "automation" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Shield size={14} /> After Download
+              <Shield size={17} /> After Download
             </button>
             <button
               onClick={() => setActiveTab("smartFeatures")}
@@ -204,7 +256,7 @@ export default function SettingsModal({
                 activeTab === "smartFeatures" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
               }`}
             >
-              <Sparkles size={14} className="text-purple-400" /> Smart Features
+              <Sparkles size={17} className="text-purple-400" /> Smart Features
             </button>
           </div>
 
@@ -276,6 +328,86 @@ export default function SettingsModal({
                       <option value="system">System Default</option>
                     </Select>
                   </div>
+                </div>
+
+                {drives.length > 0 && (
+                  <div>
+                    <label className="mb-1 block font-medium text-[var(--text-secondary)]">Default disk</label>
+                    <Select
+                      value={defaultDrive}
+                      onChange={(e) => setDefaultDrive(e.target.value)}
+                      className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-sky-500"
+                    >
+                      <option value="">Same disk as the download folder</option>
+                      {drives.map((d) => (
+                        <option key={d.name} value={d.name}>
+                          {driveTitle(d)}
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="mt-1 text-[11px] font-normal text-[var(--text-secondary)]">
+                      The Disk Space card shows this disk, and Disk Cleaner opens on it.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block font-medium text-[var(--text-secondary)]">Animated background</label>
+                  <Select
+                    value={background}
+                    onChange={(e) => setBackground(e.target.value)}
+                    className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] px-3 py-2 text-[var(--text-primary)] outline-none focus:border-sky-500"
+                  >
+                    {BACKGROUNDS.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="mt-1 text-[11px] font-normal text-[var(--text-secondary)]">
+                    Shown behind the download list. Pick None for a plain background (uses less battery).
+                  </p>
+
+                  {background === "liquid" && (
+                    <div className="relative mt-3 flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
+                      <div
+                        className="h-12 w-12 flex-shrink-0 rounded-lg border border-[var(--border-subtle)] bg-cover bg-center"
+                        style={liquidImage ? { backgroundImage: `url(${liquidImage})` } : { background: "linear-gradient(135deg,#8b5cf6,#2dd4bf,#ec4899)" }}
+                        aria-label="Liquid image preview"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-[var(--text-primary)]">Liquid image</div>
+                        <div className="text-[11px] font-normal text-[var(--text-secondary)]">
+                          {liquidImage ? "Your picture shapes the liquid surface." : "Using the built-in picture. Choose your own, or drag an image onto this window."}
+                        </div>
+                        {liquidError && <div className="text-[11px] text-rose-400">{liquidError}</div>}
+                      </div>
+                      <label className="cursor-pointer rounded-lg gradient-accent px-3 py-1.5 text-[12px] font-medium text-white hover:opacity-90">
+                        Choose image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            void chooseLiquidImage(e.target.files?.[0]);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      {liquidImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLiquidImage(null);
+                            setLiquidImageState(null);
+                          }}
+                          className="rounded-lg border border-[var(--border-subtle)] px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -399,24 +531,6 @@ export default function SettingsModal({
               </div>
             )}
 
-            {/* File Types Tab */}
-            {activeTab === "fileTypes" && (
-              <div className="space-y-3">
-                <label className="block font-medium text-[var(--text-secondary)]">
-                  File types automatically captured by FlowGet
-                </label>
-                <textarea
-                  rows={6}
-                  value={fileTypes}
-                  onChange={(e) => setFileTypes(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3 font-mono text-[11px] text-[var(--text-primary)] outline-none focus:border-sky-500 transition leading-relaxed"
-                />
-                <p className="text-[11px] text-[var(--text-secondary)]">
-                  Space-separated list of file extensions captured by clipboard monitoring and browser integration.
-                </p>
-              </div>
-            )}
-
             {/* Automation Tab */}
             {activeTab === "automation" && (
               <div className="space-y-4">
@@ -493,7 +607,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <Battery size={14} className="text-emerald-400" />
+                        <Battery size={20} className="text-emerald-400" />
                         <span>Battery-Saver Mode (Laptop)</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
@@ -512,7 +626,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <Sparkles size={14} className="text-purple-400" />
+                        <Sparkles size={20} className="text-purple-400" />
                         <span>Detect copied download links</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
@@ -531,7 +645,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <Sparkles size={14} className="text-purple-400" />
+                        <Sparkles size={20} className="text-purple-400" />
                         <span>Smart Naming</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
@@ -550,7 +664,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <Smartphone size={14} className="text-teal-400" />
+                        <Smartphone size={20} className="text-teal-400" />
                         <span>Mobile Link Sharing (Local Wi-Fi)</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
@@ -569,7 +683,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <BarChart3 size={14} className="text-blue-400" />
+                        <BarChart3 size={20} className="text-blue-400" />
                         <span>Per-App Bandwidth View</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
@@ -588,7 +702,7 @@ export default function SettingsModal({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <HardDrive size={14} className="text-amber-400" />
+                        <HardDrive size={20} className="text-amber-400" />
                         <span>Portable Mode</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">

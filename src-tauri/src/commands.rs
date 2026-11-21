@@ -42,6 +42,9 @@ pub struct Settings {
     pub mobile_sharing_enabled: bool,
     pub bandwidth_monitor_enabled: bool,
     pub clipboard_monitor: bool,
+    pub background: String,
+    /// Drive shown on the Disk Space card and preselected in Disk Cleaner, e.g. "D:\". Empty = the download folder's drive.
+    pub default_drive: String,
 }
 
 #[derive(Serialize)]
@@ -876,6 +879,19 @@ pub struct DiskSpace {
     pub free_bytes: u64,
 }
 
+/// Run a PowerShell script and return its output, without opening a console window.
+fn run_powershell(script: &str) -> Result<String, String> {
+    let mut cmd = std::process::Command::new("powershell");
+    cmd.args(["-NoProfile", "-NonInteractive", "-Command", script]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    let out = cmd.output().map_err(|e| format!("Could not run PowerShell: {e}"))?;
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
 /// Real total/free space of the drive that holds `path` (falls back to the system drive).
 #[tauri::command]
 pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
@@ -884,11 +900,7 @@ pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
             r#"$p = '{p}'; if ($p -eq '' -or -not (Test-Path $p)) {{ $p = $env:SystemDrive + '\' }}; $d = New-Object System.IO.DriveInfo ([System.IO.Path]::GetPathRoot((Resolve-Path $p).Path)); Write-Output ($d.Name + '|' + $d.TotalSize + '|' + $d.AvailableFreeSpace)"#,
             p = path.replace('\'', "''")
         );
-        let out = std::process::Command::new("powershell")
-            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-            .output()
-            .map_err(|e| format!("Could not read disk space: {e}"))?;
-        let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        let text = run_powershell(&script)?;
         let mut parts = text.split('|');
         let drive = parts.next().unwrap_or("").to_string();
         let total = parts.next().and_then(|v| v.trim().parse::<u64>().ok());
@@ -900,6 +912,53 @@ pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
     })
     .await
     .map_err(|e| format!("Task error: {e}"))?
+}
+
+#[derive(Serialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveEntry {
+    /// e.g. "C:\"
+    pub name: String,
+    pub label: String,
+    /// "Fixed", "Removable" or "Network"
+    pub kind: String,
+    pub total_bytes: u64,
+    pub free_bytes: u64,
+}
+
+/// Every ready local, removable and network drive on this PC.
+pub fn read_drives() -> Result<Vec<DriveEntry>, String> {
+    let script = r#"[System.IO.DriveInfo]::GetDrives() | Where-Object { $_.IsReady -and ($_.DriveType -eq 'Fixed' -or $_.DriveType -eq 'Removable' -or $_.DriveType -eq 'Network') } | ForEach-Object { $_.Name + '|' + $_.VolumeLabel + '|' + $_.DriveType + '|' + $_.TotalSize + '|' + $_.AvailableFreeSpace }"#;
+    let text = run_powershell(script)?;
+    let drives: Vec<DriveEntry> = text
+        .lines()
+        .filter_map(|line| {
+            let f: Vec<&str> = line.trim().split('|').collect();
+            if f.len() < 5 {
+                return None;
+            }
+            Some(DriveEntry {
+                name: f[0].to_string(),
+                label: f[1].to_string(),
+                kind: f[2].to_string(),
+                total_bytes: f[3].trim().parse().ok()?,
+                free_bytes: f[4].trim().parse().ok()?,
+            })
+        })
+        .filter(|d| d.total_bytes > 0)
+        .collect();
+    if drives.is_empty() {
+        Err("No drives were found".to_string())
+    } else {
+        Ok(drives)
+    }
+}
+
+#[tauri::command]
+pub async fn list_drives() -> CmdResult<Vec<DriveEntry>> {
+    tokio::task::spawn_blocking(read_drives)
+        .await
+        .map_err(|e| format!("Task error: {e}"))?
 }
 
 #[tauri::command]
@@ -991,6 +1050,8 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     let mobile_sharing = state.db.get_setting("mobile_sharing_enabled").await.as_deref() != Some("0"); // default true
     let bandwidth_monitor = state.db.get_setting("bandwidth_monitor_enabled").await.as_deref() != Some("0"); // default true
     let clipboard_monitor = state.db.get_setting("clipboard_monitor").await.as_deref() != Some("0"); // default true
+    let background = state.db.get_setting("background").await.unwrap_or_else(|| "flow".to_string());
+    let default_drive = state.db.get_setting("default_drive").await.unwrap_or_default();
 
     Ok(Settings {
         global_speed_limit: state.engine.global_speed_limit(),
@@ -1014,6 +1075,8 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
         mobile_sharing_enabled: mobile_sharing,
         bandwidth_monitor_enabled: bandwidth_monitor,
         clipboard_monitor,
+        background,
+        default_drive,
     })
 }
 
@@ -1121,4 +1184,22 @@ pub async fn activate_license_key(state: State<'_, AppState>, key: String) -> Cm
 #[tauri::command]
 pub async fn deactivate_license_key(state: State<'_, AppState>) -> CmdResult<crate::licensing::TrialAndLicenseStatus> {
     crate::licensing::deactivate_license(&state.db).await.map_err(|e| e.to_string())
+}
+
+
+#[cfg(test)]
+mod drive_tests {
+    use super::*;
+
+    /// Reads the real drives of this PC: `cargo test --lib live_list_drives -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn live_list_drives() {
+        let drives = read_drives().expect("drives");
+        for d in &drives {
+            println!("{} [{}] {:?} free {} / {}", d.name, d.kind, d.label, d.free_bytes, d.total_bytes);
+        }
+        assert!(drives.iter().any(|d| d.name.to_uppercase().starts_with("C:")));
+        assert!(drives.iter().all(|d| d.free_bytes <= d.total_bytes));
+    }
 }

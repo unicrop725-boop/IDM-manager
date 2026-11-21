@@ -254,9 +254,11 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
       {/* Virtualized Table Body */}
       <div ref={parentRef} className="flex-1 overflow-y-auto">
         {downloads.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-[var(--text-disabled)] gap-2 py-20">
-            <File className="w-10 h-10 stroke-[1.2] opacity-40" />
-            <p className="text-xs">No downloads in this list</p>
+          <div className="h-full flex items-center justify-center py-20">
+            <div className="flex flex-col items-center gap-2 rounded-2xl bg-[var(--bg-panel)]/70 px-8 py-5 text-[var(--text-secondary)] backdrop-blur-md">
+              <File className="w-10 h-10 stroke-[1.2] opacity-60" />
+              <p className="text-xs">No downloads in this list</p>
+            </div>
           </div>
         ) : (
           <div

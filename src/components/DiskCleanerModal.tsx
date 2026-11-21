@@ -1,21 +1,72 @@
 import { Select } from "./Select";
 import { ModalCorner } from "./NotchCorner";
-import { useState } from "react";
-import { Trash2, CheckCircle2, HardDrive, Clock } from "lucide-react";
-import { DownloadInfo } from "../types";
+import { useEffect, useState } from "react";
+import { api } from "../api";
+import { Trash2, CheckCircle2, HardDrive, Clock, Star } from "lucide-react";
+import { DownloadInfo, DriveEntry } from "../types";
+import { driveOf, driveTitle, usedPercent } from "../utils/drives";
 import { formatBytes } from "../format";
 
 interface DiskCleanerModalProps {
   downloads: DownloadInfo[];
   onClose: () => void;
   onClean: (targetIds: string[], deleteFiles: boolean) => Promise<void>;
+  /** the saved default drive ("" = the download folder's drive) */
+  defaultDrive?: string;
+  downloadDir?: string;
+  /** called after the user makes the selected drive the default */
+  onDefaultChanged?: () => void;
 }
 
 export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
-  downloads,
+  downloads: allDownloads,
   onClose,
   onClean,
+  defaultDrive = "",
+  downloadDir = "",
+  onDefaultChanged,
 }) => {
+  // ---- which drive to clean ----
+  const [drives, setDrives] = useState<DriveEntry[] | null>(null);
+  const [drive, setDrive] = useState("");
+  const [savedDefault, setSavedDefault] = useState(defaultDrive);
+  const [savingDefault, setSavingDefault] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api
+      .listDrives()
+      .then((raw) => {
+        if (!alive) return;
+        const list = Array.isArray(raw) ? raw : [];
+        setDrives(list);
+        const wanted = driveOf(defaultDrive) || driveOf(downloadDir);
+        setDrive(list.find((d) => d.name.toUpperCase() === wanted)?.name ?? list[0]?.name ?? "");
+      })
+      .catch(() => alive && setDrives([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const current = drives?.find((d) => d.name === drive);
+  const isDefault = !!current && driveOf(savedDefault) === current.name.toUpperCase();
+
+  const makeDefault = async () => {
+    if (!current) return;
+    setSavingDefault(true);
+    try {
+      await api.setSetting("default_drive", current.name);
+      setSavedDefault(current.name);
+      onDefaultChanged?.();
+    } finally {
+      setSavingDefault(false);
+    }
+  };
+
+  // only downloads stored on the chosen drive are looked at (all of them if drives are unknown)
+  const downloads = current ? allDownloads.filter((d) => driveOf(d.filePath || d.saveDir) === current.name.toUpperCase()) : allDownloads;
+
   const [cleaning, setCleaning] = useState(false);
   const [cleanFinished, setCleanFinished] = useState(true);
   const [cleanDuplicates, setCleanDuplicates] = useState(true);
@@ -116,6 +167,54 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
           </div>
         ) : (
           <div className="p-5 space-y-4">
+            {drives && drives.length > 0 && current && (
+              <div className="p-3.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">Drive to clean</div>
+                  {isDefault ? (
+                    <span className="flex items-center gap-1 text-[11px] font-medium text-amber-400">
+                      <Star className="w-3.5 h-3.5 fill-current" /> Default drive
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void makeDefault()}
+                      disabled={savingDefault}
+                      className="flex items-center gap-1 text-[11px] font-medium text-purple-400 hover:text-purple-300 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Star className="w-3.5 h-3.5" /> Make default
+                    </button>
+                  )}
+                </div>
+                <Select
+                  value={drive}
+                  onChange={(e) => setDrive(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] text-[var(--text-primary)] cursor-pointer"
+                >
+                  {drives.map((d) => (
+                    <option key={d.name} value={d.name}>
+                      {driveTitle(d)} - {formatBytes(d.freeBytes)} free of {formatBytes(d.totalBytes)}
+                    </option>
+                  ))}
+                </Select>
+                <div>
+                  <div className="h-2 rounded-full bg-[var(--bg-hover)] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        usedPercent(current) >= 85 ? "bg-rose-500" : usedPercent(current) >= 70 ? "bg-amber-400" : "bg-emerald-400"
+                      }`}
+                      style={{ width: `${usedPercent(current)}%` }}
+                    />
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-[11px] text-[var(--text-secondary)]">
+                    <span>{usedPercent(current)}% used</span>
+                    <span>{formatBytes(current.freeBytes)} free</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--text-secondary)]">Only downloads stored on this drive are cleaned.</p>
+              </div>
+            )}
+
             <div className="p-3.5 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-between">
               <div>
                 <div className="text-[11px] text-teal-300 font-semibold uppercase tracking-wider">Total Space You Can Free</div>

@@ -972,3 +972,11 @@ button:disabled.bg-sky-500 {
 @media (prefers-reduced-motion: reduce) {
   .disk-alert, .disk-alert-inner { transition: none; }
 }
+
+/* WebGL backgrounds sit behind the list; keep them a little softer than the text */
+.bg-layer {
+  opacity: 0.65;
+}
+:root.light .bg-layer {
+  opacity: 0.5;
+}

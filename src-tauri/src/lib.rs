@@ -187,6 +187,7 @@ pub fn run() {
             commands::open_file,
             commands::pick_folder,
             commands::get_disk_space,
+            commands::list_drives,
             commands::update_download_path,
             commands::get_start_with_windows,
             commands::set_start_with_windows,

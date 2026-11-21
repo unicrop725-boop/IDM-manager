@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { api, errorText } from "./api";
 import { TitleBar } from "./components/TitleBar";
-import { FlowBackground } from "./components/FlowBackground";
+import { BackgroundLayer } from "./components/BackgroundLayer";
 import { MenuBar } from "./components/MenuBar";
 import { Sidebar, type SidebarFilter } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
@@ -16,6 +16,7 @@ import { PropertiesModal } from "./components/PropertiesModal";
 import { PremiumCard } from "./components/PremiumCard";
 import { ClipboardPopup } from "./components/ClipboardPopup";
 import { getVideoSite } from "./utils/videoUrl";
+import { isImageDrop, liquidImageFromDrop, setLiquidImage } from "./utils/liquidImage";
 import { DropTargetWidget } from "./components/DropTargetWidget";
 import AddDownloadModal from "./components/AddDownloadModal";
 import BatchDownloadModal from "./components/BatchDownloadModal";
@@ -356,8 +357,40 @@ export default function App() {
     };
   }, [settings?.batterySaver, downloads]);
 
+  // A short message at the bottom of the window (used for dropped pictures)
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const useDroppedPicture = async (dt: DataTransfer) => {
+    if ((settings?.background ?? "flow") !== "liquid") {
+      setNotice('Dropped pictures are used as the background when "Liquid" is chosen in Settings. Nothing was downloaded.');
+      return;
+    }
+    const result = await liquidImageFromDrop(dt);
+    if (!result) return;
+    if ("error" in result) {
+      setNotice(result.error);
+      return;
+    }
+    setLiquidImage(result.dataUrl);
+    setNotice("Liquid background updated.");
+  };
+
   const handleWindowDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    // Pictures (files or image links) are never downloads: they only ever change the background.
+    if (isImageDrop(e.dataTransfer)) {
+      void useDroppedPicture(e.dataTransfer);
+      return;
+    }
+    // Local files are not downloads either.
+    if (e.dataTransfer.files.length > 0 && !(e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain"))) {
+      return;
+    }
     let droppedUrl = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
     if (!droppedUrl) {
       const html = e.dataTransfer.getData("text/html");
@@ -741,7 +774,13 @@ export default function App() {
       className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none relative isolate"
     >
       {/* Animated flow-field background (shows through the download list) */}
-      <FlowBackground />
+      <BackgroundLayer kind={settings?.background ?? "flow"} />
+
+      {notice && (
+        <div className="dd-anim fixed bottom-16 left-1/2 z-[80] max-w-[90vw] -translate-x-1/2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2.5 text-[13px] text-[var(--text-primary)] shadow-2xl">
+          {notice}
+        </div>
+      )}
 
       {/* 1. Custom Frameless Title Bar */}
       <TitleBar />
@@ -778,7 +817,7 @@ export default function App() {
           currentFilter={filter}
           onSelectFilter={setFilter}
           downloads={Object.values(downloads)}
-          saveDir={settings?.downloadDir || ""}
+          saveDir={settings?.defaultDrive || settings?.downloadDir || ""}
           onOpenDiskCleaner={() => setIsDiskCleanerOpen(true)}
         />
 
@@ -830,8 +869,6 @@ export default function App() {
       <FooterBar
         totalCount={filteredAndSortedDownloads.length}
         selectedCount={selectedIds.size}
-        allSelected={selectedIds.size === filteredAndSortedDownloads.length && filteredAndSortedDownloads.length > 0}
-        onToggleSelectAll={handleToggleSelectAll}
         totalDownloadBps={totalDownloadBps}
         totalUploadBps={totalUploadBps}
         onOpenSpeedTest={() => setIsSpeedTestOpen(true)}
@@ -952,6 +989,9 @@ export default function App() {
           downloads={Object.values(downloads)}
           onClose={() => setIsDiskCleanerOpen(false)}
           onClean={handleDiskClean}
+          defaultDrive={settings?.defaultDrive ?? ""}
+          downloadDir={settings?.downloadDir ?? ""}
+          onDefaultChanged={refreshAll}
         />
       )}
 

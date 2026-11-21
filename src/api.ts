@@ -68,6 +68,8 @@ const mockSettings: Settings = {
   mobileSharingEnabled: true,
   bandwidthMonitorEnabled: true,
   clipboardMonitor: true,
+  background: "flow",
+  defaultDrive: "",
 };
 
 let mockLicenseStatus: TrialAndLicenseStatus = {
@@ -258,6 +260,10 @@ export const api = {
     isTauri
       ? invoke<{ drive: string; totalBytes: number; freeBytes: number }>("get_disk_space", { path })
       : Promise.reject(new Error("Disk space is only available in the desktop app")),
+  listDrives: () =>
+    isTauri
+      ? invoke<import("./types").DriveEntry[]>("list_drives")
+      : Promise.reject(new Error("Drives are only available in the desktop app")),
   updateDownloadPath: (id: string, newPath: string) =>
     isTauri
       ? invoke<void>("update_download_path", { id, newPath })

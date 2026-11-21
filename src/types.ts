@@ -188,6 +188,10 @@ export interface Settings {
   mobileSharingEnabled?: boolean;
   bandwidthMonitorEnabled?: boolean;
   clipboardMonitor?: boolean;
+  /** Animated background: none | flow | liquid | neon | starfield | tunnel | bokeh */
+  background?: string;
+  /** Drive for the Disk Space card and Disk Cleaner, e.g. "D:\\". Empty = the download folder's drive. */
+  defaultDrive?: string;
 }
 
 export interface MediaFormatOption {
@@ -251,4 +255,13 @@ export interface TrialAndLicenseStatus {
   licenseKey?: string | null;
   licenseEmail?: string | null;
   licenseTier?: string | null;
+}
+
+export interface DriveEntry {
+  /** e.g. "C:\\" */
+  name: string;
+  label: string;
+  kind: "Fixed" | "Removable" | "Network" | string;
+  totalBytes: number;
+  freeBytes: number;
 }

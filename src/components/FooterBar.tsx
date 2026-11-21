@@ -1,12 +1,9 @@
 import React from "react";
-import { Checkbox } from "./Checkbox";
 import { CircleArrowDown, CircleArrowUp } from "lucide-react";
 
 interface FooterBarProps {
   totalCount: number;
   selectedCount: number;
-  allSelected: boolean;
-  onToggleSelectAll: () => void;
   totalDownloadBps: number;
   totalUploadBps: number;
   onOpenSpeedTest: () => void;
@@ -15,8 +12,6 @@ interface FooterBarProps {
 export const FooterBar: React.FC<FooterBarProps> = ({
   totalCount,
   selectedCount,
-  allSelected,
-  onToggleSelectAll,
   totalDownloadBps,
   totalUploadBps,
   onOpenSpeedTest,
@@ -25,23 +20,11 @@ export const FooterBar: React.FC<FooterBarProps> = ({
 
   return (
     <footer className="h-12 w-full flex items-center justify-between px-5 grad-bar-up text-[var(--text-secondary)] select-none z-30">
-      {/* Left: Select All Checkbox + Count */}
+      {/* Left: how many rows are selected (select all lives in the table header) */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-4 group">
-          <Checkbox
-            checked={allSelected && totalCount > 0}
-            onChange={onToggleSelectAll}
-          />
-          <span
-            onClick={onToggleSelectAll}
-            className="text-[13px] cursor-pointer group-hover:text-[var(--text-primary)] transition-colors"
-          >
-            Select All
-          </span>
-        </div>
         {selectedCount > 0 && (
-          <span className="text-[11px] text-purple-400 font-medium">
-            ({selectedCount} of {totalCount} selected)
+          <span className="text-[12px] text-purple-400 font-medium">
+            {selectedCount} of {totalCount} selected
           </span>
         )}
       </div>

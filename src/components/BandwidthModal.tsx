@@ -1,5 +1,5 @@
 import { ModalCorner } from "./NotchCorner";
-import { Activity, Monitor, HardDrive } from "lucide-react";
+import { Activity } from "lucide-react";
 import { formatSpeed } from "../format";
 import type { AdapterInfo, DownloadInfo } from "../types";
 
@@ -12,11 +12,6 @@ interface Props {
 export default function BandwidthModal({ downloads, onClose }: Props) {
   const activeDownloads = downloads.filter((d) => d.state === "downloading");
   const flowgetSpeedBps = activeDownloads.reduce((acc, d) => acc + (d.speedBps || 0), 0);
-
-  // Simulated total network bandwidth (FlowGet + OS/Browser headroom)
-  const systemEstimatedSpeedBps = flowgetSpeedBps > 0 ? flowgetSpeedBps * 1.25 + 500000 : 800000;
-  const flowgetPct = Math.min(100, Math.round((flowgetSpeedBps / systemEstimatedSpeedBps) * 100));
-  const otherPct = 100 - flowgetPct;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 select-none animate-in fade-in duration-150">
@@ -41,30 +36,8 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
                   {formatSpeed(flowgetSpeedBps)}
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-[11px] text-[var(--text-disabled)] uppercase font-semibold">System Total</span>
-                <div className="text-xl font-bold font-mono text-[var(--text-primary)] mt-0.5">
-                  {formatSpeed(systemEstimatedSpeedBps)}
-                </div>
-              </div>
             </div>
 
-            {/* Split Bar */}
-            <div className="w-full h-3 rounded-full bg-[var(--bg-hover)] overflow-hidden flex">
-              <div
-                style={{ width: `${flowgetPct}%` }}
-                className="h-full bg-gradient-to-r from-purple-500 to-teal-400 transition-all duration-300"
-              />
-              <div
-                style={{ width: `${otherPct}%` }}
-                className="h-full bg-slate-600/40 transition-all duration-300"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-purple-300 font-medium">FlowGet: {flowgetPct}% of network</span>
-              <span className="text-[var(--text-disabled)]">Other Apps: {otherPct}%</span>
-            </div>
           </div>
 
           {/* Apps Breakdown List */}
@@ -92,37 +65,6 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Web Browsers */}
-              <div className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-sky-500/10 flex items-center justify-center text-sky-400">
-                    <Monitor className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-[var(--text-primary)]">Web Browsers (Chrome / Edge)</div>
-                    <div className="text-[11px] text-[var(--text-disabled)]">General web browsing & tabs</div>
-                  </div>
-                </div>
-                <div className="text-right font-mono text-[var(--text-secondary)]">
-                  {formatSpeed(flowgetSpeedBps > 0 ? flowgetSpeedBps * 0.18 : 450000)}
-                </div>
-              </div>
-
-              {/* System Services */}
-              <div className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-slate-500/10 flex items-center justify-center text-slate-400">
-                    <HardDrive className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-[var(--text-primary)]">Windows OS & Cloud Sync</div>
-                    <div className="text-[11px] text-[var(--text-disabled)]">Telemetry, updates, OneDrive</div>
-                  </div>
-                </div>
-                <div className="text-right font-mono text-[var(--text-secondary)]">
-                  {formatSpeed(flowgetSpeedBps > 0 ? flowgetSpeedBps * 0.07 : 350000)}
-                </div>
-              </div>
             </div>
           </div>
         </div>

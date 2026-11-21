@@ -2,11 +2,13 @@
 
 pub mod batch;
 pub mod categories;
+pub mod clipboard_watch;
 pub mod commands;
 pub mod db;
 pub mod ipc_server;
 pub mod licensing;
 pub mod media_stream;
+pub mod payload_check;
 pub mod post_download;
 pub mod protocols;
 pub mod queue_manager;
@@ -130,6 +132,7 @@ pub fn run() {
             }));
 
             tauri::async_runtime::spawn(event_pump(app.handle().clone(), db.clone(), rx));
+            clipboard_watch::start(app.handle().clone(), db.clone());
 
             let supervisor = engine.clone();
             tauri::async_runtime::spawn(async move { supervisor.run_network_monitor().await });
@@ -183,6 +186,7 @@ pub fn run() {
             commands::open_folder,
             commands::open_file,
             commands::pick_folder,
+            commands::get_disk_space,
             commands::update_download_path,
             commands::get_start_with_windows,
             commands::set_start_with_windows,
@@ -213,6 +217,7 @@ pub fn run() {
             }
             let engine = state.engine.clone();
             let handle = handle.clone();
+            commands::stop_all_yt_jobs();
             tauri::async_runtime::spawn(async move {
                 engine.shutdown().await;
                 handle.exit(0);

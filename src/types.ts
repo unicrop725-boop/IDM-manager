@@ -119,6 +119,13 @@ export interface AddRequest {
   speedLimit?: number;
   /** Other links to the same file; verified (same size and ETag) before use. */
   mirrors?: string[];
+  /** Video pages (YouTube, ...): chosen quality, whether it is audio only, and optional re-encode. */
+  mediaFormat?: string;
+  mediaAudioOnly?: boolean;
+  convertTo?: "mp4" | "mkv" | "mp3" | "m4a";
+  /** Video pages: best stream at or below this height / frame rate. */
+  mediaHeight?: number;
+  mediaFps?: number;
 }
 
 export interface Category {
@@ -180,6 +187,7 @@ export interface Settings {
   portableMode?: boolean;
   mobileSharingEnabled?: boolean;
   bandwidthMonitorEnabled?: boolean;
+  clipboardMonitor?: boolean;
 }
 
 export interface MediaFormatOption {
@@ -191,6 +199,13 @@ export interface MediaFormatOption {
   isAudioOnly: boolean;
 }
 
+export interface VideoOption {
+  height: number;
+  fps: number;
+  ext: string;
+  fileSizeApprox?: number;
+}
+
 export interface MediaResolveResult {
   isSupported: boolean;
   isDrm: boolean;
@@ -199,6 +214,8 @@ export interface MediaResolveResult {
   thumbnail?: string;
   duration?: number;
   formats: MediaFormatOption[];
+  /** Real resolution + frame-rate combinations the site offers (highest first). */
+  videoOptions?: VideoOption[];
   manifestType?: string;
 }
 

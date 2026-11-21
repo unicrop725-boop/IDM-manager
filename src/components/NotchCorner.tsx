@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 /**
@@ -9,14 +9,34 @@ import { X } from "lucide-react";
 export const NotchCorner: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const ref = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
+  // Copy the card's real background colour into --card-bg (used by the notch curves and the
+  // header/footer gradients). It must be re-read whenever the theme changes, otherwise the old
+  // colour stays stuck on the card.
+  const sync = () => {
     const el = ref.current;
     const parent = el?.parentElement;
     if (!el || !parent) return;
     const bg = getComputedStyle(parent).backgroundColor;
     parent.style.setProperty("--card-bg", bg);
     el.style.setProperty("--card-bg", bg);
-  });
+  };
+
+  useLayoutEffect(sync);
+
+  useEffect(() => {
+    let t: number | undefined;
+    const observer = new MutationObserver(() => {
+      sync();
+      // run again once any colour transition on the card has finished
+      window.clearTimeout(t);
+      t = window.setTimeout(sync, 320);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(t);
+    };
+  }, []);
 
   return (
     <div ref={ref} className="notch-corner">

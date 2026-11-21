@@ -76,6 +76,7 @@ export default function SettingsModal({
   const [portableMode, setPortableMode] = useState(settings.portableMode ?? false);
   const [mobileSharingEnabled, setMobileSharingEnabled] = useState(settings.mobileSharingEnabled ?? true);
   const [bandwidthMonitorEnabled, setBandwidthMonitorEnabled] = useState(settings.bandwidthMonitorEnabled ?? true);
+  const [clipboardMonitor, setClipboardMonitor] = useState(settings.clipboardMonitor ?? true);
 
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -101,6 +102,7 @@ export default function SettingsModal({
       await api.setSetting("portable_mode", portableMode ? "1" : "0");
       await api.setSetting("mobile_sharing_enabled", mobileSharingEnabled ? "1" : "0");
       await api.setSetting("bandwidth_monitor_enabled", bandwidthMonitorEnabled ? "1" : "0");
+      await api.setSetting("clipboard_monitor", clipboardMonitor ? "1" : "0");
 
       // Update active i18n
       updateI18nLanguage(language as any);
@@ -496,6 +498,25 @@ export default function SettingsModal({
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
                         Automatically pauses heavy active downloads when your laptop battery drops below 20% to prevent unexpected shutdown.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Clipboard link detection */}
+                  <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer pt-2 border-t border-[var(--border-subtle)]">
+                    <input
+                      type="checkbox"
+                      checked={clipboardMonitor}
+                      onChange={(e) => setClipboardMonitor(e.target.checked)}
+                      className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={14} className="text-purple-400" />
+                        <span>Detect copied download links</span>
+                      </div>
+                      <p className="text-[11px] font-normal text-[var(--text-secondary)]">
+                        When you copy a file, video (YouTube, ...) or magnet link anywhere, FlowGet comes forward and offers to download it.
                       </p>
                     </div>
                   </label>

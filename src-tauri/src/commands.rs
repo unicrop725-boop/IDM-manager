@@ -41,6 +41,7 @@ pub struct Settings {
     pub portable_mode: bool,
     pub mobile_sharing_enabled: bool,
     pub bandwidth_monitor_enabled: bool,
+    pub clipboard_monitor: bool,
 }
 
 #[derive(Serialize)]
@@ -51,6 +52,190 @@ pub struct DuplicateCheckResult {
     pub file_exists: bool,
     pub existing_file_path: Option<String>,
     pub suggested_file_name: String,
+}
+
+// ---- yt-dlp (video page) downloads: tracked here so they can be paused, resumed and cancelled ----
+
+#[derive(Clone)]
+struct YtParams {
+    url: String,
+    save_dir: String,
+    name_stem: Option<String>,
+    format_id: Option<String>,
+    audio_only: bool,
+    convert: Option<String>,
+    height: Option<u32>,
+    fps: Option<u32>,
+}
+
+struct YtJob {
+    params: YtParams,
+    temp_dir: PathBuf,
+    info: std::sync::Mutex<DownloadInfo>,
+    ctl: std::sync::Mutex<std::sync::Arc<crate::media_stream::YtControl>>,
+}
+
+static YT_JOBS: std::sync::OnceLock<std::sync::Mutex<std::collections::HashMap<String, std::sync::Arc<YtJob>>>> =
+    std::sync::OnceLock::new();
+
+fn yt_jobs() -> &'static std::sync::Mutex<std::collections::HashMap<String, std::sync::Arc<YtJob>>> {
+    YT_JOBS.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
+}
+
+fn yt_job(id: &str) -> Option<std::sync::Arc<YtJob>> {
+    yt_jobs().lock().unwrap().get(id).cloned()
+}
+
+/// Stop every running yt-dlp download (used when the app exits so no process is left behind).
+pub fn stop_all_yt_jobs() {
+    let jobs: Vec<_> = yt_jobs().lock().unwrap().values().cloned().collect();
+    for job in jobs {
+        let ctl = job.ctl.lock().unwrap().clone();
+        ctl.stop(crate::media_stream::YtControl::PAUSE);
+    }
+}
+
+/// Start (or restart after a pause) the yt-dlp process for a job.
+fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db::Db, engine: flowget_engine::Engine) {
+    use crate::media_stream::{YtControl, YT_CANCELLED, YT_PAUSED};
+
+    let ctl = std::sync::Arc::new(YtControl::default());
+    *job.ctl.lock().unwrap() = ctl.clone();
+    {
+        let mut i = job.info.lock().unwrap();
+        i.state = DownloadState::Downloading;
+        i.error = None;
+        i.note = Some("Resolving video with yt-dlp...".to_string());
+        let _ = app.emit("download-updated", &*i);
+    }
+
+    tokio::spawn(async move {
+        let (job_b, app_b, ctl_b) = (job.clone(), app.clone(), ctl.clone());
+        let res = tokio::task::spawn_blocking(move || {
+            let p = &job_b.params;
+            let mut last_emit = std::time::Instant::now();
+            crate::media_stream::download_ytdlp_blocking(
+                &p.url,
+                Path::new(&p.save_dir),
+                Some(&job_b.temp_dir),
+                p.name_stem.as_deref(),
+                p.format_id.as_deref(),
+                p.audio_only,
+                p.convert.as_deref(),
+                p.height,
+                p.fps,
+                &ctl_b,
+                |downloaded, total, speed, eta| {
+                    if last_emit.elapsed() < std::time::Duration::from_millis(400) {
+                        return;
+                    }
+                    last_emit = std::time::Instant::now();
+                    let mut i = job_b.info.lock().unwrap();
+                    i.downloaded = downloaded;
+                    i.total_size = total;
+                    i.speed_bps = speed;
+                    i.eta_secs = eta;
+                    i.note = Some("Downloading with yt-dlp...".to_string());
+                    let _ = app_b.emit("download-updated", &*i);
+                },
+            )
+        })
+        .await
+        .map_err(|e| format!("Task error: {e}"))
+        .and_then(|r| r);
+
+        let id = job.info.lock().unwrap().id.clone();
+
+        if let Err(e) = &res {
+            if e == YT_PAUSED {
+                // keep the job (and its partial files) so it can be resumed
+                let mut i = job.info.lock().unwrap();
+                i.state = DownloadState::Paused;
+                i.speed_bps = 0;
+                i.eta_secs = None;
+                i.note = None;
+                let _ = app.emit("download-updated", &*i);
+                return;
+            }
+            if e == YT_CANCELLED {
+                yt_jobs().lock().unwrap().remove(&id);
+                let _ = std::fs::remove_dir_all(&job.temp_dir);
+                let _ = app.emit("download-removed", id);
+                return;
+            }
+        }
+
+        let mut done = job.info.lock().unwrap().clone();
+        match res {
+            Ok(path) => {
+                let size = std::fs::metadata(&path).ok().map(|m| m.len()).unwrap_or(0);
+                done.file_name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or(done.file_name);
+                done.file_path = path.to_string_lossy().to_string();
+                done.state = DownloadState::Completed;
+                done.downloaded = size;
+                done.total_size = Some(size);
+                done.speed_bps = 0;
+                done.eta_secs = None;
+                done.completed_at = Some(chrono::Utc::now().timestamp());
+                done.note = None;
+            }
+            Err(e) => {
+                done.state = DownloadState::Failed;
+                done.speed_bps = 0;
+                done.eta_secs = None;
+                done.note = None;
+                done.error = Some(flowget_engine::UserError { code: "VIDEO_ERROR".to_string(), message: e });
+            }
+        }
+
+        yt_jobs().lock().unwrap().remove(&id);
+        let _ = std::fs::remove_dir_all(&job.temp_dir);
+
+        let rec = flowget_engine::DownloadRecord {
+            id: done.id.clone(),
+            url: done.url.clone(),
+            final_url: None,
+            save_dir: done.save_dir.clone(),
+            file_name: done.file_name.clone(),
+            file_name_locked: true,
+            file_path: done.file_path.clone(),
+            total_size: done.total_size,
+            downloaded: done.downloaded,
+            resume_supported: Some(false),
+            mime: done.mime.clone(),
+            etag: None,
+            last_modified: None,
+            segments: Vec::new(),
+            connections: 1,
+            speed_limit: 0,
+            http: Default::default(),
+            checksum: None,
+            checksum_verified: None,
+            mirrors: Vec::new(),
+            mirror_report: Vec::new(),
+            state: done.state,
+            error: done.error.clone(),
+            created_at: done.created_at,
+            completed_at: done.completed_at,
+            category: done.category.clone(),
+            queue_id: done.queue_id.clone(),
+            queue_order: done.queue_order,
+        };
+        let _ = db.upsert_download(&rec).await;
+        // registered with the engine so it stays in the list, can be removed and reloads on restart
+        engine.restore(vec![rec]);
+        let _ = app.emit("download-updated", &done);
+    });
+}
+
+/// Cancel a yt-dlp job: end its process, drop it from the list and delete its partial files.
+fn cancel_yt_job(job: &std::sync::Arc<YtJob>, app: &tauri::AppHandle) {
+    let id = job.info.lock().unwrap().id.clone();
+    yt_jobs().lock().unwrap().remove(&id);
+    let ctl = job.ctl.lock().unwrap().clone();
+    ctl.stop(crate::media_stream::YtControl::CANCEL);
+    let _ = std::fs::remove_dir_all(&job.temp_dir);
+    let _ = app.emit("download-removed", id);
 }
 
 /// Add a download and start or queue it.
@@ -232,6 +417,76 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
         return Ok(info);
     }
 
+    // 2b. Video pages (YouTube, Vimeo, ...): resolve and download with yt-dlp
+    if crate::media_stream::is_video_page_url(&request.url) {
+        crate::media_stream::validate_remote_url(&request.url)?;
+        let lic_status = crate::licensing::get_status(&state.db).await;
+        if !lic_status.media_download_allowed {
+            return Err("Video downloading requires an active 30-day trial or FlowGet Pro license.".to_string());
+        }
+
+        let id = uuid::Uuid::new_v4().to_string();
+        let convert = request.convert_to.clone().filter(|c| matches!(c.as_str(), "mp3" | "m4a" | "mp4" | "mkv"));
+        let is_audio = matches!(convert.as_deref(), Some("mp3") | Some("m4a")) || request.media_audio_only == Some(true);
+        let default_sub = if is_audio { "Music" } else { "Videos" };
+        let save_dir = request.save_dir.clone().unwrap_or_else(|| {
+            state.engine.default_dir().join(default_sub).to_string_lossy().to_string()
+        });
+        // Only trust a typed/auto-filled name when a quality was resolved; otherwise yt-dlp names it by title.
+        let name_stem = if request.media_format.is_some() { request.file_name.clone() } else { None };
+        let shown_name = name_stem.clone().unwrap_or_else(|| "Video (fetching title...)".to_string());
+        let now = chrono::Utc::now().timestamp();
+
+        let info = DownloadInfo {
+            id: id.clone(),
+            url: request.url.clone(),
+            file_name: shown_name.clone(),
+            file_path: format!("{save_dir}\\{shown_name}"),
+            save_dir: save_dir.clone(),
+            total_size: None,
+            downloaded: 0,
+            state: DownloadState::Downloading,
+            resume_supported: Some(true),
+            mime: Some(if is_audio { "audio/mpeg" } else { "video/mp4" }.to_string()),
+            connections: 1,
+            speed_limit: 0,
+            checksum: None,
+            checksum_verified: None,
+            error: None,
+            created_at: now,
+            completed_at: None,
+            speed_bps: 0,
+            eta_secs: None,
+            segments: Vec::new(),
+            note: Some("Resolving video with yt-dlp...".to_string()),
+            protocol: Some("yt-dlp".to_string()),
+            mirrors: Vec::new(),
+            category: Some(default_sub.to_string()),
+            queue_id: request.queue_id.clone(),
+            queue_order: request.queue_order,
+        };
+
+        let job = std::sync::Arc::new(YtJob {
+            params: YtParams {
+                url: request.url.clone(),
+                save_dir: save_dir.clone(),
+                name_stem,
+                format_id: request.media_format.clone(),
+                audio_only: request.media_audio_only == Some(true),
+                convert,
+                height: request.media_height,
+                fps: request.media_fps,
+            },
+            temp_dir: PathBuf::from(&save_dir).join(format!(".flowget-{id}")),
+            info: std::sync::Mutex::new(info.clone()),
+            ctl: std::sync::Mutex::new(std::sync::Arc::new(crate::media_stream::YtControl::default())),
+        });
+        yt_jobs().lock().unwrap().insert(id, job.clone());
+        spawn_ytdlp(job, state.app_handle.clone(), state.db.clone(), state.engine.clone());
+
+        return Ok(info);
+    }
+
     // 3. Check if HLS (.m3u8) or DASH (.mpd)
     if request.url.contains(".m3u8") || request.url.contains(".mpd") {
         let is_dash = request.url.contains(".mpd");
@@ -346,11 +601,23 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
 
 #[tauri::command]
 pub async fn pause(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    if let Some(job) = yt_job(&id) {
+        let ctl = job.ctl.lock().unwrap().clone();
+        ctl.stop(crate::media_stream::YtControl::PAUSE);
+        return Ok(());
+    }
     state.engine.pause(&id).await.map_err(msg)
 }
 
 #[tauri::command]
 pub async fn resume(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    if let Some(job) = yt_job(&id) {
+        let paused = job.info.lock().unwrap().state == DownloadState::Paused;
+        if paused {
+            spawn_ytdlp(job, state.app_handle.clone(), state.db.clone(), state.engine.clone());
+        }
+        return Ok(());
+    }
     state.engine.resume(&id).await.map_err(msg)
 }
 
@@ -361,6 +628,10 @@ pub async fn mark_queued(state: State<'_, AppState>, id: String) -> CmdResult<()
 
 #[tauri::command]
 pub async fn cancel(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    if let Some(job) = yt_job(&id) {
+        cancel_yt_job(&job, &state.app_handle);
+        return Ok(());
+    }
     state.engine.cancel(&id).await.map_err(msg)
 }
 
@@ -376,12 +647,22 @@ pub async fn restart(state: State<'_, AppState>, id: String) -> CmdResult<()> {
 
 #[tauri::command]
 pub async fn remove(state: State<'_, AppState>, id: String, delete_file: bool) -> CmdResult<()> {
+    if let Some(job) = yt_job(&id) {
+        cancel_yt_job(&job, &state.app_handle);
+        return Ok(());
+    }
     state.engine.remove(&id, delete_file).await.map_err(msg)
 }
 
 #[tauri::command]
 pub fn get_downloads(state: State<'_, AppState>) -> Vec<DownloadInfo> {
-    state.engine.list()
+    let mut list = state.engine.list();
+    // yt-dlp downloads that are still running or paused live outside the engine
+    for job in yt_jobs().lock().unwrap().values() {
+        list.push(job.info.lock().unwrap().clone());
+    }
+    list.sort_by(|a, b| a.created_at.cmp(&b.created_at).then_with(|| a.id.cmp(&b.id)));
+    list
 }
 
 #[tauri::command]
@@ -572,26 +853,49 @@ pub fn open_file(path: String) -> CmdResult<()> {
 }
 
 #[tauri::command]
-pub async fn pick_folder(initial_dir: Option<String>) -> CmdResult<Option<String>> {
+pub async fn pick_folder(window: tauri::WebviewWindow, initial_dir: Option<String>) -> CmdResult<Option<String>> {
+    // Native Windows "pick folder" dialog (modern, resizable, remembers its size), owned by the app window.
     tokio::task::spawn_blocking(move || {
-        let init = initial_dir.unwrap_or_default();
+        let mut dialog = rfd::FileDialog::new()
+            .set_title("Select download destination folder")
+            .set_parent(&window);
+        if let Some(dir) = initial_dir.filter(|d| !d.is_empty() && std::path::Path::new(d).is_dir()) {
+            dialog = dialog.set_directory(dir);
+        }
+        Ok(dialog.pick_folder().map(|p| p.to_string_lossy().to_string()))
+    })
+    .await
+    .map_err(|e| format!("Task error: {e}"))?
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiskSpace {
+    pub drive: String,
+    pub total_bytes: u64,
+    pub free_bytes: u64,
+}
+
+/// Real total/free space of the drive that holds `path` (falls back to the system drive).
+#[tauri::command]
+pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
+    tokio::task::spawn_blocking(move || {
         let script = format!(
-            r#"Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Select download destination folder'; if ('{init}' -ne '' -and (Test-Path '{init}')) {{ $f.SelectedPath = '{init}' }}; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {{ Write-Output $f.SelectedPath }}"#,
-            init = init.replace('\'', "''")
+            r#"$p = '{p}'; if ($p -eq '' -or -not (Test-Path $p)) {{ $p = $env:SystemDrive + '\' }}; $d = New-Object System.IO.DriveInfo ([System.IO.Path]::GetPathRoot((Resolve-Path $p).Path)); Write-Output ($d.Name + '|' + $d.TotalSize + '|' + $d.AvailableFreeSpace)"#,
+            p = path.replace('\'', "''")
         );
-        let output = std::process::Command::new("powershell")
+        let out = std::process::Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
-            .output();
-        match output {
-            Ok(out) => {
-                let path = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                if path.is_empty() {
-                    Ok(None)
-                } else {
-                    Ok(Some(path))
-                }
-            }
-            Err(e) => Err(format!("Could not open folder picker: {e}")),
+            .output()
+            .map_err(|e| format!("Could not read disk space: {e}"))?;
+        let text = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        let mut parts = text.split('|');
+        let drive = parts.next().unwrap_or("").to_string();
+        let total = parts.next().and_then(|v| v.trim().parse::<u64>().ok());
+        let free = parts.next().and_then(|v| v.trim().parse::<u64>().ok());
+        match (total, free) {
+            (Some(total_bytes), Some(free_bytes)) if total_bytes > 0 => Ok(DiskSpace { drive, total_bytes, free_bytes }),
+            _ => Err("Disk space is not available".to_string()),
         }
     })
     .await
@@ -686,6 +990,7 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     let portable_mode = state.db.get_setting("portable_mode").await.as_deref() == Some("1");
     let mobile_sharing = state.db.get_setting("mobile_sharing_enabled").await.as_deref() != Some("0"); // default true
     let bandwidth_monitor = state.db.get_setting("bandwidth_monitor_enabled").await.as_deref() != Some("0"); // default true
+    let clipboard_monitor = state.db.get_setting("clipboard_monitor").await.as_deref() != Some("0"); // default true
 
     Ok(Settings {
         global_speed_limit: state.engine.global_speed_limit(),
@@ -708,6 +1013,7 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
         portable_mode,
         mobile_sharing_enabled: mobile_sharing,
         bandwidth_monitor_enabled: bandwidth_monitor,
+        clipboard_monitor,
     })
 }
 

@@ -67,6 +67,16 @@ pub struct AddRequest {
     /// Other places that hold the **same file**. Each is verified (same size and ETag, supports
     /// ranges) before use; verified mirrors serve different segments at the same time.
     pub mirrors: Vec<String>,
+    /// Video pages (YouTube, ...): the chosen yt-dlp format id, if the user picked one.
+    pub media_format: Option<String>,
+    /// Video pages: the chosen format has no video track.
+    pub media_audio_only: Option<bool>,
+    /// Video pages: re-encode to `mp4`, `mp3` or `m4a`.
+    pub convert_to: Option<String>,
+    /// Video pages: download the best stream at or below this height (e.g. 1080).
+    pub media_height: Option<u32>,
+    /// Video pages: prefer streams at or below this frame rate (e.g. 60).
+    pub media_fps: Option<u32>,
 }
 
 /// Outcome of checking one mirror.

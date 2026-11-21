@@ -659,3 +659,316 @@ button:disabled.bg-sky-500 {
 .heartbeat-line {
   filter: drop-shadow(0 0 3px rgba(222, 98, 98, 0.7));
 }
+
+/* ===== Responsive toolbar: wraps and shrinks instead of getting cut off ===== */
+.toolbar-root {
+  container-type: inline-size;
+  position: relative;
+  z-index: 30; /* keeps the video quality picker above the table */
+  width: 100%;
+  min-height: 84px;
+}
+@container (max-width: 1100px) {
+  .tool-group { gap: 4px; }
+  .tool-btn { width: 66px; }
+}
+@container (max-width: 800px) {
+  .tool-divider { display: none; }
+  .tool-group { gap: 2px; width: 100%; justify-content: space-between; }
+  .tool-btn { width: 58px; height: 62px; }
+  .tool-btn span { font-size: 11px; }
+}
+
+/* ===== Responsive download table: drop the least important columns first ===== */
+.dt-root {
+  container-type: inline-size;
+}
+.dt-col-name,
+.dt-col-name-h {
+  min-width: 170px;
+}
+.dt-col-size,
+.dt-col-status,
+.dt-col-eta,
+.dt-col-date {
+  flex-shrink: 0;
+}
+@container (max-width: 1000px) {
+  .dt-col-date { display: none; }
+}
+@container (max-width: 800px) {
+  .dt-col-eta { display: none; }
+}
+@container (max-width: 620px) {
+  .dt-col-size { width: 88px; }
+  .dt-col-status { width: 130px; }
+}
+
+/* Pause / resume button inside a table row */
+.row-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+  transition: 0.15s ease;
+}
+.row-action:hover {
+  background: var(--accent-gradient);
+  color: #fff;
+}
+.row-action:active {
+  transform: scale(0.92);
+}
+
+/* Pause = amber, Resume = green (matches the toolbar colours) */
+.row-action--pause {
+  color: #fbbf24;
+  background-color: rgba(245, 158, 11, 0.16);
+}
+.row-action--pause:hover {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  color: #fff;
+}
+.row-action--resume {
+  color: #34d399;
+  background-color: rgba(16, 185, 129, 0.16);
+}
+.row-action--resume:hover {
+  background: linear-gradient(135deg, #10b981, #14b8a6);
+  color: #fff;
+}
+
+/* ===== Download visualiser (progress dialog) ===== */
+.dl-ticks {
+  display: flex;
+  gap: 3px;
+  height: 38px;
+  align-items: stretch;
+}
+.dl-tick {
+  flex: 1;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--text-primary) 13%, transparent);
+  transition: background-color 0.3s ease;
+}
+.dl-tick--on {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%), var(--tc, #2dd4bf);
+}
+.dl-ticks--sm {
+  height: 14px;
+  gap: 2px;
+}
+.dl-ticks--sm .dl-tick {
+  border-radius: 1.5px;
+}
+.dl-viz--active .dl-tick--on {
+  animation: dl-wave 1.8s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 28ms);
+}
+.dl-viz--active .dl-tick--head {
+  animation: dl-head 0.9s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.8);
+}
+@keyframes dl-wave {
+  0%, 100% { filter: brightness(0.82); }
+  50% { filter: brightness(1.15); }
+}
+@keyframes dl-head {
+  0%, 100% { opacity: 1; transform: scaleY(1); }
+  50% { opacity: 0.55; transform: scaleY(0.82); }
+}
+
+.dl-pills {
+  display: flex;
+  gap: 8px;
+  height: 14px;
+}
+.dl-pill {
+  position: relative;
+  min-width: 10px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--c, #888) 22%, transparent);
+}
+.dl-pill--empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-disabled);
+  background: var(--bg-hover);
+}
+.dl-pill-fill {
+  position: relative;
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--c, #888);
+  transition: width 0.3s ease;
+  overflow: hidden;
+}
+.dl-pill-fill--live::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: dl-shine 1.3s linear infinite;
+}
+@keyframes dl-shine {
+  to { transform: translateX(100%); }
+}
+
+.dl-dots {
+  display: grid;
+  gap: 3px;
+}
+.dl-dot {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-primary) 10%, transparent);
+  transition: background-color 0.35s ease, opacity 0.35s ease;
+}
+.dl-dot--on {
+  background: #f97316;
+  opacity: var(--b, 0.85);
+}
+.dl-dot--fresh {
+  background: #fb923c;
+}
+.dl-dot--next {
+  background: color-mix(in srgb, #f97316 40%, transparent);
+}
+.dl-viz--active .dl-dot--fresh {
+  animation: dl-flicker 0.9s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+.dl-viz--active .dl-dot--next {
+  animation: dl-incoming 0.7s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes dl-flicker {
+  0%, 100% { opacity: 1; filter: brightness(1.25); }
+  50% { opacity: 0.45; filter: brightness(0.9); }
+}
+@keyframes dl-incoming {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-viz--active .dl-tick--on,
+  .dl-viz--active .dl-tick--head,
+  .dl-viz--active .dl-dot--fresh,
+  .dl-viz--active .dl-dot--next,
+  .dl-pill-fill--live::after { animation: none; }
+}
+
+/* ===== Completion sweep: a light travels right -> left and everything flashes as it passes ===== */
+.dl-viz {
+  position: relative;
+  --cols: 64;
+}
+.dl-viz--complete::after {
+  content: "";
+  position: absolute;
+  inset: -6px 0;
+  pointer-events: none;
+  border-radius: 12px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45) 45%, rgba(94, 234, 212, 0.55) 55%, transparent) no-repeat;
+  background-size: 28% 100%;
+  background-position: 135% 0;
+  animation: dl-beam 1.6s cubic-bezier(0.45, 0, 0.25, 1) 1 both;
+  mix-blend-mode: screen;
+}
+@keyframes dl-beam {
+  from { background-position: 135% 0; opacity: 1; }
+  85% { opacity: 1; }
+  to { background-position: -35% 0; opacity: 0; }
+}
+
+.dl-viz--complete .dl-dot {
+  animation: dl-pop 0.75s ease-out 1 both;
+  animation-delay: calc((var(--cols) - var(--col)) * 14ms);
+}
+.dl-viz--complete .dl-tick--on {
+  animation: dl-pop-tick 0.75s ease-out 1 both;
+  animation-delay: calc((60 - var(--i)) * 14ms);
+}
+.dl-viz--complete .dl-pill-fill {
+  animation: dl-pop-tick 0.75s ease-out 1 both;
+  animation-delay: calc((var(--pn) - var(--pi)) * 90ms);
+}
+@keyframes dl-pop {
+  0% { filter: brightness(1); transform: scale(1); }
+  35% { filter: brightness(2.6) saturate(1.3); transform: scale(1.45); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+@keyframes dl-pop-tick {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(2.2) saturate(1.2); }
+  100% { filter: brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl-viz--complete::after,
+  .dl-viz--complete .dl-dot,
+  .dl-viz--complete .dl-tick--on,
+  .dl-viz--complete .dl-pill-fill { animation: none; }
+}
+
+/* Flow-field background: keep it from fighting with the text on top */
+.flow-bg {
+  opacity: 0.9;
+}
+:root.light .flow-bg {
+  opacity: 0.7;
+}
+
+/* Share dialog tiles: tinted with each network's brand colour */
+.share-tile {
+  background-color: color-mix(in srgb, var(--brand) 9%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 24%, transparent);
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.share-tile:hover {
+  background-color: color-mix(in srgb, var(--brand) 18%, transparent);
+}
+.share-tile:active {
+  transform: scale(0.98);
+}
+.share-tile-icon {
+  background-color: color-mix(in srgb, var(--brand) 16%, transparent);
+}
+
+/* Disk Space card: hidden until the disk is nearly full, then slides in from the left */
+.disk-alert {
+  display: grid;
+  grid-template-rows: 0fr;
+  visibility: hidden;
+  transition: grid-template-rows 0.5s ease, visibility 0s linear 0.55s;
+}
+.disk-alert--open {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition: grid-template-rows 0.5s ease, visibility 0s;
+}
+.disk-alert-inner {
+  min-height: 0;
+  overflow: hidden;
+  transform: translateX(-115%);
+  opacity: 0;
+  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.25, 1), opacity 0.4s ease;
+}
+.disk-alert--open .disk-alert-inner {
+  transform: translateX(0);
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .disk-alert, .disk-alert-inner { transition: none; }
+}

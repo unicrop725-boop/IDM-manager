@@ -24,13 +24,20 @@ interface Opt {
 export const Select: React.FC<SelectProps> = ({ value, onChange, className = "", disabled, id, children }) => {
   const options = useMemo<Opt[]>(() => {
     const out: Opt[] = [];
-    React.Children.toArray(children).forEach((child) => {
-      if (React.isValidElement(child) && child.type === "option") {
-        const p = child.props as { value?: string | number; children?: React.ReactNode };
-        const label = p.children;
-        out.push({ value: String(p.value ?? (typeof label === "string" ? label : "")), label });
-      }
-    });
+    // walk the children, looking inside fragments (<>...</>) and nested arrays
+    const walk = (nodes: React.ReactNode) => {
+      React.Children.toArray(nodes).forEach((child) => {
+        if (!React.isValidElement(child)) return;
+        if (child.type === React.Fragment) {
+          walk((child.props as { children?: React.ReactNode }).children);
+        } else if (child.type === "option") {
+          const p = child.props as { value?: string | number; children?: React.ReactNode };
+          const label = p.children;
+          out.push({ value: String(p.value ?? (typeof label === "string" ? label : "")), label });
+        }
+      });
+    };
+    walk(children);
     return out;
   }, [children]);
 

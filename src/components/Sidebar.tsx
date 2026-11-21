@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { api } from "../api";
+import { formatBytes } from "../format";
 import {
   Folder,
   FolderDown,
@@ -25,7 +27,11 @@ export type SidebarFilter =
   | { type: "category"; name: string }
   | { type: "status"; status: "unfinished" | "finished" };
 
+/** Show the Disk Space card from this usage (percent) upwards. */
+const DISK_WARN_PERCENT = 85;
+
 interface SidebarProps {
+  saveDir?: string;
   currentFilter: SidebarFilter;
   onSelectFilter: (f: SidebarFilter) => void;
   downloads: DownloadInfo[];
@@ -67,6 +73,7 @@ const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, ex
 );
 
 export const Sidebar: React.FC<SidebarProps> = ({
+  saveDir = "",
   currentFilter,
   onSelectFilter,
   onOpenDiskCleaner,
@@ -87,7 +94,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   // Disk space simulation / estimation
-  const diskUsagePercent = 90;
+  // Real disk usage of the drive that holds the download folder (refreshed every 30s)
+  const [disk, setDisk] = useState<{ drive: string; totalBytes: number; freeBytes: number } | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = () =>
+      api
+        .getDiskSpace(saveDir)
+        .then((d) => !cancelled && setDisk(d))
+        .catch(() => !cancelled && setDisk(null));
+    load();
+    const t = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [saveDir]);
+  const diskUsagePercent = disk ? Math.round(((disk.totalBytes - disk.freeBytes) / disk.totalBytes) * 100) : 0;
+  // The Disk Space card only slides in when the drive is nearly full
+  const showDiskCard = disk !== null && diskUsagePercent >= DISK_WARN_PERCENT;
   const getFaceEmoji = (pct: number) => {
     if (pct < 70) return "😊";
     if (pct <= 85) return "😐";
@@ -157,6 +182,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Bottom Section: DISK SPACE WIDGET CARD */}
+      <div className={`disk-alert ${showDiskCard ? "disk-alert--open" : ""}`} aria-hidden={!showDiskCard}>
+      <div className="disk-alert-inner">
       <div className="notch-card px-4 pt-4 pb-4 m-3 bg-[var(--bg-card)] border border-[var(--border-subtle)]">
         <NotchCorner>
           <button
@@ -206,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             />
           </svg>
           <div className="absolute left-1/2 top-[34px] -translate-x-1/2 text-[26px] leading-none">
-            {getFaceEmoji(diskUsagePercent)}
+            {disk ? getFaceEmoji(diskUsagePercent) : "—"}
           </div>
           <span className="absolute left-0 -bottom-1 -translate-x-1/2 text-[11px] text-[var(--text-secondary)]">0%</span>
           <span className="absolute right-0 -bottom-1 translate-x-1/2 text-[11px] text-[var(--text-secondary)]">100%</span>
@@ -214,10 +241,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Percentage + Drive Path */}
         <div className="text-center mt-2 text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-          {diskUsagePercent}%
+          {disk ? `${diskUsagePercent}%` : "--"}
         </div>
         <div className="text-center text-[12px] text-[var(--text-secondary)] truncate mb-4">
-          C:\Downloads
+          {disk ? `${disk.drive}  ·  ${formatBytes(disk.freeBytes)} free` : "Not available"}
         </div>
 
         {/* Gradient Disk Cleaner Button */}
@@ -227,6 +254,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           Disk Cleaner
         </button>
+      </div>
+      </div>
       </div>
     </aside>
   );

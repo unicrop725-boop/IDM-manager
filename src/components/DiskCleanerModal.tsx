@@ -53,7 +53,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
 
   const totalFinishedBytes = finishedItems.reduce((acc, d) => acc + (d.totalSize || 0), 0);
   const totalDuplicateBytes = duplicateItems.reduce((acc, d) => acc + (d.totalSize || 0), 0);
-  const totalTempBytes = failedOrCancelledItems.reduce((acc, d) => acc + (d.downloaded || 0), 0) + 1024 * 1024 * 45; // ~45MB leftover temp files
+  const totalTempBytes = failedOrCancelledItems.reduce((acc, d) => acc + (d.downloaded || 0), 0);
 
   const totalReclaimableBytes =
     (cleanFinished ? totalFinishedBytes : 0) +
@@ -197,7 +197,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
                     <span className="font-mono text-amber-400 font-bold">{formatBytes(totalTempBytes)}</span>
                   </div>
                   <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                    Leftover segments, failed fragments, and temporary cache files.
+                    Found {failedOrCancelledItems.length} failed or cancelled download{failedOrCancelledItems.length === 1 ? "" : "s"} with partial data.
                   </p>
                 </div>
               </label>

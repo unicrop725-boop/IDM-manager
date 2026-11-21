@@ -1784,6 +1784,11 @@ async fn aimd_stops_growing_when_extra_connections_do_not_help() {
     let mut cfg = test_config(dir.path());
     cfg.aimd_start = 4;
     cfg.aimd_interval = Duration::from_millis(800);
+    // The interval is shortened for test speed, and speed measured over 800 ms jitters by roughly
+    // +/-12 %: with the default 5 % threshold a lucky rebound reads as "one more connection helped"
+    // and growth never stops (observed: always [4, 5, 6, 7, 8] on a busy 4-core machine). A threshold
+    // above the noise keeps this test about the stop logic rather than about measurement jitter.
+    cfg.aimd_gain = 0.25;
     let (engine, obs) = make_engine_with(cfg);
     engine.set_global_speed_limit(4 * MIB); // the "line" is full no matter how many connections
 
@@ -1972,4 +1977,91 @@ async fn progress_is_persisted_every_two_seconds_by_default() {
         assert!(gap >= Duration::from_millis(1700), "persisted too often: {gap:?} between checkpoints");
         assert!(gap <= Duration::from_millis(4500), "persisted too rarely: {gap:?} between checkpoints");
     }
+}
+
+/// STRESS: 50 downloads added at the same moment (4 connections each, so up to 200 sockets) all
+/// complete, every file is byte-exact, names do not collide and no temporary files are left behind.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn fifty_parallel_downloads_all_complete_byte_exact() {
+    const COUNT: usize = 50;
+    let size = 2 * MIB + 3;
+    // Each connection is slow (256 KiB/s) so the downloads genuinely overlap instead of finishing
+    // one after another.
+    let server = serve(ServerConfig { size, rate_per_conn: 256 * KIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+
+    let mut ids = Vec::new();
+    for _ in 0..COUNT {
+        let info = engine
+            .add(AddRequest { url: server.url(), connections: Some(4), ..Default::default() })
+            .await
+            .unwrap();
+        ids.push(info.id);
+    }
+
+    let expected = server.expected_sha256();
+    let mut names = std::collections::HashSet::new();
+    for id in &ids {
+        let done = wait_state(&engine, id, DownloadState::Completed).await;
+        assert_eq!(done.downloaded, size, "download {id} is incomplete");
+        let path = file_of(&done);
+        assert_eq!(std::fs::metadata(&path).unwrap().len(), size);
+        assert_eq!(common::sha256_file(&path), expected, "download {id} is corrupt");
+        assert!(names.insert(path), "two downloads were given the same file");
+    }
+
+    let entries = dir_entries(dir.path());
+    assert_eq!(entries.len(), COUNT, "expected exactly {COUNT} files, found: {entries:?}");
+    let peak = server.stats.peak_connections.load(Ordering::SeqCst);
+    println!("50 parallel downloads OK: peak simultaneous server connections = {peak}");
+    assert!(peak >= COUNT, "the downloads did not really run in parallel (peak {peak})");
+}
+
+/// Downloads finished outside the engine (yt-dlp videos) are registered with `restore`: they must
+/// appear in the list and be removable from the UI, and removing must keep the file by default.
+#[tokio::test]
+async fn restored_finished_item_is_listed_and_removable() {
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+    let file = dir.path().join("video.mkv");
+    std::fs::write(&file, b"video-bytes").unwrap();
+    let rec = flowget_engine::DownloadRecord {
+        id: "yt-1".into(),
+        url: "https://youtu.be/abc".into(),
+        final_url: None,
+        save_dir: dir.path().to_string_lossy().to_string(),
+        file_name: "video.mkv".into(),
+        file_name_locked: true,
+        file_path: file.to_string_lossy().to_string(),
+        total_size: Some(11),
+        downloaded: 11,
+        resume_supported: Some(false),
+        mime: Some("video/x-matroska".into()),
+        etag: None,
+        last_modified: None,
+        segments: Vec::new(),
+        connections: 1,
+        speed_limit: 0,
+        http: Default::default(),
+        checksum: None,
+        checksum_verified: None,
+        mirrors: Vec::new(),
+        mirror_report: Vec::new(),
+        state: DownloadState::Completed,
+        error: None,
+        created_at: 1,
+        completed_at: Some(2),
+        category: Some("Videos".into()),
+        queue_id: None,
+        queue_order: None,
+    };
+    engine.restore(vec![rec]);
+    let listed = engine.list();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].state, DownloadState::Completed);
+
+    engine.remove("yt-1", false).await.expect("remove should find the restored item");
+    assert!(engine.list().is_empty());
+    assert!(file.exists(), "file must be kept when delete_file is false");
 }

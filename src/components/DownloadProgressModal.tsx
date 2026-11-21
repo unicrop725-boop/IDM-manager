@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { ModalCorner } from "./NotchCorner";
-import { Pause, Play, Ban, EyeOff, Zap, CheckCircle2, AlertCircle } from "lucide-react";
+import { Pause, Play, Ban, EyeOff, Zap, CheckCircle2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { DownloadViz } from "./DownloadViz";
 import { DownloadInfo } from "../types";
 import { formatBytes, formatSpeed, formatEta, isUnbounded } from "../format";
 
@@ -20,6 +21,7 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
   onCancel,
 }) => {
   const d = download;
+  const [showConns, setShowConns] = useState(false);
   const pct = d.totalSize && d.totalSize > 0
     ? Math.min(100, Math.max(0, (d.downloaded / d.totalSize) * 100))
     : 0;
@@ -29,10 +31,10 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none animate-in fade-in duration-150">
-      <div className="notch-card w-[560px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
+      <div className="notch-card w-[700px] max-w-[95vw] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-2xl overflow-hidden flex flex-col text-xs text-[var(--text-secondary)]">
         <ModalCorner onClose={onClose} />
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-[var(--text-primary)] font-semibold text-sm truncate pr-4">
             <Zap className="w-4 h-4 text-purple-400 flex-shrink-0" />
             <span className="truncate">{d.fileName}</span>
@@ -40,19 +42,19 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-4 space-y-4">
+        <div className="p-6 space-y-6">
           {/* Metadata Grid */}
-          <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-3 space-y-2">
+          <div className="rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] p-5 space-y-3.5">
             <div className="flex items-start gap-2">
-              <span className="w-24 text-[var(--text-disabled)] font-medium flex-shrink-0">URL:</span>
-              <span className="truncate text-[var(--text-primary)] font-mono text-[11px]" title={d.url}>
+              <span className="w-28 text-[var(--text-disabled)] font-medium flex-shrink-0">URL:</span>
+              <span className="truncate text-[var(--text-primary)] font-mono text-[13px]" title={d.url}>
                 {d.url}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-24 text-[var(--text-disabled)] font-medium">Status:</span>
+                <span className="w-28 text-[var(--text-disabled)] font-medium">Status:</span>
                 <span className="capitalize text-[var(--text-primary)] font-medium">{d.state}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -73,7 +75,7 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-24 text-[var(--text-disabled)] font-medium">File Size:</span>
+                <span className="w-28 text-[var(--text-disabled)] font-medium">File Size:</span>
                 <span className="text-[var(--text-primary)] font-mono">
                   {formatBytes(d.downloaded)} of {formatBytes(d.totalSize)}
                 </span>
@@ -86,7 +88,7 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="w-24 text-[var(--text-disabled)] font-medium">Time Left:</span>
+                <span className="w-28 text-[var(--text-disabled)] font-medium">Time Left:</span>
                 <span className="text-[var(--text-primary)] font-mono">{formatEta(d.etaSecs)}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -106,61 +108,29 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
                 {d.connections} {d.connections === 1 ? "Connection" : "Connections"}
               </span>
             </div>
-            <div className="w-full h-3 rounded-full bg-[var(--bg-hover)] overflow-hidden p-0.5 border border-[var(--border-subtle)]">
-              <div
-                className="h-full rounded-full gradient-accent transition-all duration-200"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
           </div>
 
-          {/* Segment Map (visual bar showing each connection's part filling in) */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-[var(--text-primary)]">
-              Segment Allocation Map
-            </span>
-            <div className="w-full h-6 rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] flex overflow-hidden p-0.5 gap-0.5">
-              {d.segments.length === 0 ? (
-                <div className="w-full h-full bg-[var(--bg-hover)] rounded flex items-center justify-center text-[10px] text-[var(--text-disabled)]">
-                  Probing segment map...
-                </div>
-              ) : (
-                d.segments.map((s, idx) => {
-                  const segSpan = isUnbounded(s.end) ? 1 : Math.max(1, s.end - s.start + 1);
-                  const segDownloaded = Math.min(segSpan, s.downloaded);
-                  const segPct = (segDownloaded / segSpan) * 100;
-                  return (
-                    <div
-                      key={idx}
-                      className="h-full bg-[var(--bg-hover)] rounded relative overflow-hidden flex-1 group"
-                      title={`Segment #${s.index + 1}: ${formatBytes(segDownloaded)} / ${formatBytes(segSpan)} (${segPct.toFixed(1)}%)`}
-                    >
-                      <div
-                        className="h-full gradient-accent opacity-90 transition-all duration-200"
-                        style={{ width: `${segPct}%` }}
-                      />
-                      <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono text-[var(--text-primary)] pointer-events-none drop-shadow">
-                        #{s.index + 1}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
+          {/* Live visualisation: ticks, connection pills and a dot map of the file */}
+          <DownloadViz d={d} pct={pct} active={isDownloading} />
 
           {/* Connection List */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-[var(--text-primary)]">
-              Active Connections ({d.segments.length})
-            </span>
-            <div className="max-h-32 overflow-y-auto rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] font-mono text-[11px]">
+            <button
+              type="button"
+              onClick={() => setShowConns((v) => !v)}
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--text-primary)] hover:text-purple-400 transition-colors cursor-pointer"
+            >
+              {showConns ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              Connection details ({d.segments.length})
+            </button>
+            {showConns && (
+            <div className="max-h-48 overflow-y-auto rounded-lg bg-[var(--bg-card)] border border-[var(--border-subtle)] divide-y divide-[var(--border-subtle)] font-mono text-[11px]">
               {d.segments.map((s, idx) => {
                 const segSpan = isUnbounded(s.end) ? 1 : Math.max(1, s.end - s.start + 1);
                 const segDownloaded = Math.min(segSpan, s.downloaded);
                 const isComplete = segDownloaded >= segSpan;
                 return (
-                  <div key={idx} className="flex items-center justify-between px-3 py-1.5">
+                  <div key={idx} className="flex items-center justify-between px-4 py-2.5">
                     <span className="text-purple-400 font-semibold">Conn #{idx + 1}</span>
                     <span className="text-[var(--text-secondary)]">
                       {formatBytes(s.start)} - {isUnbounded(s.end) ? "EOF" : formatBytes(s.end)}
@@ -172,17 +142,18 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
                 );
               })}
             </div>
+            )}
           </div>
         </div>
 
         {/* Footer Action Buttons */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-card)]">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <button
             onClick={() => {
               if (isDownloading) onPause(d.id);
               else if (canResume) onResume(d.id);
             }}
-            className="px-3.5 py-1.5 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] font-medium flex items-center gap-1.5 transition-colors"
+            className="px-5 py-2.5 rounded-lg bg-[var(--bg-hover)] hover:bg-[var(--border-subtle)] text-[var(--text-primary)] font-medium flex items-center gap-1.5 transition-colors"
           >
             {isDownloading ? (
               <>
@@ -200,7 +171,7 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={() => onCancel(d.id)}
-              className="px-3 py-1.5 rounded-lg hover:bg-rose-500/20 text-rose-400 font-medium flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2.5 rounded-lg hover:bg-rose-500/20 text-rose-400 font-medium flex items-center gap-1.5 transition-colors"
             >
               <Ban className="w-3.5 h-3.5" />
               <span>Cancel</span>
@@ -208,7 +179,7 @@ export const DownloadProgressModal: React.FC<DownloadProgressModalProps> = ({
 
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg gradient-accent hover:opacity-90 text-white font-medium flex items-center gap-1.5 transition-opacity shadow-sm"
+              className="px-6 py-2.5 rounded-lg gradient-accent hover:opacity-90 text-white font-medium flex items-center gap-1.5 transition-opacity shadow-sm"
             >
               <EyeOff className="w-3.5 h-3.5" />
               <span>Hide</span>

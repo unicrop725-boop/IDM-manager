@@ -30,6 +30,8 @@ librqbit = "9.1.0"
 reqwest = { version = "0.12", default-features = false, features = ["default-tls", "stream", "json"] }
 ring = "0.17"
 base64 = "0.22"
+rfd = { version = "0.15", default-features = false }
+arboard = { version = "3", default-features = false }
 
 [dev-dependencies]
 tempfile = "3"

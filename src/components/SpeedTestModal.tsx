@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ModalCorner } from "./NotchCorner";
 import { RotateCcw, ArrowDown, ArrowUp, Activity, Trash2 } from "lucide-react";
+
+const SPEED_HOST = "https://speed.cloudflare.com";
 
 interface SpeedTestModalProps {
   onClose: () => void;
@@ -47,8 +49,8 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
   const [tab, setTab] = useState<"gauge" | "history">("gauge");
   const [testing, setTesting] = useState(false);
   const [phase, setPhase] = useState<"idle" | "ping" | "download" | "upload" | "finished">("idle");
-  const [pingMs, setPingMs] = useState(12);
-  const [jitterMs, setJitterMs] = useState(2);
+  const [pingMs, setPingMs] = useState(0);
+  const [jitterMs, setJitterMs] = useState(0);
   const [downloadSpeed, setDownloadSpeed] = useState(0);
   const [uploadSpeed, setUploadSpeed] = useState(0);
 
@@ -81,57 +83,184 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
     localStorage.removeItem("flowget_speedtest_history");
   };
 
-  const startTest = () => {
+  const abortRef = useRef<AbortController | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [maxScale, setMaxScale] = useState(100);
+
+  // Stop any running test when the dialog closes
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const growScale = (mbps: number) =>
+    setMaxScale((cur) => {
+      if (mbps < cur * 0.9) return cur;
+      return [100, 200, 500, 1000, 2000, 5000].find((v) => v > mbps * 1.1) ?? 10000;
+    });
+
+  /**
+   * Runs `workers` parallel jobs for `durationMs` and reports live Mbps (1s sliding window).
+   * Returns the average Mbps measured after a 1s ramp-up.
+   */
+  const measure = async (
+    durationMs: number,
+    workers: number,
+    job: (addBytes: (n: number) => void, signal: AbortSignal) => Promise<void>,
+    onLive: (mbps: number) => void,
+    outer: AbortSignal
+  ): Promise<number> => {
+    const ctrl = new AbortController();
+    const onOuter = () => ctrl.abort();
+    outer.addEventListener("abort", onOuter);
+    let total = 0;
+    const t0 = performance.now();
+    const marks: { t: number; b: number }[] = [];
+    let rampBytes = 0;
+    let rampTime = 0;
+    const addBytes = (n: number) => {
+      total += n;
+    };
+    const tick = setInterval(() => {
+      const now = performance.now();
+      marks.push({ t: now, b: total });
+      const windowStart = now - 1000;
+      const ref = marks.find((m) => m.t >= windowStart) ?? marks[0];
+      const dt = (now - ref.t) / 1000;
+      if (dt > 0.2) onLive(((total - ref.b) * 8) / 1e6 / dt);
+      if (!rampTime && now - t0 >= 1000) {
+        rampTime = now;
+        rampBytes = total;
+      }
+    }, 100);
+    const stopTimer = setTimeout(() => ctrl.abort(), durationMs);
+    try {
+      await Promise.all(
+        Array.from({ length: workers }, () =>
+          job(addBytes, ctrl.signal).catch((e) => {
+            if (!ctrl.signal.aborted) throw e;
+          })
+        )
+      );
+    } finally {
+      clearInterval(tick);
+      clearTimeout(stopTimer);
+      outer.removeEventListener("abort", onOuter);
+    }
+    if (outer.aborted) throw new DOMException("Aborted", "AbortError");
+    const end = performance.now();
+    const secs = (end - (rampTime || t0)) / 1000;
+    const bytes = total - (rampTime ? rampBytes : 0);
+    return secs > 0 ? (bytes * 8) / 1e6 / secs : 0;
+  };
+
+  const startTest = async () => {
     if (testing) return;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setTesting(true);
+    setError(null);
     setPhase("ping");
     setDownloadSpeed(0);
     setUploadSpeed(0);
+    setPingMs(0);
+    setJitterMs(0);
+    setMaxScale(100);
 
-    // Phase 1: Ping & Jitter
-    setTimeout(() => {
-      const finalPing = Math.floor(10 + Math.random() * 6);
-      setPingMs(finalPing);
-      setJitterMs(Math.floor(1 + Math.random() * 2));
+    try {
+      // 1) Latency + jitter: small requests to the nearest Cloudflare edge
+      const samples: number[] = [];
+      for (let i = 0; i < 9; i++) {
+        const t = performance.now();
+        const res = await fetch(`${SPEED_HOST}/__down?bytes=0&r=${Date.now()}_${i}`, {
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+        await res.arrayBuffer();
+        samples.push(performance.now() - t);
+      }
+      const usable = samples.slice(1); // first request includes DNS/TLS set-up
+      const ping = usable.reduce((a, v) => a + v, 0) / usable.length;
+      const jitter =
+        usable.slice(1).reduce((a, v, i) => a + Math.abs(v - usable[i]), 0) / Math.max(1, usable.length - 1);
+      setPingMs(Math.round(ping));
+      setJitterMs(Math.round(jitter));
+
+      // 2) Download: 4 parallel streams for 7s
       setPhase("download");
+      const dl = await measure(
+        7000,
+        4,
+        async (addBytes, signal) => {
+          while (!signal.aborted) {
+            const res = await fetch(`${SPEED_HOST}/__down?bytes=100000000&r=${Math.random()}`, {
+              cache: "no-store",
+              signal,
+            });
+            const reader = res.body?.getReader();
+            if (!reader) throw new Error("Streaming is not supported");
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              addBytes(value.byteLength);
+            }
+          }
+        },
+        (mbps) => {
+          setDownloadSpeed(mbps);
+          growScale(mbps);
+        },
+        ctrl.signal
+      );
+      setDownloadSpeed(dl);
+      growScale(dl);
 
-      // Phase 2: Download Speed ramp-up
-      let currentDl = 0;
-      const dlTarget = 120 + Math.random() * 80; // Fast realistic broadband target
-      const dlInterval = setInterval(() => {
-        currentDl += (dlTarget - currentDl) * 0.16 + (Math.random() * 4 - 2);
-        setDownloadSpeed(Math.max(0, currentDl));
-      }, 70);
+      // 3) Upload: 3 parallel POSTs for 6s
+      setPhase("upload");
+      const payload = new Uint8Array(2 * 1024 * 1024);
+      for (let o = 0; o < payload.length; o += 65536) crypto.getRandomValues(payload.subarray(o, o + 65536));
+      const blob = new Blob([payload]);
+      const ul = await measure(
+        6000,
+        3,
+        (addBytes, signal) =>
+          new Promise<void>((resolve, reject) => {
+            const run = () => {
+              if (signal.aborted) return resolve();
+              const xhr = new XMLHttpRequest();
+              let last = 0;
+              xhr.open("POST", `${SPEED_HOST}/__up`);
+              xhr.upload.onprogress = (e) => {
+                addBytes(e.loaded - last);
+                last = e.loaded;
+              };
+              xhr.onload = run;
+              xhr.onerror = () => (signal.aborted ? resolve() : reject(new Error("Upload failed")));
+              signal.addEventListener("abort", () => {
+                xhr.abort();
+                resolve();
+              });
+              xhr.send(blob);
+            };
+            run();
+          }),
+        (mbps) => {
+          setUploadSpeed(mbps);
+          growScale(mbps);
+        },
+        ctrl.signal
+      );
+      setUploadSpeed(ul);
+      growScale(ul);
 
-      setTimeout(() => {
-        clearInterval(dlInterval);
-        setDownloadSpeed(dlTarget);
-        setPhase("upload");
-
-        // Phase 3: Upload Speed ramp-up
-        let currentUl = 0;
-        const ulTarget = 45 + Math.random() * 35;
-        const ulInterval = setInterval(() => {
-          currentUl += (ulTarget - currentUl) * 0.16 + (Math.random() * 3 - 1.5);
-          setUploadSpeed(Math.max(0, currentUl));
-        }, 70);
-
-        setTimeout(() => {
-          clearInterval(ulInterval);
-          setUploadSpeed(ulTarget);
-          setPhase("finished");
-          setTesting(false);
-          saveHistoryResult(finalPing, dlTarget, ulTarget);
-        }, 2400);
-      }, 2600);
-    }, 1000);
+      setPhase("finished");
+      saveHistoryResult(Math.round(ping), dl, ul);
+    } catch (e) {
+      if ((e as DOMException)?.name === "AbortError") return;
+      setPhase("idle");
+      setError("Speed test failed. Check your internet connection and try again.");
+    } finally {
+      setTesting(false);
+    }
   };
 
-  useEffect(() => {
-    startTest();
-  }, []);
-
-  const maxScale = 200;
   const currentSpeed =
     phase === "download"
       ? downloadSpeed
@@ -376,7 +505,8 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
 
             {/* Test Status Indicator */}
             <div className="text-center font-medium">
-              {phase === "idle" && (
+              {error && <span className="font-semibold text-rose-500">{error}</span>}
+              {phase === "idle" && !error && (
                 <span className={isDark ? "text-slate-400" : "text-slate-500"}>Click Start to begin speed test</span>
               )}
               {phase === "ping" && (
@@ -416,7 +546,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
                   <span className={isDark ? "text-slate-400" : "text-slate-500"}>Ping</span>
                 </div>
                 <div className="text-base font-extrabold font-mono">
-                  {pingMs} <span className="text-xs font-normal opacity-60">ms</span>
+                  {pingMs > 0 ? pingMs : "--"} <span className="text-xs font-normal opacity-60">ms</span>
                 </div>
                 {/* Heartbeat strip */}
                 <div className="heartbeat-strip pt-0.5">
@@ -537,7 +667,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
           }`}
         >
           <span className="text-[11px] opacity-60 font-mono">
-            {phase === "finished" ? `Jitter: ${jitterMs}ms` : "Server: Mumbai (CDN Edge)"}
+            {phase === "finished" ? `Jitter: ${jitterMs}ms` : "Server: Cloudflare (nearest edge)"}
           </span>
           <button
             type="button"

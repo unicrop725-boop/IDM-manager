@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { api, errorText } from "./api";
 import { TitleBar } from "./components/TitleBar";
+import { FlowBackground } from "./components/FlowBackground";
 import { MenuBar } from "./components/MenuBar";
 import { Sidebar, type SidebarFilter } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
@@ -14,6 +15,7 @@ import { SpeedTestModal } from "./components/SpeedTestModal";
 import { PropertiesModal } from "./components/PropertiesModal";
 import { PremiumCard } from "./components/PremiumCard";
 import { ClipboardPopup } from "./components/ClipboardPopup";
+import { getVideoSite } from "./utils/videoUrl";
 import { DropTargetWidget } from "./components/DropTargetWidget";
 import AddDownloadModal from "./components/AddDownloadModal";
 import BatchDownloadModal from "./components/BatchDownloadModal";
@@ -70,7 +72,6 @@ export default function App() {
     userAgent?: string;
   }>({});
   const [clipboardCandidateUrl, setClipboardCandidateUrl] = useState<string | null>(null);
-  const [lastClipboardText, setLastClipboardText] = useState("");
   const [showDropWidget] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -84,7 +85,7 @@ export default function App() {
   const [licenseStatus, setLicenseStatus] = useState<TrialAndLicenseStatus | null>(null);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-  const [showPremiumCard, setShowPremiumCard] = useState(true);
+  const [showPremiumCard, setShowPremiumCard] = useState(false);
   const [activeProgressModalId, setActiveProgressModalId] = useState<string | null>(null);
   const [propertiesDownload, setPropertiesDownload] = useState<DownloadInfo | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState<ContextMenuPosition | null>(null);
@@ -204,37 +205,6 @@ export default function App() {
     };
   }, []);
 
-  // Live simulation ticker for browser preview / benchmark
-  useEffect(() => {
-    const isTauri = typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
-    if (isTauri) return;
-
-    const interval = setInterval(() => {
-      setDownloads((cur) => {
-        let changed = false;
-        const next = { ...cur };
-        Object.keys(next).forEach((id) => {
-          const d = next[id];
-          if (d.state === "downloading" && d.totalSize) {
-            changed = true;
-            const delta = Math.round(d.speedBps * 0.1);
-            const newDownloaded = Math.min(d.totalSize, d.downloaded + delta);
-            const remaining = d.totalSize - newDownloaded;
-            const newEta = d.speedBps > 0 ? Math.ceil(remaining / d.speedBps) : 0;
-            next[id] = {
-              ...d,
-              downloaded: newDownloaded,
-              etaSecs: newEta,
-            };
-          }
-        });
-        return changed ? next : cur;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, []);
-
   // Event pump
   useEffect(() => {
     const unlisten: Promise<UnlistenFn>[] = [
@@ -317,29 +287,22 @@ export default function App() {
     };
   }, [settings, activeProgressModalId]);
 
-  // Clipboard Monitor
+  // Copied links are detected by the backend (system-wide, even while FlowGet is in the background)
   useEffect(() => {
-    const checkClipboard = async () => {
-      try {
-        if (!document.hasFocus()) return;
-        const text = await navigator.clipboard.readText();
-        if (text && text !== lastClipboardText && (text.startsWith("http://") || text.startsWith("https://"))) {
-          setLastClipboardText(text);
-          const hasExt = text.match(/\.(zip|rar|7z|iso|exe|msi|mp4|mkv|mp3|pdf|apk|tar|gz|bin)(\?|$)/i);
-          if (hasExt) {
-            setClipboardCandidateUrl(text);
-          }
-        }
-      } catch {}
-    };
-
-    const interval = setInterval(checkClipboard, 1500);
-    window.addEventListener("focus", checkClipboard);
+    const un = listen<{ url: string; kind: string }>("clipboard-url", ({ payload }) => {
+      setClipboardCandidateUrl(payload.url);
+    });
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", checkClipboard);
+      un.then((f) => f());
     };
-  }, [lastClipboardText]);
+  }, []);
+
+  // The prompt goes away by itself if you ignore it
+  useEffect(() => {
+    if (!clipboardCandidateUrl) return;
+    const t = setTimeout(() => setClipboardCandidateUrl(null), 30000);
+    return () => clearTimeout(t);
+  }, [clipboardCandidateUrl]);
 
   // Sync active language from settings
   useEffect(() => {
@@ -667,6 +630,28 @@ export default function App() {
     setIsAddModalOpen(true);
   };
 
+  // Quick video download from the toolbar (quality picked in the Add Url box)
+  const handleDownloadVideo = async (
+    url: string,
+    opts: {
+      height?: number;
+      fps?: number;
+      audioOnly?: boolean;
+      saveDir?: string;
+      container?: "mp4" | "mkv" | "mp3" | "m4a";
+    }
+  ) => {
+    await api.addDownload({
+      url,
+      saveDir: opts.saveDir || undefined,
+      mediaHeight: opts.height,
+      mediaFps: opts.fps,
+      mediaAudioOnly: opts.audioOnly,
+      convertTo: opts.container && opts.container !== "mp4" ? opts.container : undefined,
+    });
+    refreshAll();
+  };
+
   // Context Menu Actions
   const handleOpenFolder = (d: DownloadInfo) => {
     const p = d.filePath || d.saveDir;
@@ -753,8 +738,11 @@ export default function App() {
     <div
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleWindowDrop}
-      className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none relative"
+      className="flex flex-col h-screen w-screen overflow-hidden bg-[var(--bg-app)] text-[var(--text-primary)] font-sans antialiased select-none relative isolate"
     >
+      {/* Animated flow-field background (shows through the download list) */}
+      <FlowBackground />
+
       {/* 1. Custom Frameless Title Bar */}
       <TitleBar />
 
@@ -790,6 +778,7 @@ export default function App() {
           currentFilter={filter}
           onSelectFilter={setFilter}
           downloads={Object.values(downloads)}
+          saveDir={settings?.downloadDir || ""}
           onOpenDiskCleaner={() => setIsDiskCleanerOpen(true)}
         />
 
@@ -798,6 +787,7 @@ export default function App() {
           {/* 4. Toolbar */}
           <Toolbar
             onQuickAddUrl={handleQuickAdd}
+            onDownloadVideo={handleDownloadVideo}
             onOpenAddModal={() => {
               setQuickAddUrl("");
               setIsAddModalOpen(true);
@@ -830,6 +820,8 @@ export default function App() {
             onSort={handleSort}
             allSelected={selectedIds.size === filteredAndSortedDownloads.length && filteredAndSortedDownloads.length > 0}
             onToggleSelectAll={handleToggleSelectAll}
+            onPause={(id) => api.pause(id).catch(() => {})}
+            onResume={(id) => api.resume(id).catch(() => {})}
           />
         </main>
       </div>
@@ -924,8 +916,13 @@ export default function App() {
         <ClipboardPopup
           url={clipboardCandidateUrl}
           onDownload={(url) => {
-            setQuickAddUrl(url);
-            setIsAddModalOpen(true);
+            if (getVideoSite(url)) {
+              // videos: put the link in the Add Url box so the quality picker opens
+              window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: url }));
+            } else {
+              setQuickAddUrl(url);
+              setIsAddModalOpen(true);
+            }
             setClipboardCandidateUrl(null);
           }}
           onDismiss={() => setClipboardCandidateUrl(null)}

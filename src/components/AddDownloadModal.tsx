@@ -1,10 +1,10 @@
 import { Select } from "./Select";
 import { ModalCorner } from "./NotchCorner";
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Film, AlertTriangle, Sparkles, Wand2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Wand2 } from "lucide-react";
 import { api } from "../api";
 import { cleanFileName } from "../utils/smartNaming";
-import type { AddRequest, Category, DuplicateCheckResult, QueueInfo, MediaResolveResult } from "../types";
+import type { AddRequest, Category, DuplicateCheckResult, QueueInfo } from "../types";
 import DuplicateModal from "./DuplicateModal";
 
 interface Props {
@@ -55,37 +55,6 @@ export default function AddDownloadModal({
   const [duplicateData, setDuplicateData] = useState<DuplicateCheckResult | null>(null);
 
   // Streaming Media & Video Quality Resolution
-  const [mediaLoading, setMediaLoading] = useState(false);
-  const [mediaInfo, setMediaInfo] = useState<MediaResolveResult | null>(null);
-  const [selectedFormatId, setSelectedFormatId] = useState("");
-  const [convertTo, setConvertTo] = useState<"original" | "mp4" | "mp3" | "m4a">("original");
-  const [drmError, setDrmError] = useState<string | null>(null);
-
-  const resolveMediaInfo = async (targetUrl: string) => {
-    setDrmError(null);
-    setMediaLoading(true);
-    try {
-      const res = await api.resolveVideo(targetUrl);
-      if (res.isDrm) {
-        setDrmError(res.drmMessage || "This video is protected and cannot be downloaded.");
-        setMediaInfo(null);
-      } else {
-        setMediaInfo(res);
-        if (res.formats && res.formats.length > 0) {
-          setSelectedFormatId(res.formats[0].formatId);
-        }
-        if (res.title && !fileName) {
-          const ext = res.formats[0]?.ext || "mp4";
-          setFileName(`${res.title}.${ext}`);
-        }
-      }
-    } catch (e: any) {
-      console.warn("Media resolution:", e);
-    } finally {
-      setMediaLoading(false);
-    }
-  };
-
   // Auto-detect category and filename when URL changes
   useEffect(() => {
     const trimmed = url.trim();
@@ -245,81 +214,19 @@ export default function AddDownloadModal({
 
             {/* URL input */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="font-medium text-[var(--text-primary)]">Download URL</label>
-                <button
-                  type="button"
-                  onClick={() => resolveMediaInfo(url.trim())}
-                  disabled={mediaLoading || !url.trim()}
-                  className="flex items-center gap-1 text-[11px] font-medium text-purple-400 hover:text-purple-300 disabled:opacity-40 transition-colors"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  {mediaLoading ? "Resolving Stream..." : "Check Video / Qualities"}
-                </button>
-              </div>
+              <label className="mb-1.5 block font-medium text-[var(--text-primary)]">Download URL</label>
               <div className="relative flex items-center">
                 <Link2 className="w-4 h-4 absolute left-3 text-[var(--text-disabled)] pointer-events-none" />
                 <input
                   autoFocus
                   type="text"
                   value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    setDrmError(null);
-                    setMediaInfo(null);
-                  }}
+                  onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.com/file.zip or video / magnet / hls link"
                   className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-disabled)] outline-none focus:border-purple-500/50 font-mono text-[11px] transition-colors"
                 />
               </div>
             </div>
-
-            {/* DRM Alert */}
-            {drmError && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 font-semibold flex items-center gap-2 animate-in fade-in">
-                <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-                <span>{drmError}</span>
-              </div>
-            )}
-
-            {/* Media Stream Quality & Format Picker */}
-            {mediaInfo && mediaInfo.formats && mediaInfo.formats.length > 0 && (
-              <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 space-y-3 animate-in fade-in">
-                <div className="flex items-center gap-2 text-xs font-semibold text-purple-300">
-                  <Film className="w-4 h-4" />
-                  <span>Media Stream Detected: {mediaInfo.title || "Video"}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">Available Qualities</label>
-                    <Select
-                      value={selectedFormatId}
-                      onChange={(e) => setSelectedFormatId(e.target.value)}
-                      className="w-full h-8 px-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] text-xs outline-none focus:border-purple-500/50"
-                    >
-                      {mediaInfo.formats.map((f) => (
-                        <option key={f.formatId} value={f.formatId}>
-                          {f.qualityLabel} ({f.ext.toUpperCase()})
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[11px] font-medium text-[var(--text-secondary)]">Format Conversion (ffmpeg)</label>
-                    <Select
-                      value={convertTo}
-                      onChange={(e) => setConvertTo(e.target.value as any)}
-                      className="w-full h-8 px-2.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] text-xs outline-none focus:border-purple-500/50"
-                    >
-                      <option value="original">Original (No re-encoding)</option>
-                      <option value="mp4">Convert to MP4</option>
-                      <option value="mp3">Convert to MP3 (Audio 320k)</option>
-                      <option value="m4a">Convert to M4A (AAC Audio)</option>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* File name & Category */}
             <div className="grid grid-cols-2 gap-3">
@@ -564,7 +471,7 @@ export default function AddDownloadModal({
               </button>
               <button
                 type="submit"
-                disabled={loading || Boolean(drmError)}
+                disabled={loading}
                 className="px-5 py-2 rounded-xl gradient-accent hover:opacity-90 active:scale-95 disabled:opacity-50 text-white font-medium transition-all shadow-md"
               >
                 {loading ? "Adding..." : "Add Download"}

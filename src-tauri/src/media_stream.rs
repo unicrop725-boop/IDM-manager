@@ -9,7 +9,31 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Semaphore;
 use url::Url;
 
+/// Only plain web URLs may reach yt-dlp / ffmpeg. This blocks option injection (a "URL" such as
+/// `--exec=...` is parsed by yt-dlp as a flag) and local-file / exotic-protocol inputs for ffmpeg.
+pub fn validate_remote_url(url: &str) -> Result<Url, String> {
+    let trimmed = url.trim();
+    if trimmed.starts_with('-') {
+        return Err("Invalid media URL.".to_string());
+    }
+    let parsed = Url::parse(trimmed).map_err(|_| "Invalid media URL.".to_string())?;
+    match parsed.scheme() {
+        "http" | "https" if parsed.host_str().is_some() => Ok(parsed),
+        _ => Err("Only http:// and https:// media URLs are supported.".to_string()),
+    }
+}
+
 pub const DRM_PROTECTED_MSG: &str = "This video is protected and cannot be downloaded.";
+
+/// One real video quality: a resolution and frame rate that the site offers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoOption {
+    pub height: u32,
+    pub fps: u32,
+    pub ext: String,
+    pub file_size_approx: Option<u64>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,6 +57,8 @@ pub struct MediaResolveResult {
     pub duration: Option<f64>,
     pub formats: Vec<MediaFormatOption>,
     pub manifest_type: Option<String>,
+    #[serde(default)]
+    pub video_options: Vec<VideoOption>,
 }
 
 /// Detect DRM protections in manifest content or error output.
@@ -54,6 +80,7 @@ pub fn check_drm(content: &str) -> bool {
 
 /// Resolve video metadata and available qualities using bundled yt-dlp or direct manifest inspection.
 pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
+    validate_remote_url(url)?;
     let trimmed = url.trim();
     let lower = trimmed.to_lowercase();
 
@@ -76,6 +103,7 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
                 thumbnail: None,
                 duration: None,
                 formats: Vec::new(),
+                video_options: Vec::new(),
                 manifest_type: if lower.contains(".mpd") { Some("dash".into()) } else { Some("hls".into()) },
             });
         }
@@ -107,13 +135,14 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
                     is_audio_only: true,
                 },
             ],
+            video_options: Vec::new(),
             manifest_type: if is_dash { Some("dash".into()) } else { Some("hls".into()) },
         });
     }
 
     // 2. Use yt-dlp sidecar
     let output = Command::new("yt-dlp")
-        .args(["--dump-single-json", "--no-warnings", "--no-playlist", trimmed])
+        .args(["--dump-single-json", "--no-warnings", "--no-playlist", "--", trimmed])
         .output();
 
     let output = match output {
@@ -133,6 +162,7 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
             thumbnail: None,
             duration: None,
             formats: Vec::new(),
+            video_options: Vec::new(),
             manifest_type: None,
         });
     }
@@ -150,6 +180,7 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
 
     let mut formats = Vec::new();
     let mut seen_qualities = std::collections::HashSet::new();
+    let mut video_options: Vec<VideoOption> = Vec::new();
 
     // Standard qualities to display
     if let Some(formats_arr) = json.get("formats").and_then(|v| v.as_array()) {
@@ -174,6 +205,17 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
                     });
                 }
             } else if height > 0 {
+                if vcodec != "none" && height >= 144 {
+                    let fps = f.get("fps").and_then(|v| v.as_f64()).map(|v| v.round() as u32).filter(|v| *v > 0).unwrap_or(30);
+                    match video_options.iter_mut().find(|o| o.height == height as u32 && o.fps == fps) {
+                        Some(o) => {
+                            if size.unwrap_or(0) > o.file_size_approx.unwrap_or(0) {
+                                o.file_size_approx = size;
+                            }
+                        }
+                        None => video_options.push(VideoOption { height: height as u32, fps, ext: ext.clone(), file_size_approx: size }),
+                    }
+                }
                 let quality_label = match height {
                     h if h >= 2160 => "4K (2160p)",
                     h if h >= 1440 => "2K (1440p)",
@@ -199,6 +241,8 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
         }
     }
 
+    video_options.sort_by(|a, b| b.height.cmp(&a.height).then(b.fps.cmp(&a.fps)));
+
     if formats.is_empty() {
         formats.push(MediaFormatOption {
             format_id: "best".to_string(),
@@ -218,6 +262,7 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
         thumbnail,
         duration,
         formats,
+        video_options,
         manifest_type: None,
     })
 }
@@ -233,7 +278,7 @@ pub async fn download_hls(
         .build()
         .map_err(|e| e.to_string())?;
 
-    let base_url = Url::parse(playlist_url).map_err(|e| format!("Invalid playlist URL: {e}"))?;
+    let base_url = validate_remote_url(playlist_url)?;
     let resp = client.get(playlist_url).send().await.map_err(|e| e.to_string())?;
     let playlist_text = resp.text().await.map_err(|e| e.to_string())?;
 
@@ -392,6 +437,7 @@ pub async fn download_dash(
         .build()
         .map_err(|e| e.to_string())?;
 
+    validate_remote_url(manifest_url)?;
     let resp = client.get(manifest_url).send().await.map_err(|e| e.to_string())?;
     let manifest_text = resp.text().await.map_err(|e| e.to_string())?;
 
@@ -406,6 +452,9 @@ pub async fn download_dash(
     let status = Command::new("ffmpeg")
         .args([
             "-y",
+            // A manifest may reference other inputs; only allow network protocols, never file:.
+            "-protocol_whitelist",
+            "http,https,tcp,tls,crypto",
             "-i",
             manifest_url,
             "-c",
@@ -447,6 +496,215 @@ pub async fn download_dash(
     Ok(())
 }
 
+/// Marker errors returned by `download_ytdlp_blocking` when it was stopped on purpose.
+pub const YT_PAUSED: &str = "__yt_paused__";
+pub const YT_CANCELLED: &str = "__yt_cancelled__";
+
+/// Lets another thread pause or cancel a running yt-dlp download (by ending its process tree).
+#[derive(Default)]
+pub struct YtControl {
+    pid: std::sync::atomic::AtomicU32,
+    /// 0 = running, 1 = pause requested, 2 = cancel requested
+    state: std::sync::atomic::AtomicU8,
+}
+
+impl YtControl {
+    pub const PAUSE: u8 = 1;
+    pub const CANCEL: u8 = 2;
+
+    pub fn stop(&self, state: u8) {
+        use std::sync::atomic::Ordering::SeqCst;
+        self.state.store(state, SeqCst);
+        let pid = self.pid.load(SeqCst);
+        if pid != 0 {
+            kill_process_tree(pid);
+        }
+    }
+}
+
+fn kill_process_tree(pid: u32) {
+    let mut cmd = Command::new("taskkill");
+    cmd.args(["/PID", &pid.to_string(), "/T", "/F"]);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    let _ = cmd.output();
+}
+
+/// Video-page sites that yt-dlp can resolve (the URL is a web page, not a file).
+pub fn is_video_page_url(url: &str) -> bool {
+    let Ok(u) = Url::parse(url.trim()) else { return false };
+    let host = u.host_str().unwrap_or("").to_lowercase();
+    let host = host.trim_start_matches("www.").trim_start_matches("m.");
+    const HOSTS: &[&str] = &[
+        "youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv", "tiktok.com",
+        "instagram.com", "facebook.com", "fb.watch", "twitter.com", "x.com", "reddit.com",
+    ];
+    HOSTS.iter().any(|h| host == *h || host.ends_with(&format!(".{h}")))
+}
+
+/// A yt-dlp format id is only letters, digits, `_`, `-` and `.`; anything else is ignored.
+fn is_safe_format_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 40 && id.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+}
+
+fn sanitize_stem(name: &str) -> String {
+    let stem = match name.rsplit_once('.') {
+        Some((s, ext)) if ext.len() <= 4 && ext.chars().all(|c| c.is_ascii_alphanumeric()) => s,
+        _ => name,
+    };
+    let cleaned: String = stem
+        .chars()
+        .map(|c| if matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*') || c.is_control() { '_' } else { c })
+        .collect();
+    cleaned.trim().trim_end_matches('.').to_string()
+}
+
+/// Download a video page with yt-dlp (blocking). Reports `(downloaded, total, speed_bps, eta_secs)`
+/// while running and returns the final file path.
+pub fn download_ytdlp_blocking(
+    url: &str,
+    out_dir: &Path,
+    temp_dir: Option<&Path>,
+    name_stem: Option<&str>,
+    format_id: Option<&str>,
+    audio_only: bool,
+    convert_to: Option<&str>,
+    height: Option<u32>,
+    fps: Option<u32>,
+    ctl: &YtControl,
+    mut on_progress: impl FnMut(u64, Option<u64>, u64, Option<u64>),
+) -> Result<PathBuf, String> {
+    use std::io::{BufRead, BufReader, Read};
+    use std::process::Stdio;
+
+    validate_remote_url(url)?;
+    std::fs::create_dir_all(out_dir).map_err(|e| format!("Cannot create folder: {e}"))?;
+
+    let template = match name_stem.map(sanitize_stem) {
+        Some(stem) if !stem.is_empty() => format!("{stem}.%(ext)s"),
+        _ => "%(title).150B [%(id)s].%(ext)s".to_string(),
+    };
+    let out_template = template;
+
+    let extract_audio = matches!(convert_to, Some("mp3") | Some("m4a"));
+    let selector = if extract_audio {
+        "ba/b".to_string()
+    } else if let Some(h) = height.filter(|h| (100..=8640).contains(h)) {
+        // best stream at or below the chosen height (and frame rate), merged with the best audio
+        let fps_filter = fps.filter(|f| (1..=240).contains(f)).map(|f| format!("[fps<={f}]")).unwrap_or_default();
+        format!("bv*[height<={h}]{fps_filter}+ba/b[height<={h}]/b")
+    } else {
+        match format_id {
+            Some(id) if is_safe_format_id(id) => {
+                if audio_only { id.to_string() } else { format!("{id}+bestaudio/{id}") }
+            }
+            _ => "bv*+ba/b".to_string(),
+        }
+    };
+
+    let mut cmd = Command::new("yt-dlp");
+    cmd.args([
+        "--no-playlist", "--no-warnings", "--newline", "--progress", "--windows-filenames", "--no-simulate",
+        "--progress-template",
+        "download:FGPROG %(progress.downloaded_bytes)s|%(progress.total_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s",
+        "--print", "after_move:FGDONE %(filepath)s",
+        "-f", &selector,
+        // Prefer H.264 video and AAC audio at the chosen size: they play in every Windows app,
+        // while the default pick (VP9/AV1 + Opus) often has no sound or no picture in Movies & TV.
+        "-S", "res,fps,vcodec:h264,acodec:aac",
+        "-o", &out_template,
+    ]);
+    cmd.arg("-P").arg(format!("home:{}", out_dir.to_string_lossy()));
+    if let Some(t) = temp_dir {
+        // partial files live here, so a paused download can continue where it stopped
+        cmd.arg("-P").arg(format!("temp:{}", t.to_string_lossy()));
+    }
+    match convert_to {
+        Some("mp3") => { cmd.args(["-x", "--audio-format", "mp3", "--audio-quality", "0"]); }
+        Some("m4a") => { cmd.args(["-x", "--audio-format", "m4a"]); }
+        Some("mp4") => { cmd.args(["--recode-video", "mp4"]); }
+        Some("mkv") => { cmd.args(["--merge-output-format", "mkv"]); }
+        _ => { cmd.args(["--merge-output-format", "mp4"]); }
+    }
+    cmd.args(["--", url.trim()]);
+    cmd.env("PYTHONIOENCODING", "utf-8").env("PYTHONUTF8", "1");
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // no console window
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("yt-dlp is not installed or not on PATH ({e}). Install it with: pip install yt-dlp"))?;
+
+    {
+        use std::sync::atomic::Ordering::SeqCst;
+        ctl.pid.store(child.id(), SeqCst);
+        if ctl.state.load(SeqCst) != 0 {
+            kill_process_tree(child.id()); // stop was requested while starting
+        }
+    }
+
+    let stderr = child.stderr.take();
+    let err_thread = std::thread::spawn(move || {
+        let mut buf = String::new();
+        if let Some(mut e) = stderr {
+            let _ = e.read_to_string(&mut buf);
+        }
+        buf
+    });
+
+    let mut final_path: Option<String> = None;
+    if let Some(stdout) = child.stdout.take() {
+        for line in BufReader::new(stdout).lines().map_while(Result::ok) {
+            if let Some(rest) = line.strip_prefix("FGPROG ") {
+                let f: Vec<&str> = rest.trim().split('|').collect();
+                let num = |i: usize| f.get(i).and_then(|v| v.trim().parse::<f64>().ok());
+                let downloaded = num(0).unwrap_or(0.0) as u64;
+                let total = num(1).or(num(2)).map(|v| v as u64);
+                let speed = num(3).unwrap_or(0.0) as u64;
+                let eta = num(4).map(|v| v as u64);
+                on_progress(downloaded, total, speed, eta);
+            } else if let Some(rest) = line.strip_prefix("FGDONE ") {
+                final_path = Some(rest.trim().to_string());
+            }
+        }
+    }
+
+    let status = child.wait().map_err(|e| format!("yt-dlp failed: {e}"))?;
+    let stderr_text = err_thread.join().unwrap_or_default();
+
+    ctl.pid.store(0, std::sync::atomic::Ordering::SeqCst);
+
+    if status.success() {
+        if let Some(p) = final_path {
+            let path = PathBuf::from(p);
+            if path.exists() {
+                return Ok(path);
+            }
+        }
+        return Err("yt-dlp finished but no output file was found.".to_string());
+    }
+
+    match ctl.state.load(std::sync::atomic::Ordering::SeqCst) {
+        YtControl::PAUSE => return Err(YT_PAUSED.to_string()),
+        YtControl::CANCEL => return Err(YT_CANCELLED.to_string()),
+        _ => {}
+    }
+
+    if check_drm(&stderr_text) {
+        return Err(DRM_PROTECTED_MSG.to_string());
+    }
+    let last: Vec<&str> = stderr_text.lines().filter(|l| !l.trim().is_empty()).rev().take(3).collect();
+    let msg = last.into_iter().rev().collect::<Vec<_>>().join(" ");
+    Err(if msg.is_empty() { "yt-dlp could not download this video.".to_string() } else { msg })
+}
+
 /// Auto-update yt-dlp in the background
 pub async fn auto_update_ytdlp() -> Result<String, String> {
     tokio::task::spawn_blocking(|| {
@@ -464,4 +722,146 @@ pub async fn auto_update_ytdlp() -> Result<String, String> {
     })
     .await
     .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    #[ignore]
+    async fn live_resolve_lists_height_and_fps() {
+        let r = resolve_media("https://youtu.be/6PVKNZCpex8").await.expect("resolve");
+        println!("title: {:?}", r.title);
+        for o in &r.video_options {
+            println!("option: {}p{} ({}) size={:?}", o.height, o.fps, o.ext, o.file_size_approx);
+        }
+        assert!(!r.video_options.is_empty(), "no video options");
+        assert!(r.video_options.windows(2).all(|w| w[0].height >= w[1].height), "not sorted by height");
+    }
+
+    /// Download at a chosen height + fps and check the real file with ffmpeg.
+    #[test]
+    #[ignore]
+    fn live_ytdlp_height_fps_download() {
+        let dir = std::env::temp_dir().join("flowget-ytdlp-live-test2");
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = download_ytdlp_blocking(
+            "https://youtu.be/6PVKNZCpex8", &dir, None, None, None, false, None, Some(360), Some(30), &YtControl::default(), |_, _, _, _| {},
+        )
+        .expect("download should succeed");
+        let out = std::process::Command::new("ffmpeg").arg("-i").arg(&path).output().expect("ffmpeg");
+        let info = String::from_utf8_lossy(&out.stderr).to_string();
+        let video_line = info.lines().find(|l| l.contains("Video:")).unwrap_or("").to_string();
+        println!("{video_line}");
+        assert!(video_line.contains("x360"), "expected 360p, got: {video_line}");
+        let audio_line = info.lines().find(|l| l.contains("Audio:")).unwrap_or("").to_string();
+        println!("{audio_line}");
+        assert!(audio_line.contains("aac"), "expected AAC audio, got: {audio_line}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[ignore]
+    fn live_ytdlp_mkv_download() {
+        let dir = std::env::temp_dir().join("flowget-ytdlp-live-test3");
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = download_ytdlp_blocking(
+            "https://youtu.be/6PVKNZCpex8", &dir, None, None, None, false, Some("mkv"), Some(240), Some(30), &YtControl::default(), |_, _, _, _| {},
+        )
+        .expect("download should succeed");
+        println!("saved: {}", path.display());
+        assert_eq!(path.extension().and_then(|e| e.to_str()), Some("mkv"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Pause a running download, then resume it: the second run must pick up the partial file.
+    #[test]
+    #[ignore]
+    fn live_ytdlp_pause_and_resume() {
+        use std::sync::Arc;
+        let dir = std::env::temp_dir().join("flowget-ytdlp-live-test4");
+        let tmp = dir.join(".tmp");
+        let _ = std::fs::remove_dir_all(&dir);
+        let url = "https://youtu.be/6PVKNZCpex8";
+
+        // run 1: pause as soon as some data has arrived
+        let ctl = Arc::new(YtControl::default());
+        let ctl2 = ctl.clone();
+        let mut at_pause = 0u64;
+        let r1 = download_ytdlp_blocking(url, &dir, Some(&tmp), None, None, false, None, Some(720), Some(30), &ctl, |d, _, _, _| {
+            if d > 300_000 && at_pause == 0 {
+                at_pause = d;
+                ctl2.stop(YtControl::PAUSE);
+            }
+        });
+        println!("run 1: {:?}, paused at {at_pause} bytes", r1.as_ref().map(|p| p.display().to_string()));
+        assert_eq!(r1.unwrap_err(), YT_PAUSED);
+        let partials = std::fs::read_dir(&tmp).map(|r| r.count()).unwrap_or(0);
+        println!("partial files kept: {partials}");
+        assert!(partials > 0, "partial file should remain");
+
+        // run 2: resume
+        let ctl = YtControl::default();
+        let mut first = None;
+        let path = download_ytdlp_blocking(url, &dir, Some(&tmp), None, None, false, None, Some(720), Some(30), &ctl, |d, _, _, _| {
+            if first.is_none() {
+                first = Some(d);
+            }
+        })
+        .expect("resume should finish");
+        println!("run 2 first progress report: {:?} (was paused at {at_pause}); saved {}", first, path.display());
+        assert!(first.unwrap_or(0) >= at_pause / 2, "resume should continue from the partial data, not restart");
+        assert!(path.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Live network test (needs yt-dlp + ffmpeg on PATH): `cargo test --lib live_ytdlp -- --ignored --nocapture`
+    #[test]
+    #[ignore]
+    fn live_ytdlp_audio_download() {
+        let dir = std::env::temp_dir().join("flowget-ytdlp-live-test");
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut ticks = 0u32;
+        let path = download_ytdlp_blocking(
+            "https://youtu.be/6PVKNZCpex8",
+            &dir,
+            None,
+            None,
+            None,
+            false,
+            Some("mp3"),
+            None,
+            None,
+            &YtControl::default(),
+            |d, t, s, e| {
+                ticks += 1;
+                println!("progress: {d}/{t:?} speed={s} eta={e:?}");
+            },
+        )
+        .expect("download should succeed");
+        println!("saved: {}", path.display());
+        assert!(path.exists());
+        assert_eq!(path.extension().and_then(|e| e.to_str()), Some("mp3"));
+        assert!(std::fs::metadata(&path).unwrap().len() > 100_000);
+        assert!(ticks > 0, "progress callback never fired");
+    }
+
+    #[test]
+    fn media_urls_must_be_plain_http() {
+        assert!(validate_remote_url("https://example.com/v.m3u8").is_ok());
+        assert!(validate_remote_url("  http://example.com/a  ").is_ok());
+        for bad in [
+            "--exec=calc.exe",
+            "-o somefile",
+            "file:///C:/Windows/win.ini",
+            "concat:a|b",
+            "ftp://example.com/x",
+            "javascript:alert(1)",
+            "",
+            "not a url",
+        ] {
+            assert!(validate_remote_url(bad).is_err(), "should reject {bad:?}");
+        }
+    }
 }

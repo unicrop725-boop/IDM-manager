@@ -5,6 +5,7 @@ import {
   ArrowUp,
   ArrowDown,
   Pause,
+  Play,
   AlertTriangle,
   WifiOff,
   Music,
@@ -19,6 +20,7 @@ import {
 import { DownloadInfo } from "../types";
 import { formatBytes, formatDate, getFileTypeLabel, FileCategoryType } from "../format";
 import { Checkbox } from "./Checkbox";
+import { TickProgress } from "./DownloadViz";
 import { ContextMenuPosition } from "./ContextMenu";
 
 export type SortField = "name" | "size" | "status" | "eta" | "date";
@@ -35,7 +37,21 @@ interface DownloadTableProps {
   onSort: (field: SortField) => void;
   allSelected?: boolean;
   onToggleSelectAll?: () => void;
+  onPause?: (id: string) => void;
+  onResume?: (id: string) => void;
 }
+
+/** File name, or the last part of the URL when the name is empty. */
+const displayName = (d: DownloadInfo): string => {
+  if (d.fileName && d.fileName.trim()) return d.fileName;
+  try {
+    const last = new URL(d.url).pathname.split("/").filter(Boolean).pop();
+    if (last) return decodeURIComponent(last);
+  } catch {
+    /* not a valid URL */
+  }
+  return d.url || "(unnamed)";
+};
 
 const formatTimeLeft = (secs: number | null | undefined): string => {
   if (secs == null || !isFinite(secs) || secs <= 0) return "0 Sec";
@@ -58,6 +74,8 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   onSort,
   allSelected = false,
   onToggleSelectAll,
+  onPause,
+  onResume,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -101,6 +119,31 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
     }
   };
 
+  // HTTP(S) downloads (engine) and yt-dlp videos can be paused/resumed; streams, FTP and torrents
+  // are managed elsewhere.
+  const canToggle = (d: DownloadInfo) => !d.protocol || d.protocol.startsWith("HTTP") || d.protocol === "yt-dlp";
+
+  const rowAction = (d: DownloadInfo, kind: "pause" | "resume") => {
+    const handler = kind === "pause" ? onPause : onResume;
+    if (!handler || !canToggle(d)) return null;
+    const Icon = kind === "pause" ? Pause : Play;
+    return (
+      <button
+        type="button"
+        title={kind === "pause" ? "Pause" : "Resume"}
+        aria-label={kind === "pause" ? "Pause download" : "Resume download"}
+        onClick={(e) => {
+          e.stopPropagation();
+          handler(d.id);
+        }}
+        onDoubleClick={(e) => e.stopPropagation()}
+        className={`row-action ${kind === "pause" ? "row-action--pause" : "row-action--resume"}`}
+      >
+        <Icon className="w-3.5 h-3.5 fill-current" />
+      </button>
+    );
+  };
+
   const renderStatus = (d: DownloadInfo) => {
     const pct = d.totalSize && d.totalSize > 0
       ? Math.min(100, Math.max(0, (d.downloaded / d.totalSize) * 100))
@@ -115,11 +158,8 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
         return (
           <div className="flex flex-col gap-1.5">
             <span className="text-[13px] text-[var(--text-primary)]">{Math.round(pct)}%</span>
-            <div className="w-28 h-1.5 rounded-full bg-[var(--bg-hover)] overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-teal-400 to-purple-500 transition-all duration-200"
-                style={{ width: `${pct}%` }}
-              />
+            <div className="w-28">
+              <TickProgress pct={pct} ticks={24} size="sm" active={d.state === "downloading"} />
             </div>
           </div>
         );
@@ -164,10 +204,10 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[var(--bg-app)] select-none overflow-hidden">
+    <div className="dt-root flex-1 flex flex-col h-full select-none overflow-hidden">
       {/* Table Header */}
       <div className="h-12 w-full flex items-center px-4 grad-bar-down text-[13px] text-[var(--text-secondary)] select-none flex-shrink-0">
-        <div className="w-10 flex items-center">
+        <div className="w-10 flex-shrink-0 flex items-center">
           <Checkbox
             checked={allSelected && downloads.length > 0}
             onChange={() => onToggleSelectAll?.()}
@@ -175,39 +215,40 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
         </div>
         <div
           onClick={() => onSort("name")}
-          className="flex-1 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors pl-12"
+          className="flex-1 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors pl-12 dt-col-name-h"
         >
           <span>Name</span>
           {renderSortIcon("name")}
         </div>
         <div
           onClick={() => onSort("size")}
-          className="w-28 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+          className="dt-col-size w-28 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Size</span>
           {renderSortIcon("size")}
         </div>
         <div
           onClick={() => onSort("status")}
-          className="w-44 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+          className="dt-col-status w-44 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Status</span>
           {renderSortIcon("status")}
         </div>
         <div
           onClick={() => onSort("eta")}
-          className="w-36 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+          className="dt-col-eta w-36 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Time Left</span>
           {renderSortIcon("eta")}
         </div>
         <div
           onClick={() => onSort("date")}
-          className="w-40 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
+          className="dt-col-date w-40 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
           <span>Last Modification</span>
           {renderSortIcon("date")}
         </div>
+        <div className="dt-col-action w-12 flex-shrink-0" aria-hidden="true" />
       </div>
 
       {/* Virtualized Table Body */}
@@ -255,7 +296,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                 >
                   {/* Checkbox */}
                   <div
-                    className="w-10 flex items-center"
+                    className="w-10 flex-shrink-0 flex items-center"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -265,34 +306,43 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                   </div>
 
                   {/* Icon + Name + Category */}
-                  <div className="flex-1 flex items-center gap-4 min-w-0 pr-4 pl-1">
+                  <div className="dt-col-name flex-1 flex items-center gap-4 min-w-0 pr-4 pl-1">
                     {renderTypeIcon(typeLabel)}
                     <div className="min-w-0 flex flex-col">
-                      <span className="truncate font-medium text-[var(--text-primary)]" title={d.fileName}>
-                        {d.fileName}
+                      <span className="truncate font-medium text-[var(--text-primary)]" title={displayName(d)}>
+                        {displayName(d)}
                       </span>
                       <span className="text-[11px] text-[var(--text-secondary)]">{typeLabel}</span>
                     </div>
                   </div>
 
                   {/* Size */}
-                  <div className="w-28 text-[var(--text-primary)]">
+                  <div className="dt-col-size w-28 text-[var(--text-primary)]">
                     {formatBytes(d.totalSize)}
                   </div>
 
                   {/* Status */}
-                  <div className="w-44 flex items-center">
+                  <div className="dt-col-status w-44 flex items-center">
                     {renderStatus(d)}
                   </div>
 
                   {/* Time Left */}
-                  <div className="w-36 text-[var(--text-primary)]">
+                  <div className="dt-col-eta w-36 text-[var(--text-primary)]">
                     {d.state === "downloading" ? formatTimeLeft(d.etaSecs) : "0 Sec"}
                   </div>
 
                   {/* Last Modification */}
-                  <div className="w-40 text-[var(--text-secondary)] text-[12px] truncate">
+                  <div className="dt-col-date w-40 text-[var(--text-secondary)] text-[12px] truncate">
                     {formatDate(d.completedAt || d.createdAt)}
+                  </div>
+
+                  {/* Pause / Resume (always in the same place) */}
+                  <div className="dt-col-action w-12 flex-shrink-0 flex items-center justify-center">
+                    {d.state === "downloading" || d.state === "probing"
+                      ? rowAction(d, "pause")
+                      : d.state === "paused"
+                      ? rowAction(d, "resume")
+                      : null}
                   </div>
                 </div>
               );

@@ -140,3 +140,38 @@ cargo run --release -p flowget-engine --example bench -- --runs 3 --out bench-re
 
 Results and how to read them: [benchmarks.md](benchmarks.md). Takes about 10 minutes; do not run other heavy work
 meanwhile, it would distort the timings.
+
+
+## Phase 9: final quality check
+
+Run everything:
+
+```powershell
+cd D:\I-Download
+npm install; npx tsc --noEmit          # type check (needs npm install first)
+cd src-tauri
+cargo test --workspace --release       # 207 tests; the root crate's tests need build.rs's manifest fix
+cargo test -p flowget-engine --release -- --ignored --nocapture acceptance   # 1 GiB resume + 30 s network cut
+```
+
+| What | Where |
+|---|---|
+| Security regression tests (SFTP injection, extraction injection, URL validation, loopback server, native host) | `protocols.rs`, `post_download.rs`, `media_stream.rs`, `ipc_server.rs`, `payload_check.rs`, `bin/flowget-host.rs` (`#[cfg(test)]`) |
+| 50 parallel downloads | `fifty_parallel_downloads_all_complete_byte_exact` in `engine/tests/engine_tests.rs` |
+| Real hard kill and resume across processes | `engine/examples/killtest.rs` (below) |
+| 10,000 rows in the interface | open the built UI with `?stress=10000` in a browser (mock mode only) |
+| Memory / CPU of the real app | sample `flowget.exe` and its `msedgewebview2.exe` children; see `docs/benchmarks.md` |
+
+Hard-kill test by hand:
+
+```powershell
+# Terminal 1
+cargo run --release -p flowget-engine --example testserver -- --size-mb 256 --rate-mb 4 --port 8123
+# Terminal 2: start, let it pass ~40%, kill it hard, then resume in a fresh process
+cargo run --release -p flowget-engine --example killtest -- run  C:\temp\kt http://127.0.0.1:8123/file.bin
+taskkill /F /IM killtest.exe
+cargo run --release -p flowget-engine --example killtest -- resume C:\temp\kt   # prints SHA256; compare with the server's
+```
+
+`scripts/test-phase9-stress-security.js` is **not** a real test (it checks JavaScript copies of the logic);
+see the note at the top of that file.

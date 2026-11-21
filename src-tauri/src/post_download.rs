@@ -62,13 +62,18 @@ impl PostDownloadManager {
             _ => {
                 // If tar.exe failed and it is a .zip, fallback to PowerShell Expand-Archive
                 if name_lower.ends_with(".zip") {
-                    let ps_cmd = format!(
-                        "Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
-                        path.display(),
-                        out_dir.display()
-                    );
+                    // The file name is attacker-controlled (Content-Disposition) and may contain
+                    // quotes or `;`, so it must never be spliced into the command text. The paths
+                    // travel in environment variables and the command is a constant.
                     let ps_status = std::process::Command::new("powershell")
-                        .args(["-NoProfile", "-Command", &ps_cmd])
+                        .args([
+                            "-NoProfile",
+                            "-NonInteractive",
+                            "-Command",
+                            "Expand-Archive -LiteralPath $env:FLOWGET_ARCHIVE -DestinationPath $env:FLOWGET_DEST -Force",
+                        ])
+                        .env("FLOWGET_ARCHIVE", &path)
+                        .env("FLOWGET_DEST", &out_dir)
                         .status();
                     match ps_status {
                         Ok(s) if s.success() => Ok(out_dir.to_string_lossy().to_string()),
@@ -151,10 +156,39 @@ impl PostDownloadManager {
             return Err(format!("File does not exist: {path_str}"));
         }
 
-        std::process::Command::new("cmd")
-            .args(["/C", "start", "", path_str])
+        // Not via `cmd /C start`: cmd would interpret `&`, `^` and `%` in the file name, and a
+        // downloaded file called `x&calc.exe` would run a second command. explorer.exe receives the
+        // path as one argument and opens it with the default application.
+        std::process::Command::new("explorer.exe")
+            .arg(&path)
             .spawn()
             .map_err(|e| format!("Failed to open file: {e}"))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A server controls the file name. This corrupt "zip" is named so that, when its path used to be
+    /// pasted into a PowerShell command line, it ran `ni flowget_pwned_marker` (verified against the
+    /// old code: the marker was created) (creating a file in the
+    /// working directory). tar.exe fails on it, which triggers the PowerShell fallback.
+    #[tokio::test]
+    async fn extraction_does_not_execute_commands_hidden_in_the_file_name() {
+        let marker = std::env::current_dir().unwrap().join("flowget_pwned_marker");
+        let _ = std::fs::remove_file(&marker);
+
+        let dir = tempfile::tempdir().unwrap();
+        // `#` comments out the rest of the old command line, so it still parsed and ran.
+        let evil = dir.path().join("a'; ni flowget_pwned_marker #.zip");
+        std::fs::write(&evil, b"this is not a zip archive").unwrap();
+
+        let _ = PostDownloadManager::extract_archive(evil.to_str().unwrap(), None).await;
+
+        let injected = marker.exists();
+        let _ = std::fs::remove_file(&marker);
+        assert!(!injected, "the file name was executed as PowerShell code");
     }
 }

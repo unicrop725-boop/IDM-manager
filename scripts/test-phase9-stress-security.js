@@ -1,4 +1,16 @@
 /**
+ * !!! READ THIS FIRST !!!
+ * This script does NOT test FlowGet. It re-implements the file-name sanitizer, the sidecar argument check
+ * and the native-message validator in JavaScript and then tests those copies; its "power cut" splits an
+ * in-memory buffer; its "10,000 items" are a JavaScript array. It can pass while the real code is broken
+ * (it did, while the injection bugs described in docs/security-review.md existed).
+ *
+ * The real checks live in the Rust test suite (`cargo test --workspace --release`), in
+ * src-tauri/engine/examples/killtest.rs (real hard-kill and resume) and in docs/benchmarks.md.
+ * Kept only for history.
+ */
+
+/**
  * Phase 9 Stress, Concurrency & Security Verification Test
  * 
  * Tests:

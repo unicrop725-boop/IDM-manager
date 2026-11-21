@@ -1024,6 +1024,9 @@ struct RunState {
     /// AIMD: when the speed was last compared, and what it was.
     grow_checked_at: std::time::Instant,
     grow_last_speed: f64,
+    /// Bytes written when the speed was last compared (the interval's speed is measured from this,
+    /// not taken from the smoothed meter, which may still be converging).
+    grow_last_bytes: u64,
     /// AIMD has found the count that works (the ceiling was reached, or the last extra connection
     /// brought no real gain). Only then is the count remembered for the domain: a download that
     /// ended while still ramping up says nothing about the best count.
@@ -1140,6 +1143,7 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
         ceiling,
         grow_checked_at: std::time::Instant::now(),
         grow_last_speed: 0.0,
+        grow_last_bytes: 0,
         // Nothing to ramp: started at the ceiling, or not ranged.
         settled: !ranged || start >= ceiling,
     };
@@ -1502,15 +1506,22 @@ fn watch_connections(
 /// (5 %) above what it was at the previous comparison, allow one more connection (up to the
 /// download's ceiling). When an interval brings no real gain the count has settled, and it stays.
 ///
-/// `speed` is the smoothed total speed in bytes/s.
-fn maybe_grow(inner: &Inner, entry: &Entry, cfg: &EngineConfig, run: &mut RunState, speed: f64) {
+/// `written` is the cumulative number of bytes written. The speed compared is the average over the
+/// interval itself (bytes since the last check / elapsed time), not the smoothed speed shown in the
+/// UI: that is an exponential average with a time constant of about a second, so when the interval
+/// is short it is still climbing at every check, which reads as "more connections help" even on a
+/// line that is already full.
+fn maybe_grow(inner: &Inner, entry: &Entry, cfg: &EngineConfig, run: &mut RunState, written: u64) {
     if run.target >= run.ceiling {
         run.settled = true;
         return;
     }
-    if run.grow_checked_at.elapsed() < cfg.aimd_interval {
+    let elapsed = run.grow_checked_at.elapsed();
+    if elapsed < cfg.aimd_interval {
         return;
     }
+    let speed = written.saturating_sub(run.grow_last_bytes) as f64 / elapsed.as_secs_f64();
+    run.grow_last_bytes = written;
     let previous = std::mem::replace(&mut run.grow_last_speed, speed);
     run.grow_checked_at = std::time::Instant::now();
     if speed > 0.0 && speed > previous * (1.0 + cfg.aimd_gain) {
@@ -1621,6 +1632,8 @@ async fn run_phase(
 
     let mut ticker = tokio::time::interval(cfg.progress_interval);
     ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    run.grow_last_bytes = table.total_written();
+    run.grow_checked_at = std::time::Instant::now();
     let mut meter = SpeedMeter::new(table.total_written(), std::time::Instant::now());
     let mut adapter_meters: Vec<SpeedMeter> =
         adapter_set.slots.iter().map(|_| SpeedMeter::new(0, std::time::Instant::now())).collect();
@@ -1646,8 +1659,7 @@ async fn run_phase(
                 if healthy {
                     if ranged {
                         maybe_halve(inner, entry, &table, &fails, cfg, run);
-                        let speed = entry.live.lock().unwrap().speed as f64;
-                        maybe_grow(inner, entry, cfg, run, speed);
+                        maybe_grow(inner, entry, cfg, run, table.total_written());
                     }
                     fill_workers(&ctx, &mut set, &mut active, target_of(run), steal);
                 }

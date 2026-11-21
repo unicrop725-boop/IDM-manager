@@ -1,143 +1,138 @@
-# Benchmarks & Performance Analysis
+# Benchmarks and measurements (Phase 9)
 
-This document details the performance, reliability, and resource utilization benchmarks of **FlowGet** in comparison to classic segmented downloaders and **Internet Download Manager (IDM)**.
+Everything in this file was measured on the machine below on 2026-11-21 unless it says otherwise.
+Earlier versions of this file contained timings against IDM, hotspot results and memory figures that were
+not backed by any measurement; they have been removed. Section 6 lists what has **not** been measured.
 
----
+## Test machine
 
-## 1. FlowGet vs IDM Comparative Benchmarks (Phase 9)
+| | |
+|---|---|
+| OS | Windows 10 Pro (build 19045) |
+| CPU | Intel Core i5-7400, 4 cores / 4 threads, 3.0 GHz |
+| RAM | 48 GB |
+| Network | One Wi-Fi adapter (Realtek 8822CE, 802.11ac); no second adapter |
+| Other load | The machine was in normal use (browsers, editor, Windows Defender). Timing tests were repeated on a quiet machine where a result looked load-sensitive. |
+| Build | `cargo build --release` (thin LTO), WebView2 157.0 |
 
-### Test Environment & Hardware Specification
-- **Operating System:** Windows 11 Pro 64-bit (Build 22631)
-- **CPU:** AMD Ryzen 7 / Intel Core i7 (8 cores, 16 threads @ 3.8 GHz)
-- **RAM:** 16 GB DDR4-3200 MHz
-- **Storage:** Samsung 980 PRO NVMe M.2 SSD (PCIe Gen4, sequential write ~4500 MB/s)
-- **Network Interface 1 (Primary):** Intel Wi-Fi 6 AX200 (100 Mbps WAN fiber connection, ping 12 ms)
-- **Network Interface 2 (Secondary):** Qualcomm Snapdragon 4G LTE USB Tethered Hotspot (50 Mbps cellular WAN, ping 38 ms)
-- **IDM Version:** Internet Download Manager v6.42 (Build 18) configured with 8 and 16 max connections.
-- **FlowGet Version:** FlowGet 1.0 (with Adaptive Work Stealing and Turbo Multi-Interface Bonding enabled).
+Network behaviour in sections 1 to 3 comes from a local test server that misbehaves in a reproducible way
+(caps, silence, dropped connections, outages), not from a real WAN.
 
----
+## 1. Engine vs. simple strategies, bad-network scenarios
 
-### Test Scenarios Across 4 Network Conditions
+`cargo run --release -p flowget-engine --example bench -- --runs 3`. Median time to receive the whole
+file over 3 runs (min-max in brackets, lower is better). "8 fixed" is a plain segmented downloader: 8
+connections, fixed segments, ordinary retry. **It is not IDM.** Every file was verified against the
+expected SHA-256.
 
-#### Condition 1: Good Wi-Fi (100 Mbps Stable WAN)
-*Clean broadband link, 12 ms RTT latency, 0% packet loss.*
+| Scenario | single connection | 8 fixed connections | adaptive (FlowGet) | adaptive vs 8 fixed |
+|---|---|---|---|---|
+| A. Healthy server, each connection capped at 4 MiB/s (32 MiB) | 14.6 s | 3.7 s | 3.4 s | 1.1x faster |
+| B. One slow connection (256 KiB/s) | 14.4 s | 16.5 s | 5.5 s | 3.0x faster |
+| C. A connection goes silent | 15.3 s | 32.0 s | 4.0 s | 8.0x faster |
+| D. Server tolerates only 3 connections | 14.6 s | 9.2 s | 6.2 s | 1.5x faster |
+| E. Flaky link (responses cut every 1 MiB, 16 MiB) | 9.5 s | 2.1 s | 2.2 s | about equal |
+| F. 5-second internet outage | 21.9 s | 10.7 s | 11.5 s | **0.9x (slightly slower)** |
+| G. 30-second internet outage | 70.3 s | 61.4 s | 36.6 s | 1.7x faster |
 
-| File Size | FlowGet Time | FlowGet Avg Speed | IDM Time | IDM Avg Speed | Result / Difference |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **100 MB** | **8.4 s** | 11.9 MB/s | 8.8 s | 11.4 MB/s | FlowGet is ~5% faster (faster handshake) |
-| **1 GB** | **87.2 s** | 11.7 MB/s | 89.1 s | 11.5 MB/s | FlowGet is ~2% faster (instant disk allocation) |
-| **5 GB** | **7m 18s** | 11.6 MB/s | 7m 25s | 11.5 MB/s | Within margin of line saturation |
+Extra data the server had to send was at most 1% over the file size in every case.
 
-*Analysis:* On a completely healthy, saturated broadband connection, both engines effectively max out the 100 Mbps pipe (~11.9 MB/s theoretical limit). FlowGet's pre-allocated sparse disk files (`SetFileValidData` / `fallocate`) prevent the disk re-allocation lag IDM experiences when combining parts at 99%.
+What this supports: work stealing and stall detection make a large difference when one connection is slow
+or dead (B, C), and the network supervisor roughly halves recovery from a long outage (G). It does not
+show a gain on a healthy link (A) or a short outage (F).
 
----
+## 2. Hard kill ("power cut") and resume
 
-#### Condition 2: Slow 3G-like Speed (1.5 Mbps Bandwidth Cap, 180 ms Latency)
-*Simulated remote or throttled cellular link, high latency, small TCP windows.*
+Real separate processes (`examples/killtest.rs`): a downloader persisting its records to disk is killed
+with `taskkill /F`, then a fresh process restores only that record and the partial file and resumes.
 
-| File Size | FlowGet Time | FlowGet Avg Speed | IDM Time | IDM Avg Speed | Result / Difference |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **100 MB** | **9m 04s** | 188 KB/s | 9m 18s | 183 KB/s | FlowGet is ~2.5% faster |
-| **1 GB** | **1h 31m** | 187 KB/s | 1h 34m | 181 KB/s | FlowGet keeps connections alive better |
-| **5 GB** | **7h 38m** | 186 KB/s | 7h 51m | 181 KB/s | FlowGet is 13 minutes faster |
+* 256 MiB file, killed at 41.6%. The last durable record said 85,327,872 bytes (31.8%).
+* The fresh process resumed and finished. **SHA-256 matched the server's value.**
 
-*Analysis:* Under severe bandwidth throttling, opening too many connections can cause bufferbloat and packet re-transmission. FlowGet's adaptive connection tuning automatically throttles from 8 connections down to 3-4 optimal connections to prevent TCP socket starvation, yielding smoother throughput and fewer re-transmits than IDM.
+Also passing: the 1 GiB acceptance test (pause at 40.5%, close, reopen, resume: checksum matches), the
+30-second network-cut test (resumed 0.32 s after the link returned), and the in-process crash test.
 
----
+Limit: a process kill leaves the operating system's file buffers intact. A real loss of power (buffers
+not flushed) was **not** tested.
 
-#### Condition 3: Unstable Connection with Drops (20% Packet Loss + Outages)
-*Simulated flaky link with 20% random packet drops and a 5-second complete link outage every 45 seconds.*
+## 3. 50 parallel downloads
 
-| File Size | FlowGet Time | FlowGet Avg Speed | IDM Time | IDM Avg Speed | Result / Difference |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **100 MB** | **14.2 s** | 7.04 MB/s | 38.6 s | 2.59 MB/s | **FlowGet is 2.7x faster** |
-| **1 GB** | **2m 21s** | 7.26 MB/s | 6m 48s | 2.51 MB/s | **FlowGet is 2.9x faster** |
-| **5 GB** | **11m 45s** | 7.24 MB/s | 34m 12s | 2.49 MB/s | **FlowGet is 2.9x faster** |
+`fifty_parallel_downloads_all_complete_byte_exact`: 50 downloads of 2 MiB added at once, 4 connections
+each, server limited to 256 KiB/s per connection so they genuinely overlap. All 50 completed byte-exact,
+got 50 distinct file names, left no temporary files; the server saw **200 simultaneous connections**.
 
-*Analysis:* This is where FlowGet decisively outperforms IDM.
-1. When an active segment drops on IDM, it waits for standard 30s TCP timeouts and plain backoff (retrying at 2s, 6s, 14s, 30s, 60s).
-2. FlowGet employs **Work Stealing**: if one connection freezes, idle worker connections instantly steal remaining byte slices from the tail of the stuck segment.
-3. FlowGet's **Network Supervisor** detects link state transitions in ~125 ms, immediately pausing timers and firing rapid reconnection the moment packets start routing again.
+The engine itself has no global cap on simultaneous downloads or sockets; limiting concurrency is done
+by queues (*Max Concurrent*).
 
----
+## 4. Memory and CPU (real app, real process tree)
 
-#### Condition 4: Turbo Mode (Bonded Wi-Fi 100 Mbps + Mobile Hotspot 50 Mbps)
-*Simultaneous multi-adapter downloading using dual network interfaces.*
+`flowget.exe` plus its six Microsoft Edge WebView2 processes, sampled once a second for 30 to 40 s after
+a 25 s settle. "Working set" counts shared pages the way Task Manager does; "private" does not.
 
-| File Size | FlowGet (Turbo Mode) | FlowGet Avg Speed | IDM (Single Adapter) | IDM Avg Speed | Result / Difference |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **100 MB** | **5.7 s** | 17.5 MB/s | 8.8 s | 11.4 MB/s | **FlowGet is 1.54x faster** |
-| **1 GB** | **58.6 s** | 17.4 MB/s | 89.1 s | 11.5 MB/s | **FlowGet is 1.52x faster** |
-| **5 GB** | **4m 52s** | 17.4 MB/s | 7m 25s | 11.5 MB/s | **FlowGet saves 2.5+ minutes** |
+| State | `flowget.exe` alone | Whole app, working set | Whole app, private | CPU (of 4 cores) |
+|---|---|---|---|---|
+| Idle, 1 download in the list | 25 MB | 342 MB | 138 MB | 0.06% |
+| Idle, 10,001 downloads in the list | 41 MB | 367 MB | 167 MB | 1.7% |
 
-*Analysis:* IDM is physically incapable of utilizing multiple internet connections simultaneously—it binds strictly to the OS default route. FlowGet's **Turbo Mode** binds segment worker sockets to distinct network adapter IP addresses (`IP_UNICAST_IF` / `SO_BINDTODEVICE`), aggregating 100 Mbps Wi-Fi and 50 Mbps 4G Hotspot into a unified 150 Mbps download pipeline.
+**Requirement "idle under 80 MB": met by the Rust process alone (25 MB), not met by the app as a user
+sees it** (342 MB working set, 138 MB private), because the WebView2 processes are most of it.
 
----
+CPU **while downloading** was measured for the download engine in its own process, driving the same
+engine code, against the local server (the real window could not be driven safely, see section 6):
 
-## 2. Resource Utilization: Memory & CPU Footprint
+| Throughput | CPU, % of all 4 cores | CPU, % of one core | RAM |
+|---|---|---|---|
+| 69 Mbit/s | 0.41% | 1.6% | 26 MB |
+| 113 Mbit/s | 0.51% | 2.1% | 27 MB |
+| 219 Mbit/s | 0.76% | 3.0% | 38 MB |
 
-Measurements taken using Windows Performance Monitor (`perfmon`) and Task Manager over 30 minutes of continuous operation.
+**Requirement "under 5% CPU while downloading": met for the engine**, with margin, even counting against
+a single core. It excludes the cost of drawing the window during a download, which was not measured.
 
-### Memory (RAM) Check
-*Requirement: Idle under 80 MB RAM.*
+## 5. List scale: 10,000 items
 
-| State | FlowGet Measured RAM | IDM Measured RAM | Target Threshold | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Cold Start (0 downloads)** | **36.2 MB** | 22.1 MB | < 80 MB | **PASSED** |
-| **Idle (10,000 items in list)** | **42.4 MB** | 31.8 MB | < 80 MB | **PASSED** |
-| **Active (8 parallel downloads)** | **64.8 MB** | 48.2 MB | < 120 MB | **PASSED** |
-| **Peak (50 parallel downloads)** | **82.1 MB** | 74.5 MB | < 150 MB | **PASSED** |
+Interface only (mock data, no Rust backend), headless Chrome, `?stress=N` test hook:
 
-FlowGet uses a hybrid architecture:
-- Rust backend uses zero-copy buffer slicing with fixed chunk circular buffers (64 KiB rings).
-- Frontend table virtualization renders only the ~20 visible DOM rows regardless of whether the table contains 10 items or 10,000 items.
+| Rows | First row | DOM rows drawn | JS heap | Scroll to end | Sort | Search | Main-thread stalls > 100 ms |
+|---|---|---|---|---|---|---|---|
+| 10,000 | 437 ms | 21 | 7.7 MB (12.7 MB after sort/search) | 44 ms | 73 ms | 377 ms (includes typing) | none |
+| 50,000 | 1.4 s | 21 | 55 MB (236 MB after) | 0.5 s | 0.9 s | 4.6 s | 8, up to 254 ms |
 
----
+The table is virtualized, so 10,000 rows is comfortable; 50,000 is where search and sort start to hurt.
+The real app with 10,001 rows in its database started and idled normally (section 4).
 
-### CPU Check
-*Requirement: Under 5% CPU while downloading.*
+## 6. Not measured
 
-| State | FlowGet CPU Usage | IDM CPU Usage | Target Threshold | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Idle** | **0.1%** | 0.1% | < 1.0% | **PASSED** |
-| **1 Download (100 Mbps)** | **2.8%** | 3.6% | < 5.0% | **PASSED** |
-| **5 Downloads (100 Mbps)** | **3.4%** | 4.2% | < 5.0% | **PASSED** |
-| **Peak Turbo Mode (150 Mbps)** | **3.8%** | N/A | < 5.0% | **PASSED** |
+| Item | Why not |
+|---|---|
+| **Comparison with IDM** (4 network conditions x 100 MB / 1 GB / 5 GB) | IDM is installed here but cannot be driven reliably or non-intrusively from a script, and the conditions below could not be produced. No IDM figure in this repository is a measurement. |
+| **Turbo Mode** (Wi-Fi + hotspot) | The machine has one network adapter. The binding code exists (connections are bound to an adapter's local address) but its speed-up is unmeasured. |
+| **Real slow-3G / lossy / unstable WAN** | No network shaper (Clumsy, netem, a router) was available. Sections 1 to 3 use a misbehaving local server instead, which is reproducible but not the same thing. |
+| **5 GB files** | Disk write speed on this machine and the time budget; the largest real runs were 1 GiB (acceptance) and 256 MiB (hard kill). |
+| **CPU of the window during a download** | The only way to start a download in the real app is through its window; automating that by keystrokes risked sending input to other windows, so it was not done. |
+| **Real power loss** | See section 2. |
 
-*Analysis:* FlowGet achieves under 4% CPU utilization by:
-1. Direct asynchronous kernel I/O with Tokio and `IOCP` (I/O Completion Ports) on Windows.
-2. Hardware-accelerated AVX2 / SSE4.1 SIMD SHA-256 chunk hashing.
-3. Disk pre-allocation avoiding filesystem metadata fragmentation.
-4. UI progress throttling at 60 FPS (Framer Motion requestAnimationFrame) avoiding unnecessary React re-renders.
+### How to run the IDM comparison yourself
 
----
+```powershell
+cd D:\I-Download\src-tauri
+# Terminal 1: a test server. --rate-mb is per connection and must be an integer; 0 = unlimited.
+cargo run --release -p flowget-engine --example testserver -- --size-mb 1024 --rate-mb 2
+# It prints the URL and the expected SHA-256.
+```
 
-## 3. Stress & Scalability Verification
+Download the printed URL in FlowGet and in IDM with a stopwatch (same save drive, same connection count),
+then compare `Get-FileHash <file> -Algorithm SHA256` with the printed value. For a bad-network condition,
+put a shaper such as Clumsy between the machine and the real internet and use a real file instead of the
+local server.
 
-| Stress Test | Test Description | Result | Status |
-| :--- | :--- | :--- | :--- |
-| **10,000 Items in List** | 10,000 downloads loaded in table; scrolling, sorting, and live searching. | Virtualizer keeps memory footprint at +3.45 MB; instant search filter runs in 4.18 ms; sorting runs in 0.98 ms. | **PASSED** |
-| **50 Parallel Downloads** | 50 concurrent download tasks added simultaneously. | Global connection throttle strictly caps socket pool at 32 connections; queue manager processes all 50 downloads without deadlock. | **PASSED** |
-| **Power Cut / Crash Simulation** | Sudden termination at 40% completion; recovery on restart. | `.flowget.part` integrity check validated; byte ranges resume at offset 838,860; final SHA-256 matches bit-for-bit. | **PASSED** |
+## 7. Test suite
 
----
-
-## 4. Security Audit Verification
-
-| Security Domain | Defense Mechanism | Audit Result | Status |
-| :--- | :--- | :--- | :--- |
-| **Directory Traversal** | `filename.rs::sanitize` strips `../`, `..\`, and absolute drive prefixes (`C:\`). | Malicious paths like `../../Windows/System32/evil.dll` safely reduced to `evil.dll`. | **PASSED** |
-| **Windows Reserved Devices** | Sanitizer detects `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`. | Automatically prepended with underscore (e.g. `CON.txt` -> `_CON.txt`). | **PASSED** |
-| **Remote Code Execution (RCE)** | Sidecars (`ffmpeg`, `yt-dlp`) use `std::process::Command` with direct vector arguments. No shell invocation (`cmd.exe /c`). | Semicolons, pipes, and shell metacharacters rejected. | **PASSED** |
-| **Native Messaging Host** | Host limits message length to 10 MB and enforces strict JSON schema with origin whitelist. | Oversized messages and malformed JSON payloads rejected immediately. | **PASSED** |
-| **HTTPS Certificate Validation** | Reqwest client uses native OS Root Certificates with strict TLS 1.2/1.3 verification (`danger_accept_invalid_certs = false`). | Self-signed or MITM intercepted certificates are rejected. | **PASSED** |
-
----
-
-## 5. Summary & Verdict
-
-FlowGet matches IDM on raw line-speed downloads while significantly surpassing it in:
-1. **Unstable / High-loss networks** (2.7x - 2.9x faster due to adaptive work stealing and fast reconnect).
-2. **Multi-adapter bonding** (1.5x+ faster by utilizing Wi-Fi and 4G simultaneously in Turbo Mode).
-3. **System stability and safety** (RAM strictly under 80 MB, CPU under 4%, zero disk fragmentation, and verified path traversal immunity).
+`cargo test --workspace --release`: **207 passed, 0 failed**, 5 ignored. Of those, the two long acceptance
+tests (1 GiB pause/resume, 30-second network cut) were run separately and passed; the other three need
+internet access or outbound UDP (`real_http3`, `diagnose_real_http3`, one connectivity test in
+`netwatch.rs`) and were not run.
+Before this phase the root crate's tests could not even start on Windows (missing Common Controls
+manifest; fixed in `build.rs`), and two engine tests failed: an AIMD connection-growth test (fixed in the
+engine and the test) and a QUIC-fallback test that is timing-sensitive under load (passes on a quiet
+machine).

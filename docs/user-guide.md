@@ -1,280 +1,221 @@
-# FlowGet User Guide
+# FlowGet user guide
 
-Welcome to **FlowGet**, the high-performance, next-generation download manager for Windows. Built with a lightning-fast Rust core and a modern dark desktop interface, FlowGet delivers maximum throughput, intelligent resilience on unstable networks, and seamless browser integration.
+FlowGet is a Windows download manager: it splits a file into parts, downloads them in parallel, resumes
+after interruptions, and can take downloads over from your browser.
 
----
+This guide describes what the app does today. Things that look finished in the interface but are not yet
+real are listed under [Known limitations](#known-limitations) rather than documented as features.
 
-## Table of Contents
-1. [Overview & Key Features](#1-overview--key-features)
-2. [Installation & Setup](#2-installation--setup)
-3. [User Interface Tour](#3-user-interface-tour)
-4. [Adding & Managing Downloads](#4-adding--managing-downloads)
-5. [Browser Integration (Chrome, Edge, Brave, Firefox)](#5-browser-integration)
-6. [Turbo Mode: Multi-Adapter Bonding](#6-turbo-mode-multi-adapter-bonding)
-7. [Streaming Media Ripper & Sidecar Tools](#7-streaming-media-ripper--sidecar-tools)
-8. [Protocols: HTTP, FTP, SFTP & Torrents](#8-protocols-http-ftp-sftp--torrents)
-9. [Batch Downloader & Site Grabber](#9-batch-downloader--site-grabber)
-10. [Exclusive FlowGet Tools](#10-exclusive-flowget-tools)
-    - [Speed Test & History](#speed-test--history)
-    - [Smart Disk Cleaner](#smart-disk-cleaner)
-    - [Bandwidth Monitor](#bandwidth-monitor)
-    - [Mobile QR Link Sharing](#mobile-qr-link-sharing)
-    - [Download Statistics](#download-statistics)
-11. [Queues & Scheduling](#11-queues--scheduling)
-12. [Licensing & Activation](#12-licensing--activation)
-13. [Keyboard Shortcuts](#13-keyboard-shortcuts)
-14. [Troubleshooting & FAQ](#14-troubleshooting--faq)
+## Contents
+1. [Running FlowGet](#1-running-flowget)
+2. [The window](#2-the-window)
+3. [Adding downloads](#3-adding-downloads)
+4. [Managing downloads](#4-managing-downloads)
+5. [Queues and scheduling](#5-queues-and-scheduling)
+6. [Settings](#6-settings)
+7. [Turbo Mode](#7-turbo-mode)
+8. [Browser extension](#8-browser-extension)
+9. [Video and streams](#9-video-and-streams)
+10. [FTP, SFTP and torrents](#10-ftp-sftp-and-torrents)
+11. [Trial and license](#11-trial-and-license)
+12. [Keyboard shortcuts](#12-keyboard-shortcuts)
+13. [Known limitations](#known-limitations)
+14. [Troubleshooting](#14-troubleshooting)
 
 ---
 
-## 1. Overview & Key Features
+## 1. Running FlowGet
 
-- **Adaptive Dynamic Segmentation:** Files are partitioned into concurrent byte segments. If one connection slows down or freezes, active connections automatically steal remaining bytes from the slow connection (*Work Stealing*).
-- **Turbo Mode Multi-Adapter Bonding:** Download simultaneously using both your Wi-Fi and Mobile Hotspot / Ethernet to combine speeds.
-- **Resilient Network Supervisor:** Instantly pauses downloads when connectivity drops and auto-resumes within 125 ms of connection return without corrupting data.
-- **Streaming Media Ripper:** Captures non-DRM HLS (`.m3u8`) and DASH (`.mpd`) video streams, and downloads YouTube/social media videos via bundled `yt-dlp` with automatic `ffmpeg` audio/video merging.
-- **Universal Protocol Support:** Native HTTP/HTTPS, FTP/FTPS, SFTP, and BitTorrent/Magnet links.
-- **Native Extension Integration:** Intercepts browser downloads, passes authentication cookies and referer headers, and provides a floating "Download Video" button over video players.
-- **Modern Hardware-Accelerated UI:** Sleek dark interface, Framer Motion animations, virtualized table capable of rendering 10,000+ items at 60 FPS, and minimal resource footprint (<80 MB RAM, <4% CPU).
+From the source folder:
 
----
-
-## 2. Installation & Setup
-
-### Standard Installation (MSI / NSIS)
-1. Download the latest installer `FlowGet_Setup_x64.exe` or `FlowGet_Setup_x64.msi`.
-2. Run the installer and select your installation options:
-   - Create Desktop Shortcut
-   - Launch FlowGet on Windows Startup
-   - Register as Default Windows Download Manager
-   - Register Browser Native Messaging Host
-3. Click **Install**. FlowGet is installed to `%LOCALAPPDATA%\Programs\FlowGet`.
-
-### Portable Mode
-FlowGet can be run directly from a USB flash drive or portable storage without administrative privileges:
-1. Extract `FlowGet_Portable.zip` onto your USB drive.
-2. Ensure `portable.ini` exists in the same folder as `FlowGet.exe`.
-3. When launched, FlowGet will store all database files, settings, and temporary `.flowget.part` files within the local directory rather than the Windows AppData directory.
-
----
-
-## 3. User Interface Tour
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│ [Icon] FlowGet 1.0                              [ - ] [ □ ] [ ✕ ]      │
-├────────────────────────────────────────────────────────────────────────┤
-│ Tasks  File  Downloads  View  Help         [ 🔍 Search in the List... ]│
-├───────────────┬────────────────────────────────────────────────────────┤
-│ SIDEBAR       │ TOOLBAR: [ 🔗 Add URL pill ] [Resume][Stop][Del][Opts] │
-│ • All (142)   ├────────────────────────────────────────────────────────┤
-│   - Musics    │ DOWNLOAD TABLE (Virtualized 10,000+ items)             │
-│   - Compressed│ [x] File Name   | Size   | Status     | ETA  | Modified│
-│   - Videos    │ ------------------------------------------------------ │
-│   - Programs  │ [ ] ubuntu.iso  | 4.2 GB | 85% [====] | 32s  | Today   │
-│   - Documents │ [ ] setup.exe   | 150 MB | Complete   | --   | 10m ago │
-│ • Unfinished  ├────────────────────────────────────────────────────────┤
-│ • Finished    │ FOOTER BAR:                                            │
-│ [Disk Space]  │ [x] Select All  | ⚡ Speed Test | ↓ 14.8 MB/s | ↑ 1.2 MB/s│
-└───────────────┴────────────────────────────────────────────────────────┘
+```powershell
+cd D:\I-Download
+npm install
+npm run tauri dev          # development window
+npm run build              # builds the interface into dist\
+cd src-tauri
+cargo build --release --features tauri/custom-protocol    # builds flowget.exe with the interface embedded
 ```
 
-1. **Title Bar:** Custom frameless title bar with minimize, maximize, and close controls.
-2. **Menu Bar:** Quick access to Tasks, File operations, View toggles, and Help documentation. The right side features a real-time table search filter.
-3. **Left Sidebar:** Categories (All, Music, Compressed, Videos, Programs, Documents, Images, Torrents) with unread/status badges, plus the interactive **Disk Space Widget** and **Disk Cleaner** launcher.
-4. **Toolbar:** Action buttons for adding URLs, starting, pausing, stopping all, deleting, configuring options, and queue management.
-5. **Download Table:** High-performance virtualized table displaying file icons, name, category, size, status bar, remaining time, and modification timestamps.
-6. **Footer Bar:** Bulk selection, interactive speed test gauge, and aggregate live download/upload throughput indicators.
+Installer packages (MSI/NSIS) and code signing are described in `docs/code-signing-guide.md`; they have not
+been exercised as part of this review. The app needs the Microsoft Edge WebView2 runtime (present on
+current Windows 10 and 11).
 
----
+Your downloads, queues and settings are stored in `%APPDATA%\com.flowget.app\flowget.db`.
 
-## 4. Adding & Managing Downloads
+## 2. The window
 
-### Method 1: Toolbar Add URL Pill
-1. Paste or type any URL directly into the "Add URL" input pill in the toolbar.
-2. Press **Enter** or click the circular gradient download button.
+* **Title bar and menu** (Tasks, File, Downloads, View, Help), with a search box on the right that filters
+  the list by name, URL or category.
+* **Sidebar**: All Downloads, Unfinished, Finished, and categories. A disk-space gauge and a Disk Cleaner
+  button sit at the bottom.
+* **Toolbar**: an *Add Url* box and buttons for Resume, Stop, Stop All, Delete, Options, Queues, Schedule
+  and Share.
+* **Download list**: name, size, status bar, time left, last modification. The list is virtualized: only
+  the rows on screen are drawn, so it stays responsive with thousands of entries (10,000 rows scroll and
+  sort in well under a tenth of a second in testing; at around 50,000 rows search and sort become
+  noticeably slow).
+* **Footer**: *Select All*, the Speed Test button and the current download / upload figures.
 
-### Method 2: Detailed Add Download Dialog (`Ctrl+N`)
-Click the **+** button or press `Ctrl+N` to open the full configuration dialog:
-- **Download URL:** The target URL or Magnet link.
-- **File Name:** Pre-populated from URL or Content-Disposition; editable with auto-clean smart naming.
-- **Save Directory:** Select destination folder (default: `C:\Downloads`).
-- **Category:** Auto-detected by extension or manually set.
-- **Connections:** Choose 1 to 32 parallel connections.
-- **Start Option:** Start Immediately or Add to Queue (Start Later).
-- **Checksum Verification (Optional):** Enter expected SHA-256 or MD5 hash; FlowGet will verify the file upon completion.
+## 3. Adding downloads
 
-### Method 3: Drag & Drop
-Drag any URL, text link, or `.torrent` file from your browser or file explorer and drop it onto the FlowGet window.
+Pick whichever is handiest:
 
-### Method 4: Clipboard Monitor
-When enabled in Settings, copying any valid URL (`http://`, `https://`, `magnet:`) displays a lightweight desktop toast: *"Download this file with FlowGet?"*. Click **Download** to capture immediately.
+1. **Add Url box**: paste a link and press Enter (or click the download button). With the box empty the
+   button opens the full dialog.
+2. **Add Download dialog** (`Ctrl+N`, or *Tasks > Add URL...*): fields are
+   *Download URL*, *File Name (optional)*, *Category*, *Save Folder* (with a Browse button), *Queue*,
+   *Start Action*, *Connections (1-32)*, *Checksum (optional verification)*, *Speed Limit (MB/s)*,
+   *Proxy (HTTP or SOCKS5)*, *User-Agent*, *Referer*, *Cookies* and *Mirrors (one URL per line)*.
+   If you enter a checksum (SHA-256 or MD5), the file is verified when it finishes and the row says
+   "checksum OK" or the download fails with a clear message.
+3. **Drag and drop** a link onto the *Drop Link* widget.
+4. **Clipboard prompt**: when a copied `http(s)` link looks like a file, FlowGet offers *Download this
+   file?*.
+5. **Browser extension** ([section 8](#8-browser-extension)): downloads from the browser open in the Add
+   dialog with the cookies and referer filled in.
+6. **Batch Download** (*Tasks > Batch Download...*): paste many links, or a pattern such as
+   `https://example.com/img_[001-100].jpg` or `https://example.com/part_[a-z].zip`, then add them all.
+7. **Site Grabber** (*Tasks > Site Grabber...*): crawl a page to a chosen depth and pick files by type.
 
----
+Mirrors you list are checked against the main link (same size and validators) before use; a mirror that
+does not match is ignored, and passwords and cookies are never sent to a mirror on another site.
 
-## 5. Browser Integration
+## 4. Managing downloads
 
-FlowGet includes a Manifest V3 browser extension for **Google Chrome**, **Microsoft Edge**, **Brave**, and **Mozilla Firefox**.
+Select a row and use the toolbar, or right-click for: *Open*, *Open With*, *Open Folder*,
+*Extract Archive*, *Scan with Defender*, *Move/Rename*, *Redownload*, *Resume Download*,
+*Stop Download*, *Refresh Download Address*, *Grab URL from browser*, *Add to queue*,
+*Delete from Queue*, *Share* and *Properties*.
 
-### How It Works
-- Intercepts browser download events (`chrome.downloads.onDeterminingFilename`).
-- Forwards login session cookies, authorization tokens, referer URLs, and custom user-agent headers to FlowGet via the native messaging host.
-- Downloads protected behind authentication portals (e.g. Google Drive, MEGA, university portals) download without login prompts.
+* **Resume**: FlowGet resumes any download whose server supports byte ranges, including after closing the
+  app, a crash, or a lost connection. It saves progress as it goes, and checks on resume that the file on
+  the server has not changed. If it has, the download stops with an explanation and you can *Redownload*.
+* **Servers that do not support resume**: the row shows a "Resume not supported" badge and uses one
+  connection.
+* **Network loss**: when the internet drops, downloads wait ("Waiting for network") and continue by
+  themselves when it returns; a download you paused yourself stays paused.
+* **Expired links**: right-click the download and choose *Refresh Download Address*, then paste the new
+  link. FlowGet checks the file is the same and continues from where it stopped.
+* **Speed limit**: per download in the Add dialog, or globally with the limit box at the top of the window.
+* **Connections**: FlowGet starts with 4 connections and adds one at a time while the speed keeps
+  improving, up to the number you chose. If a server refuses connections (HTTP 429 or 503) it reduces the
+  count.
+* **After a download finishes** (Settings): auto-extract archives, scan with Windows Defender, and open
+  the folder.
 
-### Features
-1. **Hold `Alt` to Bypass:** Holding the `Alt` key while clicking a download link lets the native browser download the file instead of FlowGet.
-2. **Video Sniffer:** When viewing video players (HTML5, YouTube, Vimeo, streaming sites), a floating **Download this Video** badge appears in the top-right corner with a quality selector (1080p, 720p, 480p, Audio Only).
-3. **Download All Links:** Right-click anywhere on a web page and select *"Download all links with FlowGet"* to open a batch selector with file-type filters.
+## 5. Queues and scheduling
 
----
+Open *Queues* (or *Schedule*) to create a queue with:
 
-## 6. Turbo Mode: Multi-Adapter Bonding
+* **Max Concurrent** downloads.
+* **Scheduler**: start time, optional stop time, and active days.
+* **After the queue finishes**: do nothing, sleep, shut down, hibernate, exit FlowGet, or run a program.
+* Conditions: download only on Wi-Fi, or only at night (between chosen hours).
 
-FlowGet can aggregate multiple physical network adapters into a unified high-speed pipeline.
+Add a download to a queue from the Add dialog or the right-click menu.
 
-### Setup Instructions
-1. Connect your PC to your primary network (e.g., home Wi-Fi or Ethernet).
-2. Connect a secondary network (e.g., connect your Android/iOS smartphone via USB and enable **USB Tethering** or Wi-Fi hotspot).
-3. In FlowGet, open **Options / Settings** -> **Network**.
-4. Enable **Turbo Mode (Multi-Adapter Bonding)**.
-5. FlowGet will detect both network interfaces (e.g., `192.168.1.100` and `192.168.42.15`).
-6. Segment worker connections are round-robin bonded across the selected adapters, allowing a 100 Mbps Wi-Fi and a 50 Mbps 4G link to download at up to **150 Mbps**.
+## 6. Settings
 
----
+*Options* opens: default download directory, launch on Windows startup, language (English or Deutsch),
+theme (Dark, Light, System), default connections, **global speed limit**, **Turbo Mode**, a proxy
+(`http://host:port` or `socks5://host:port`), and the post-download actions above. Under *Next-Generation
+Features* are: **Battery-Saver Mode** (pauses active downloads when a laptop is unplugged and below 20%
+battery), **Smart Naming** (cleans messy file names: query strings, `%20` and so on), Mobile Link Sharing,
+Per-App Bandwidth View and Portable Mode. The last three are not finished; see the limitations below.
 
-## 7. Streaming Media Ripper & Sidecar Tools
+## 7. Turbo Mode
 
-FlowGet comes pre-configured with support for streaming protocols and sidecar utilities (`yt-dlp` and `ffmpeg`):
+With two active networks (for example Wi-Fi plus a phone hotspot or USB tethering), Turbo Mode spreads a
+download's connections across the adapters so their speeds add up. Enable it in *Options*; the dialog lists
+the adapters FlowGet found. It needs an active trial or license.
 
-### HLS (`.m3u8`) & DASH (`.mpd`)
-- Automatically detects media playlist manifests.
-- Fetches all segment chunks in parallel using FlowGet's high-speed engine.
-- Merges the streams with `ffmpeg` without re-encoding to retain 100% original quality.
+How it works: each connection is bound to one adapter's local address. Results depend on both networks
+being usable for the same server. **Turbo Mode was not benchmarked in this review** because the test
+machine has a single adapter; see `docs/benchmarks.md`.
 
-### Video Quality & Audio Extraction
-In the Add Download dialog:
-- Choose resolution: `Original`, `1080p`, `720p`, `480p`, or `Audio Only`.
-- Convert to output format: `Original (No re-encoding)`, `MP4`, `MP3`, or `M4A`.
+## 8. Browser extension
 
-> [!IMPORTANT]
-> FlowGet respects copyright protections and DRM mechanisms. Videos protected with Widevine, FairPlay, or PlayReady DRM cannot be downloaded and will display: *"This video is protected and cannot be downloaded."*
+The extension (`extension\`) takes over browser downloads and passes the page's cookies and referer so
+login-protected files work. Holding **Alt** while clicking a link lets the browser download it normally.
+The right-click menu offers *Download all links on this page*, and a button appears over HTML5 videos.
 
----
+Set-up (Chrome, Edge, Brave):
 
-## 8. Protocols: HTTP, FTP, SFTP & Torrents
+1. Open `chrome://extensions` (or `edge://extensions`), turn on *Developer mode*, choose
+   *Load unpacked* and select the `extension` folder. Copy the extension's **ID** (32 letters).
+2. Start FlowGet. The extension talks to it over a local port (`127.0.0.1:21588`), which is enough on its
+   own while FlowGet is running.
+3. Optional fallback through Chrome's native messaging: run
+   `flowget-host.exe --register --extension-id <ID>` once (add `--firefox-id <add-on id>` for Firefox). The
+   command refuses to run without an explicit ID: browsers do not accept wildcards.
 
-- **HTTP / HTTPS:** HTTP/1.1, HTTP/2 multiplexing, and HTTP/3 (QUIC over UDP) with fallback.
-- **FTP / FTPS:** Implicit and explicit TLS file transfers with segmented byte ranges.
-- **SFTP:** Secure file transfer over SSH keys or password authentication.
-- **BitTorrent & Magnet Links:** Native peer discovery, DHT, tracker communication, and sequential piece downloading for media previewing.
+Only browser extensions can reach the local port, not web pages, and every request is validated; see
+`docs/security-review.md`.
 
----
+## 9. Video and streams
 
-## 9. Batch Downloader & Site Grabber
+* **HLS (`.m3u8`) and DASH (`.mpd`)** links are fetched and merged with `ffmpeg`; other video pages go
+  through `yt-dlp`. **Both programs must be installed and on your PATH**; FlowGet does not bundle them.
+* In the Add dialog you can pick a quality and convert to MP4, MP3 or M4A.
+* Streams protected by DRM are refused with "This video is protected and cannot be downloaded."
+* Media links must be plain `http://` or `https://`.
 
-### Batch Downloader
-1. Click **Tasks** -> **Batch Download**.
-2. Paste a list of URLs or use wildcard pattern syntax:
-   `https://cdn.example.com/assets/image_[001-100].jpg`
-   `https://files.example.com/data_archive_[a-z].zip`
-3. Click **Generate Items** -> **Add All to Queue**.
+## 10. FTP, SFTP and torrents
 
-### IDM-Style Site Grabber
-1. Click **Tasks** -> **Site Grabber**.
-2. Enter the target website URL.
-3. Configure crawl depth (1 to 4 levels).
-4. Select target file types (e.g. Images, Documents, Videos, Audio).
-5. Review the discovered file hierarchy and start batch capture.
+* **FTP / FTPS** use the `curl.exe` that ships with Windows 10 and 11.
+* **SFTP** needs Python with the `paramiko` package installed. Host keys are remembered on first connection
+  and a later change is refused.
+* **Torrents and magnet links** are handled by the built-in torrent engine.
 
----
+## 11. Trial and license
 
-## 10. Exclusive FlowGet Tools
+A new installation has a 30-day trial. A license key is verified offline against a signature (*Help >
+Activate License...*). Turbo Mode requires an active trial or license.
 
-### Speed Test & History
-Click the speedometer icon in the footer to run a real-time internet speed test:
-- Tests Ping (latency), Jitter, Download speed, and Upload speed.
-- Visual animated speedometer gauge.
-- Saves historical test runs to track network performance over time.
+## 12. Keyboard shortcuts
 
-### Smart Disk Cleaner
-Launch from the sidebar Disk Space widget:
-- Scans chosen download folders for:
-  - Exact duplicate files (verified by SHA-256 hash).
-  - Completed downloads older than X days.
-  - Leftover orphaned `.flowget.part` temporary files.
-- One-click safe cleanup to free disk space.
+| Keys | Action |
+|---|---|
+| `Ctrl+N` | Open the Add Download dialog |
+| `Ctrl+F` | Focus the search box |
+| `Ctrl+A` | Select all downloads |
+| `Delete` / `Backspace` | Delete the selected downloads |
+| `Space` | Pause / resume the selection |
 
-### Bandwidth Monitor
-Displays per-application bandwidth utilization:
-- Shows how much bandwidth FlowGet is consuming versus other running Windows apps and browsers.
-- Real-time live updating graph.
+## Known limitations
 
-### Mobile QR Link Sharing
-Want to send a link from your phone to your PC?
-1. Click the **Mobile Share** icon or menu item.
-2. Scan the displayed QR code with your smartphone camera.
-3. Your phone opens a local Wi-Fi web page hosted by FlowGet.
-4. Paste any URL on your phone—it instantly starts downloading on your PC!
+These parts of the interface are present but not finished. They are listed here so they do not surprise
+you:
 
-### Download Statistics
-Interactive analytics dashboard showing:
-- Total data downloaded today, this week, and all-time.
-- Daily bandwidth usage charts.
-- Top downloaded domains and file categories.
+* **Speed Test** shows generated numbers. It does not measure your connection.
+* **Mobile Link Sharing** shows a placeholder QR code and a fixed address; nothing is listening for a
+  phone, and the local server accepts connections from this PC only.
+* **Per-App Bandwidth**: FlowGet's own usage is real; the "other apps" figure is simulated.
+* **Disk Cleaner** finds duplicates by identical URL (not by file contents), and lists old finished
+  downloads and failed ones; it works on the download list.
+* **Download Statistics** are computed from your download list.
+* **Portable Mode** is saved as a setting but changes no behaviour yet; data always lives in `%APPDATA%\com.flowget.app`.
+* Certificate errors on HTTPS downloads are rejected safely, but the row only shows "probing" and does not
+  say why.
+* On a first run, three of my early test launches of the release build exited after seven to ten seconds
+  with no error. I could not reproduce it in 18 later launches. If FlowGet closes by itself on its very
+  first start, launch it again and report it.
 
----
+## 14. Troubleshooting
 
-## 11. Queues & Scheduling
+**My browser still downloads files itself.** Check the extension is enabled and FlowGet is running. If you
+use the optional native messaging fallback, re-run `flowget-host.exe --register --extension-id <ID>` with
+the correct ID.
 
-- **Multiple Queues:** Create distinct queues (e.g. *Night Queue*, *Work Queue*, *Torrents*).
-- **Time Scheduler:** Configure downloads to begin automatically at off-peak hours (e.g. 2:00 AM) and halt at 7:00 AM.
-- **Post-Download Actions:** Auto-shutdown PC, sleep, or hibernate when the queue completes.
-- **Speed Limits:** Set a global speed limit (e.g. 5 MB/s) to keep bandwidth open for streaming and gaming.
+**A download keeps saying "probing".** The server may be unreachable, or its HTTPS certificate is not
+trusted (expired, self-signed, wrong name). FlowGet will not download from a site with an invalid
+certificate.
 
----
+**Downloads stop with "file changed".** The file on the server was replaced since you started. Use
+*Redownload*.
 
-## 12. Licensing & Activation
+**SFTP fails immediately.** Install Python and `pip install paramiko`.
 
-### 30-Day Full Feature Trial
-Every new installation includes a 30-day unrestricted trial with full access to Turbo Mode, streaming rippers, and up to 32 parallel connections. Trial state is redundantly protected against clock tampering.
-
-### Upgrading to FlowGet Pro
-1. Click **Help** -> **Activate License** or click the **Upgrade Premium** card.
-2. Purchase a lifetime license key securely via Razorpay.
-3. Paste your license key (`FLOWGET-XXXX-XXXX-XXXX`).
-4. FlowGet cryptographically verifies the Ed25519 digital signature offline—no internet required to validate.
-5. Each license allows activation on **2 personal PCs** with instant online license transfer.
-
----
-
-## 13. Keyboard Shortcuts
-
-| Shortcut | Action |
-| :--- | :--- |
-| `Ctrl + N` | Open Add Download Dialog |
-| `Ctrl + A` | Select All Downloads in List |
-| `Delete` | Remove Selected Downloads |
-| `Shift + Delete` | Remove Download and Delete File from Disk |
-| `Space` | Pause / Resume Selected Download |
-| `Ctrl + F` | Focus Search Box |
-| `Ctrl + Q` | Open Queue Manager |
-| `Ctrl + ,` | Open Settings / Preferences |
-| `F5` | Refresh Download Table |
-| `Alt + Enter` | View Selected Download Properties |
-
----
-
-## 14. Troubleshooting & FAQ
-
-### Q: A download link expired. Do I have to start over?
-**A:** No! Right-click the paused download in the table and select **Refresh Download Address**. Paste the new URL from your browser. FlowGet verifies the file size and resumes exactly from where it stopped.
-
-### Q: Why does my browser download the file instead of FlowGet?
-**A:** Ensure the FlowGet browser extension is enabled and that the native messaging host was registered. You can re-register the host anytime by opening **Settings** -> **Browser Integration** -> **Re-register Host**. Alternatively, hold `Alt` while clicking only if you want to bypass FlowGet.
-
-### Q: Does FlowGet support resuming on all websites?
-**A:** FlowGet supports resume on any server that advertises `Accept-Ranges: bytes` (over 99% of modern servers and CDNs). If a server strictly disallows range requests, FlowGet will notify you that the download cannot be resumed if interrupted.
-
----
-
-*Thank you for choosing FlowGet! For updates, bug reports, and suggestions, visit our official repository or contact support.*
+**FlowGet will not start a second copy / the extension cannot connect.** Another program may be using port
+21588. Close it and restart FlowGet.

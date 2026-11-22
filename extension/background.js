@@ -2,6 +2,7 @@
 
 const DEFAULT_SETTINGS = {
   enabled: true,
+  autoSuggestBarEnabled: true,
   minSizeBytes: 0,
   fileTypes: ["zip", "rar", "7z", "iso", "exe", "msi", "mp4", "mkv", "mp3", "pdf", "apk", "tar", "gz", "bz2", "bin"],
 };

@@ -12,12 +12,15 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "FlowGet",
         "width": 1080,
         "height": 720,
         "minWidth": 760,
         "minHeight": 460,
-        "decorations": false,
+        "decorations": true,
+        "visible": true,
+        "center": true,
         "dragDropEnabled": false
       }
     ],

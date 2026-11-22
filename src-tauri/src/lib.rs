@@ -156,6 +156,22 @@ pub fn run() {
                 app_handle: app.handle().clone(),
                 shutting_down: AtomicBool::new(false),
             });
+
+            let window = match app.get_webview_window("main") {
+                Some(w) => w,
+                None => {
+                    tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::default())
+                        .title("FlowGet")
+                        .inner_size(1080.0, 720.0)
+                        .min_inner_size(760.0, 460.0)
+                        .center()
+                        .build()?
+                }
+            };
+            let _ = window.show();
+            let _ = window.unminimize();
+            let _ = window.set_focus();
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

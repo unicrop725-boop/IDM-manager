@@ -1,8 +1,9 @@
-// FlowGet Content Script - Instant Link Click Interception, Media Detector & Alt-Key Tracker
+// FlowGet Content Script - Universal Media Detector, Auto-Suggest Sniffer & Alt-Key Tracker
 
 (() => {
   document.documentElement.setAttribute('data-flowget-active', 'true');
   window.__FLOWGET_EXTENSION_ACTIVE__ = true;
+
   // 1. Alt-Key Tracking (Holding Alt while clicking skips download capture)
   let isAltHeld = false;
   window.addEventListener("keydown", (e) => {
@@ -28,7 +29,8 @@
 
   // 2. Instant Download Link Click Interceptor
   const DOWNLOAD_EXTENSIONS = [
-    "zip", "rar", "7z", "iso", "exe", "msi", "mp4", "mkv", "mp3", "pdf", "apk", "tar", "gz", "bz2", "bin"
+    "zip", "rar", "7z", "iso", "exe", "msi", "mp4", "mkv", "mp3", "pdf", "apk", "tar", "gz", "bz2", "bin",
+    "flac", "wav", "aac", "webm", "avi", "mov", "docx", "xlsx", "dmg", "pkg"
   ];
 
   document.addEventListener("click", (e) => {
@@ -60,7 +62,236 @@
     }
   }, true);
 
-  // 3. Media Detector & Floating Video Grabber
+  // 3. Universal Webpage Resource Scanner
+  function scanPageResources() {
+    const items = [];
+    const seenUrls = new Set();
+
+    function addResource(res) {
+      if (!res.url || seenUrls.has(res.url)) return;
+      seenUrls.add(res.url);
+      items.push(res);
+    }
+
+    // Check if the page itself is a media platform (YouTube, Vimeo, Reels, TikTok, Twitter/X, SoundCloud, etc.)
+    const loc = window.location.href;
+    const isMediaSite = /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com|instagram\.com\/(p|reel)|tiktok\.com|twitter\.com\/.*\/status|x\.com\/.*\/status|facebook\.com.*(video|watch)|soundcloud\.com|reddit\.com/i.test(loc);
+    if (isMediaSite) {
+      addResource({
+        title: document.title || "Video Stream",
+        url: loc,
+        type: "video",
+        ext: "mp4/stream",
+        size: "HD Stream / yt-dlp",
+      });
+    }
+
+    // Scan all <video> elements
+    document.querySelectorAll("video").forEach((vid) => {
+      const src = vid.currentSrc || vid.src;
+      if (src && !src.startsWith("blob:")) {
+        addResource({
+          title: document.title || "HTML5 Video",
+          url: src,
+          type: "video",
+          ext: src.includes(".m3u8") ? "hls" : src.includes(".mpd") ? "dash" : "mp4",
+          size: "Video Stream",
+        });
+      }
+      vid.querySelectorAll("source").forEach((s) => {
+        if (s.src) {
+          addResource({
+            title: document.title || "HTML5 Source",
+            url: s.src,
+            type: "video",
+            ext: "mp4",
+            size: "Video Source",
+          });
+        }
+      });
+    });
+
+    // Scan all <audio> elements
+    document.querySelectorAll("audio").forEach((aud) => {
+      const src = aud.currentSrc || aud.src;
+      if (src && !src.startsWith("blob:")) {
+        addResource({
+          title: document.title || "Audio Track",
+          url: src,
+          type: "audio",
+          ext: "mp3",
+          size: "Audio Stream",
+        });
+      }
+    });
+
+    // Scan all downloadable <a> links
+    document.querySelectorAll("a[href]").forEach((a) => {
+      const href = a.href;
+      if (!href || href.startsWith("javascript:") || href.startsWith("#")) return;
+      const cleanHref = href.split("?")[0].toLowerCase();
+
+      for (const ext of DOWNLOAD_EXTENSIONS) {
+        if (cleanHref.endsWith(`.${ext}`)) {
+          let type = "doc";
+          if (["mp4", "mkv", "webm", "avi", "mov"].includes(ext)) type = "video";
+          else if (["mp3", "wav", "flac", "aac"].includes(ext)) type = "audio";
+          else if (["zip", "rar", "7z", "tar", "gz", "bz2", "iso", "dmg"].includes(ext)) type = "archive";
+
+          const linkText = (a.innerText || "").trim();
+          const fileName = cleanHref.split("/").pop() || `file.${ext}`;
+          addResource({
+            title: linkText && linkText.length < 50 ? linkText : fileName,
+            url: href,
+            fileName: fileName,
+            type: type,
+            ext: ext,
+            size: `.${ext.toUpperCase()} File`,
+          });
+          break;
+        }
+      }
+    });
+
+    return items;
+  }
+
+  // Listen for popup request to scan page media
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.type === "SCAN_PAGE_MEDIA") {
+      const items = scanPageResources();
+      sendResponse({ items });
+      return true;
+    }
+  });
+
+  // 4. Smart Auto-Suggest Floating Widget on Webpages
+  let autoSuggestBar = null;
+  let hasUserDismissedBar = false;
+
+  async function updateAutoSuggestBar() {
+    if (hasUserDismissedBar) return;
+
+    const data = await chrome.storage.local.get({ autoSuggestBarEnabled: true });
+    if (!data.autoSuggestBarEnabled) {
+      if (autoSuggestBar) autoSuggestBar.remove();
+      return;
+    }
+
+    const resources = scanPageResources();
+    if (resources.length === 0) {
+      if (autoSuggestBar) autoSuggestBar.remove();
+      return;
+    }
+
+    if (!autoSuggestBar) {
+      autoSuggestBar = document.createElement("div");
+      autoSuggestBar.id = "flowget-auto-suggest-widget";
+      autoSuggestBar.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 2147483646;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        user-select: none;
+      `;
+      document.body.appendChild(autoSuggestBar);
+    }
+
+    const videoCount = resources.filter((r) => r.type === "video").length;
+    const otherCount = resources.length - videoCount;
+
+    let summaryText = `${resources.length} file${resources.length > 1 ? "s" : ""}`;
+    if (videoCount > 0 && otherCount > 0) {
+      summaryText = `${videoCount} video${videoCount > 1 ? "s" : ""}, ${otherCount} file${otherCount > 1 ? "s" : ""}`;
+    } else if (videoCount > 0) {
+      summaryText = `${videoCount} video${videoCount > 1 ? "s" : ""}`;
+    }
+
+    autoSuggestBar.innerHTML = `
+      <div style="
+        background: #16161A;
+        border: 1px solid #2DD4BF;
+        border-radius: 28px;
+        padding: 8px 14px 8px 10px;
+        box-shadow: 0 8px 28px rgba(0,0,0,0.6), 0 0 15px rgba(45, 212, 191, 0.25);
+        color: #F4F4F5;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      " id="flowget-pill-main">
+        <div style="
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 11px;
+          color: white;
+          box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+        ">⚡</div>
+        <div style="display: flex; flex-direction: column;">
+          <span style="font-weight: 700; font-size: 11px; color: #FFFFFF;">Download with FlowGet</span>
+          <span style="font-size: 10px; color: #2DD4BF;">Found ${summaryText}</span>
+        </div>
+        <button id="flowget-bar-download-all" style="
+          padding: 5px 12px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+          border: none;
+          color: white;
+          font-weight: 700;
+          font-size: 11px;
+          cursor: pointer;
+          margin-left: 4px;
+          transition: opacity 0.1s;
+        ">Download All</button>
+        <button id="flowget-bar-dismiss" style="
+          background: none;
+          border: none;
+          color: #71717A;
+          cursor: pointer;
+          font-size: 14px;
+          padding: 0 4px;
+        " title="Dismiss">✕</button>
+      </div>
+    `;
+
+    const downloadAllBtn = autoSuggestBar.querySelector("#flowget-bar-download-all");
+    const dismissBtn = autoSuggestBar.querySelector("#flowget-bar-dismiss");
+    const pillMain = autoSuggestBar.querySelector("#flowget-pill-main");
+
+    downloadAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      chrome.runtime.sendMessage({
+        type: "DOWNLOAD_BATCH",
+        items: resources.map((r) => ({ url: r.url, fileName: r.fileName || r.title })),
+      });
+      autoSuggestBar.remove();
+    });
+
+    dismissBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      hasUserDismissedBar = true;
+      autoSuggestBar.remove();
+    });
+
+    pillMain.addEventListener("click", () => {
+      openBatchModal();
+    });
+  }
+
+  // 5. Media Detector & Floating Video Grabber
   function setupVideoGrabber() {
     const videos = document.querySelectorAll("video");
     videos.forEach((video) => {
@@ -115,6 +346,8 @@
         showQualityPicker(video, btn);
       });
     });
+
+    updateAutoSuggestBar();
   }
 
   function showQualityPicker(video, anchor) {
@@ -200,10 +433,10 @@
     setTimeout(() => document.addEventListener("click", closeListener), 10);
   }
 
-  setInterval(setupVideoGrabber, 1500);
-  setTimeout(setupVideoGrabber, 500);
+  setInterval(setupVideoGrabber, 1800);
+  setTimeout(setupVideoGrabber, 400);
 
-  // 4. Batch Links Scraper
+  // 6. Batch Links Scraper
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "TRIGGER_BATCH_SCRAPER") {
       openBatchModal();

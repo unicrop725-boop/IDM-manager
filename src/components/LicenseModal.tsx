@@ -3,7 +3,7 @@ import { ModalCorner } from "./NotchCorner";
 // License Management & Activation Modal
 
 import { useState } from "react";
-import { Key, CheckCircle, AlertTriangle, ShieldCheck, ExternalLink, Sparkles } from "lucide-react";
+import { Key, CheckCircle, AlertTriangle, ShieldCheck, ExternalLink } from "lucide-react";
 import { api } from "../api";
 import type { TrialAndLicenseStatus } from "../types";
 
@@ -112,34 +112,19 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
                 </button>
               </div>
             </div>
-          ) : status.isExpired ? (
-            <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 space-y-2">
+          ) : (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-bold text-rose-400">
+                <span className="flex items-center gap-1.5 font-bold text-amber-400">
                   <AlertTriangle size={16} />
-                  <span>Trial Period Expired</span>
+                  <span>Not Activated</span>
                 </span>
-                <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] text-rose-300 font-medium">
+                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-medium">
                   Limited Basic Mode
                 </span>
               </div>
               <p className="text-[11px] text-zinc-300">
-                Basic downloading continues to work, but connections are capped to 2, and Turbo Mode and media streaming are disabled. Activate a license to unlock full 32-stream multi-threaded performance.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 font-bold text-purple-400">
-                  <Sparkles size={16} />
-                  <span>30-Day Full Feature Trial Active</span>
-                </span>
-                <span className="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-300 font-mono font-semibold">
-                  {status.daysRemaining} Days Left
-                </span>
-              </div>
-              <p className="text-[11px] text-zinc-300">
-                You have full access to all FlowGet features including Turbo Mode, 32 connections, media stream ripping, and HLS/DASH acceleration.
+                Basic downloading works, but connections are capped to 2, and Turbo Mode and media streaming are disabled. Activate a license to unlock full 32-stream multi-threaded performance.
               </p>
             </div>
           )}

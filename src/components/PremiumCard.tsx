@@ -6,8 +6,6 @@ interface PremiumCardProps {
   onUpgrade: () => void;
   onActivateKey?: () => void;
   price?: string;
-  daysRemaining?: number;
-  isExpired?: boolean;
 }
 
 export const PremiumCard: React.FC<PremiumCardProps> = ({
@@ -15,8 +13,6 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
   onUpgrade,
   onActivateKey,
   price = "₹999",
-  daysRemaining = 28,
-  isExpired = false,
 }) => {
   return (
     <div className="fixed bottom-12 right-6 w-80 rounded-2xl bg-[var(--bg-card)] border border-purple-500/30 shadow-2xl p-4 z-40 select-none animate-in slide-in-from-bottom-5 duration-200">
@@ -49,15 +45,9 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
           </span>
         </div>
         <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-          {isExpired ? (
-            <span>
-              Your 30-day free trial has expired. Downloading is limited to 2 connections. Upgrade to unlock full 32-stream multi-threading, Turbo Mode, and HLS/DASH media streaming forever.
-            </span>
-          ) : (
-            <span>
-              Your full-feature trial has <span className="text-purple-300 font-semibold">{daysRemaining} days left</span>. Upgrade now to secure lifetime updates and multi-adapter bonding forever.
-            </span>
-          )}
+          <span>
+            FlowGet is a paid app. Without a license, downloading is limited to 2 connections. Buy a lifetime license to unlock full 32-stream multi-threading, Turbo Mode, and HLS/DASH media streaming.
+          </span>
         </p>
       </div>
 
@@ -67,7 +57,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         className="w-full h-8 rounded-xl gradient-accent hover:opacity-95 active:scale-[0.98] transition-all text-white font-medium text-xs flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20 mb-1.5"
       >
         <Zap className="w-3.5 h-3.5 fill-current" />
-        <span>{isExpired ? "Unlock Lifetime Pro" : "Upgrade Premium"}</span>
+        <span>Unlock Lifetime Pro</span>
       </button>
 
       {onActivateKey && (

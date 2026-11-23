@@ -225,7 +225,7 @@ pub async fn get_or_init_trial_start(db: &Db) -> u64 {
 /// Evaluate current trial and license status
 pub async fn get_status(db: &Db) -> TrialAndLicenseStatus {
     let now = current_timestamp();
-    let trial_start = get_or_init_trial_start(db).await;
+    let trial_start = 0u64;
 
     // Check license in DB
     let saved_key: Option<String> = db.get_setting("license_key").await;
@@ -243,25 +243,16 @@ pub async fn get_status(db: &Db) -> TrialAndLicenseStatus {
         }
     }
 
-    let elapsed = now.saturating_sub(trial_start);
-    let days_remaining = if elapsed < TRIAL_DURATION_SECS {
-        let secs_left = TRIAL_DURATION_SECS - elapsed;
-        ((secs_left + 86399) / 86400) as u32
-    } else {
-        0
-    };
+    // Paid-only: there is no free trial. Without a license the app runs in
+    // limited basic mode (2 connections, no Turbo, no media streams).
+    let _ = now;
+    let days_remaining = 0u32;
+    let is_expired = !is_licensed;
+    let is_trial = false;
 
-    let is_expired = !is_licensed && days_remaining == 0;
-    let is_trial = !is_licensed && !is_expired;
-
-    // Feature gating per Phase 8 rules:
-    // If trial expired and unlicensed:
-    // - keep basic downloading working
-    // - limit to 2 connections
-    // - disable turbo mode, mirrors, media stream download
-    let max_connections = if is_licensed || is_trial { 32 } else { 2 };
-    let turbo_mode_allowed = is_licensed || is_trial;
-    let media_download_allowed = is_licensed || is_trial;
+    let max_connections = if is_licensed { 32 } else { 2 };
+    let turbo_mode_allowed = is_licensed;
+    let media_download_allowed = is_licensed;
 
     TrialAndLicenseStatus {
         is_licensed,

@@ -1088,8 +1088,6 @@ export default function App() {
           onClose={() => setShowPremiumCard(false)}
           onUpgrade={() => setIsLicenseModalOpen(true)}
           onActivateKey={() => setIsLicenseModalOpen(true)}
-          daysRemaining={licenseStatus?.daysRemaining ?? 28}
-          isExpired={licenseStatus?.isExpired ?? false}
           price="₹999"
         />
       )}

@@ -187,7 +187,7 @@ export default function SettingsModal({
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDraggingImage(true); }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDraggingImage(false); }}
         onDrop={(e) => void dropLiquidImage(e)}
-        className="notch-card flex h-[560px] w-full max-w-4xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden"
+        className="notch-card flex h-[560px] w-full max-w-2xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden"
       >
         {draggingImage && (
           <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-purple-400 bg-[var(--bg-panel)]/90 text-purple-300">

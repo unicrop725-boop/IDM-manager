@@ -18,7 +18,7 @@ export default function UpdateModal({
   newVersion = "1.1.0",
   changelog = [
     "Turbo Mode 2.0: Multi-adapter bonding boost up to 32 parallel streams.",
-    "Ed25519 offline license verification and automated 30-day trial protection.",
+    "Ed25519 offline license verification.",
     "Integrated Speed Test with persistent ping and bandwidth logs.",
     "Smart file naming auto-cleaning %20, tracking IDs, and trailing hex tags.",
     "Hindi (हिन्दी) & Gujarati (ગુજરાતી) native language dictionaries.",

@@ -80,9 +80,9 @@ const mockSettings: Settings = {
 
 let mockLicenseStatus: TrialAndLicenseStatus = {
   isLicensed: false,
-  isTrial: true,
-  isExpired: false,
-  daysRemaining: 28,
+  isTrial: false,
+  isExpired: true,
+  daysRemaining: 0,
   trialStartedAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   maxConnections: 32,
   turboModeAllowed: true,
@@ -388,7 +388,7 @@ export const api = {
       ? invoke<RestoreSummary>("restore_backup", { path })
       : Promise.resolve<RestoreSummary>({ settings: 0, categories: 0, queues: 0, downloads: 0, skippedDownloads: 0 }),
 
-  // Phase 8: Licensing & 30-Day Trial
+  // Phase 8: Licensing
   getLicenseStatus: (): Promise<TrialAndLicenseStatus> =>
     isTauri ? invoke<TrialAndLicenseStatus>("get_license_status") : Promise.resolve(mockLicenseStatus),
   activateLicense: (key: string): Promise<TrialAndLicenseStatus> => {

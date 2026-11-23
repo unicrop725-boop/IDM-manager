@@ -5,7 +5,7 @@ import { formatBytes, isUnbounded } from "../format";
 const TICKS = 60;
 const COLS = 64;
 const ROWS = 9;
-const PALETTE = ["#ea580c", "#eab308", "#14b8a6"];
+const PALETTE = ["#FED24F", "#B2D959", "#7EC151"];
 
 /** Cheap stable pseudo-random number in [0, 1) for an index. */
 const rand = (i: number, salt = 0) => {

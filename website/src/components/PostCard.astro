@@ -1,0 +1,25 @@
+---
+import type { Post } from "../lib/blog";
+import { formatDate, readingMinutes } from "../lib/blog";
+import TagList from "./TagList.astro";
+interface Props {
+  post: Post;
+  featured?: boolean;
+}
+const { post, featured = false } = Astro.props;
+const href = `/blog/${post.id}/`;
+---
+<article class={`post-card${featured ? " featured" : ""}`}>
+  <a href={href} class="cover" tabindex="-1" aria-hidden="true">
+    {post.data.cover ? <img src={post.data.cover} alt="" loading="lazy" width="1200" height="630" /> : <span>{post.data.title}</span>}
+  </a>
+  <div class="body">
+    <div class="post-meta">
+      <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+      <span>{readingMinutes(post.body)} min read</span>
+    </div>
+    <h3><a href={href} style="text-decoration:none">{post.data.title}</a></h3>
+    <p>{post.data.description}</p>
+    <TagList tags={post.data.tags} limit={3} />
+  </div>
+</article>

@@ -1,0 +1,21 @@
+---
+import { SITE } from "../config";
+const year = new Date().getFullYear();
+---
+<footer>
+  <div class="wrap foot">
+    <div>
+      <a class="brand" href="/"><img src="/img/icon-128.png" alt="" width="30" height="30" loading="lazy" />{SITE.name}</a>
+      <p style="margin-top:10px">© {year} {SITE.name}. Version {SITE.version}</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/features/">Features</a>
+      <a href="/blog/">Blog</a>
+      <a href="/download/">Download</a>
+      <a href="/switch-from-idm/">Switch from IDM</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="/rss.xml">RSS</a>
+      <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a>
+    </nav>
+  </div>
+</footer>

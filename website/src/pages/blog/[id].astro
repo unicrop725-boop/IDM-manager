@@ -1,0 +1,130 @@
+---
+import type { GetStaticPaths } from "astro";
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import PostCard from "../../components/PostCard.astro";
+import TagList from "../../components/TagList.astro";
+import { SITE, buyHref } from "../../config";
+import { formatDate, getPosts, readingMinutes, relatedPosts } from "../../lib/blog";
+
+export const getStaticPaths = (async () => {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { id: post.id }, props: { post, posts } }));
+}) satisfies GetStaticPaths;
+
+const { post, posts } = Astro.props;
+const { Content, headings } = await render(post);
+const site = Astro.site!.href.replace(/\/$/, "");
+const url = `${site}/blog/${post.id}/`;
+const { title, description, pubDate, updatedDate, tags, faq } = post.data;
+const author = post.data.author ?? SITE.defaultAuthor;
+const cover = post.data.cover ?? SITE.ogImage;
+const minutes = readingMinutes(post.body);
+const toc = headings.filter((h) => h.depth === 2);
+const related = relatedPosts(post, posts, 3);
+
+const jsonLd: Record<string, unknown>[] = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: title,
+    description,
+    image: [new URL(cover, site).href],
+    datePublished: pubDate.toISOString(),
+    dateModified: (updatedDate ?? pubDate).toISOString(),
+    author: { "@type": "Organization", name: author, url: site + "/" },
+    publisher: { "@type": "Organization", name: SITE.name, logo: { "@type": "ImageObject", url: site + "/img/icon-256.png" } },
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    keywords: tags.join(", "),
+    wordCount: (post.body ?? "").split(/\s+/).filter(Boolean).length,
+    inLanguage: SITE.language,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
+      { "@type": "ListItem", position: 2, name: "Blog", item: site + "/blog/" },
+      { "@type": "ListItem", position: 3, name: title, item: url },
+    ],
+  },
+];
+if (faq.length > 0) {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  });
+}
+---
+<Base
+  title={title}
+  description={description}
+  type="article"
+  image={cover}
+  imageAlt={post.data.coverAlt ?? title}
+  publishedTime={pubDate}
+  modifiedTime={updatedDate ?? pubDate}
+  tags={tags}
+  current="blog"
+  jsonLd={jsonLd}
+>
+  <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Blog", href: "/blog/" }, { name: title }]} />
+  <div class="wrap">
+    <article class="article">
+      <header>
+        <h1>{title}</h1>
+        <p class="lede">{description}</p>
+        <div class="post-meta">
+          <span>By {author}</span>
+          <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+          {updatedDate && <span>Updated <time datetime={updatedDate.toISOString()}>{formatDate(updatedDate)}</time></span>}
+          <span>{minutes} min read</span>
+        </div>
+        <div style="margin-top:14px"><TagList tags={tags} /></div>
+      </header>
+
+      {toc.length >= 3 && (
+        <nav class="toc-box" aria-label="In this article">
+          <strong>In this article</strong>
+          <ol>
+            {toc.map((h) => <li><a href={`#${h.slug}`}>{h.text}</a></li>)}
+          </ol>
+        </nav>
+      )}
+
+      <div class="article-body">
+        <Content />
+      </div>
+
+      {faq.length > 0 && (
+        <section class="faq" style="margin-top:48px;max-width:none" aria-labelledby="faq-h">
+          <h2 id="faq-h" style="font-size:30px;margin-bottom:6px">Frequently asked questions</h2>
+          {faq.map((f) => (
+            <details>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
+          ))}
+        </section>
+      )}
+
+      <aside class="cta-box">
+        <h2>Downloads that don't give up</h2>
+        <p>FlowGet resumes after any interruption, limits speed by schedule and warns about risky files. ${SITE.priceUsd} once, no subscription.</p>
+        <a class="btn btn-primary" href={buyHref()}>Get FlowGet Pro</a>
+        <p style="margin:14px 0 0;font-size:15px"><a href="/features/" style="color:var(--sky)">See every feature</a></p>
+      </aside>
+    </article>
+
+    {related.length > 0 && (
+      <section class="related" aria-labelledby="rel-h">
+        <h2 id="rel-h">Keep reading</h2>
+        <div class="post-grid">
+          {related.map((p) => <PostCard post={p} />)}
+        </div>
+      </section>
+    )}
+  </div>
+</Base>

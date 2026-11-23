@@ -394,7 +394,7 @@ export default function SettingsModal({
                     <div className="relative mt-3 flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-3">
                       <div
                         className="h-12 w-12 flex-shrink-0 rounded-lg border border-[var(--border-subtle)] bg-cover bg-center"
-                        style={liquidImage ? { backgroundImage: `url(${liquidImage})` } : { background: "linear-gradient(135deg,#8b5cf6,#2dd4bf,#ec4899)" }}
+                        style={liquidImage ? { backgroundImage: `url(${liquidImage})` } : { background: "linear-gradient(135deg,#FED24F,#B2D959,#7EC151)" }}
                         aria-label="Liquid image preview"
                       />
                       <div className="min-w-0 flex-1">

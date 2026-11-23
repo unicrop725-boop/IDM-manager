@@ -26,7 +26,7 @@ export const ThreeBackground: React.FC<{ kind: ThreeKind }> = ({ kind }) => {
         canvas.height / 2,
         canvas.width
       );
-      grad.addColorStop(0, "rgba(139, 92, 246, 0.05)");
+      grad.addColorStop(0, "rgba(254, 210, 79, 0.05)");
       grad.addColorStop(1, "transparent");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, canvas.width, canvas.height);

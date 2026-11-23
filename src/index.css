@@ -3,6 +3,130 @@
 @theme {
   --font-sans: "Outfit Variable", "Outfit", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --font-mono: "Outfit Variable", "Outfit", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+
+  /* Brand palette: #FED24F amber, #FFF449 yellow, #B2D959 lime, #7EC151 green.
+     The old purple/teal/sky families now draw from it, so every existing class follows the new colours. */
+  --color-purple-50: #FFFDE7;
+  --color-purple-100: #FFFAB8;
+  --color-purple-200: #FFF782;
+  --color-purple-300: #FFF449;
+  --color-purple-400: #FEE34E;
+  --color-purple-500: #FED24F;
+  --color-purple-600: #E0B13A;
+  --color-purple-700: #B58A2C;
+  --color-purple-800: #8A6823;
+  --color-purple-900: #5E4719;
+  --color-purple-950: #382B0E;
+  --color-violet-50: #FFFDE7;
+  --color-violet-100: #FFFAB8;
+  --color-violet-200: #FFF782;
+  --color-violet-300: #FFF449;
+  --color-violet-400: #FEE34E;
+  --color-violet-500: #FED24F;
+  --color-violet-600: #E0B13A;
+  --color-violet-700: #B58A2C;
+  --color-violet-800: #8A6823;
+  --color-violet-900: #5E4719;
+  --color-violet-950: #382B0E;
+  --color-indigo-50: #FFFDE7;
+  --color-indigo-100: #FFFAB8;
+  --color-indigo-200: #FFF782;
+  --color-indigo-300: #FFF449;
+  --color-indigo-400: #FEE34E;
+  --color-indigo-500: #FED24F;
+  --color-indigo-600: #E0B13A;
+  --color-indigo-700: #B58A2C;
+  --color-indigo-800: #8A6823;
+  --color-indigo-900: #5E4719;
+  --color-indigo-950: #382B0E;
+  --color-fuchsia-50: #FFFDE7;
+  --color-fuchsia-100: #FFFAB8;
+  --color-fuchsia-200: #FFF782;
+  --color-fuchsia-300: #FFF449;
+  --color-fuchsia-400: #FEE34E;
+  --color-fuchsia-500: #FED24F;
+  --color-fuchsia-600: #E0B13A;
+  --color-fuchsia-700: #B58A2C;
+  --color-fuchsia-800: #8A6823;
+  --color-fuchsia-900: #5E4719;
+  --color-fuchsia-950: #382B0E;
+  --color-teal-50: #F4FAE3;
+  --color-teal-100: #E6F3C4;
+  --color-teal-200: #D2EA94;
+  --color-teal-300: #C2E070;
+  --color-teal-400: #B2D959;
+  --color-teal-500: #7EC151;
+  --color-teal-600: #62A13E;
+  --color-teal-700: #4B7E31;
+  --color-teal-800: #3B6027;
+  --color-teal-900: #2C4720;
+  --color-teal-950: #172610;
+  --color-sky-50: #F4FAE3;
+  --color-sky-100: #E6F3C4;
+  --color-sky-200: #D2EA94;
+  --color-sky-300: #C2E070;
+  --color-sky-400: #B2D959;
+  --color-sky-500: #7EC151;
+  --color-sky-600: #62A13E;
+  --color-sky-700: #4B7E31;
+  --color-sky-800: #3B6027;
+  --color-sky-900: #2C4720;
+  --color-sky-950: #172610;
+  --color-cyan-50: #F4FAE3;
+  --color-cyan-100: #E6F3C4;
+  --color-cyan-200: #D2EA94;
+  --color-cyan-300: #C2E070;
+  --color-cyan-400: #B2D959;
+  --color-cyan-500: #7EC151;
+  --color-cyan-600: #62A13E;
+  --color-cyan-700: #4B7E31;
+  --color-cyan-800: #3B6027;
+  --color-cyan-900: #2C4720;
+  --color-cyan-950: #172610;
+  --color-blue-50: #F4FAE3;
+  --color-blue-100: #E6F3C4;
+  --color-blue-200: #D2EA94;
+  --color-blue-300: #C2E070;
+  --color-blue-400: #B2D959;
+  --color-blue-500: #7EC151;
+  --color-blue-600: #62A13E;
+  --color-blue-700: #4B7E31;
+  --color-blue-800: #3B6027;
+  --color-blue-900: #2C4720;
+  --color-blue-950: #172610;
+  --color-emerald-50: #F4FAE3;
+  --color-emerald-100: #E6F3C4;
+  --color-emerald-200: #D2EA94;
+  --color-emerald-300: #C2E070;
+  --color-emerald-400: #B2D959;
+  --color-emerald-500: #7EC151;
+  --color-emerald-600: #62A13E;
+  --color-emerald-700: #4B7E31;
+  --color-emerald-800: #3B6027;
+  --color-emerald-900: #2C4720;
+  --color-emerald-950: #172610;
+  --color-green-50: #F4FAE3;
+  --color-green-100: #E6F3C4;
+  --color-green-200: #D2EA94;
+  --color-green-300: #C2E070;
+  --color-green-400: #B2D959;
+  --color-green-500: #7EC151;
+  --color-green-600: #62A13E;
+  --color-green-700: #4B7E31;
+  --color-green-800: #3B6027;
+  --color-green-900: #2C4720;
+  --color-green-950: #172610;
+  --color-lime-50: #F4FAE3;
+  --color-lime-100: #E6F3C4;
+  --color-lime-200: #D2EA94;
+  --color-lime-300: #C2E070;
+  --color-lime-400: #B2D959;
+  --color-lime-500: #7EC151;
+  --color-lime-600: #62A13E;
+  --color-lime-700: #4B7E31;
+  --color-lime-800: #3B6027;
+  --color-lime-900: #2C4720;
+  --color-lime-950: #172610;
 }
 
 @layer base {
@@ -15,13 +139,13 @@
     --text-primary: #F4F4F5;
     --text-secondary: #A1A1AA;
     --text-disabled: #52525B;
-    --accent-purple: #8B5CF6;
-    --accent-teal: #2DD4BF;
-    --accent-gradient: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+    --accent-purple: #FED24F;
+    --accent-teal: #7EC151;
+    --accent-gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
     --field-bg: #202027;
     --field-glow: #2C2C36;
     --field-bg-hover: #282832;
-    --field-glow-hover: rgba(139, 92, 246, 0.35);
+    --field-glow-hover: rgba(254, 210, 79, 0.35);
     --field-ring: rgba(22, 22, 26, 0.92);
   }
 
@@ -34,14 +158,36 @@
     --text-primary: #18181B;
     --text-secondary: #71717A;
     --text-disabled: #A1A1AA;
-    --accent-purple: #7C3AED;
-    --accent-teal: #0D9488;
-    --accent-gradient: linear-gradient(135deg, #7C3AED 0%, #0D9488 100%);
+    --accent-purple: #B58A2C;
+    --accent-teal: #4F9A2E;
+    --accent-gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
     --field-bg: #EEF0F3;
     --field-glow: #D9DEE5;
     --field-bg-hover: #E6E9EE;
-    --field-glow-hover: rgba(124, 58, 237, 0.30);
+    --field-glow-hover: rgba(181, 138, 44, 0.30);
     --field-ring: rgba(245, 245, 245, 0.92);
+    --color-purple-300: #9A7410;
+    --color-purple-400: #8A650D;
+    --color-violet-300: #9A7410;
+    --color-violet-400: #8A650D;
+    --color-indigo-300: #9A7410;
+    --color-indigo-400: #8A650D;
+    --color-fuchsia-300: #9A7410;
+    --color-fuchsia-400: #8A650D;
+    --color-teal-300: #4B7E31;
+    --color-teal-400: #3F7029;
+    --color-sky-300: #4B7E31;
+    --color-sky-400: #3F7029;
+    --color-cyan-300: #4B7E31;
+    --color-cyan-400: #3F7029;
+    --color-blue-300: #4B7E31;
+    --color-blue-400: #3F7029;
+    --color-emerald-300: #4B7E31;
+    --color-emerald-400: #3F7029;
+    --color-green-300: #4B7E31;
+    --color-green-400: #3F7029;
+    --color-lime-300: #4B7E31;
+    --color-lime-400: #3F7029;
   }
 }
 
@@ -74,6 +220,12 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-disabled);
+}
+
+/* The brand fills are bright, so text on them is dark. */
+.gradient-accent,
+[class*="bg-gradient-to-"][class*="text-white"] {
+  color: #15200a !important;
 }
 
 .gradient-accent {
@@ -129,7 +281,7 @@ body {
   border-radius: 8px;
   background-color: #ffffff2b;
   box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, rgba(0, 0, 0, 0.21) 0px 0px 0px 24px inset,
-    #22cc3f 0px 0px 0px 0px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+    #7EC151 0px 0px 0px 0px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
   cursor: pointer;
   position: relative;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
@@ -148,9 +300,9 @@ body {
   transition: background-color 0.3s ease-in-out;
 }
 .fancy-checkbox input:checked + .checkmark {
-  background-color: #22cc3f;
-  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, #22cc3f 0px 0px 0px 2px inset,
-    #22cc3f 0px 0px 0px 24px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+  background-color: #7EC151;
+  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, #7EC151 0px 0px 0px 2px inset,
+    #7EC151 0px 0px 0px 24px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
 }
 .fancy-checkbox input:checked + .checkmark::after {
   background-color: white;
@@ -522,7 +674,7 @@ input[type="checkbox"]:not(.fc-input):not(.opacity-0) {
   cursor: pointer;
   background-color: #ffffff2b;
   box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, rgba(0, 0, 0, 0.21) 0px 0px 0px 24px inset,
-    #22cc3f 0px 0px 0px 0px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+    #7EC151 0px 0px 0px 0px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
   transition: background-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 input[type="checkbox"]:not(.fc-input):not(.opacity-0)::after {
@@ -539,9 +691,9 @@ input[type="checkbox"]:not(.fc-input):not(.opacity-0)::after {
   transition: background-color 0.3s ease-in-out;
 }
 input[type="checkbox"]:not(.fc-input):not(.opacity-0):checked {
-  background-color: #22cc3f;
-  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, #22cc3f 0px 0px 0px 2px inset,
-    #22cc3f 0px 0px 0px 24px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
+  background-color: #7EC151;
+  box-shadow: rgba(0, 0, 0, 0.62) 0px 0px 4px inset, #7EC151 0px 0px 0px 2px inset,
+    #7EC151 0px 0px 0px 24px inset, rgba(224, 224, 224, 0.45) 0px 1px 0px 0px;
 }
 input[type="checkbox"]:not(.fc-input):not(.opacity-0):checked::after {
   background-color: white;
@@ -737,11 +889,11 @@ button:disabled.bg-sky-500 {
   color: #fff;
 }
 .row-action--resume {
-  color: #34d399;
+  color: #B2D959;
   background-color: rgba(16, 185, 129, 0.16);
 }
 .row-action--resume:hover {
-  background: linear-gradient(135deg, #10b981, #14b8a6);
+  background: linear-gradient(135deg, #7EC151, #B2D959);
   color: #fff;
 }
 
@@ -759,7 +911,7 @@ button:disabled.bg-sky-500 {
   transition: background-color 0.3s ease;
 }
 .dl-tick--on {
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%), var(--tc, #2dd4bf);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%), var(--tc, #7EC151);
 }
 .dl-ticks--sm {
   height: 14px;
@@ -774,7 +926,7 @@ button:disabled.bg-sky-500 {
 }
 .dl-viz--active .dl-tick--head {
   animation: dl-head 0.9s ease-in-out infinite;
-  box-shadow: 0 0 10px rgba(45, 212, 191, 0.8);
+  box-shadow: 0 0 10px rgba(126, 193, 81, 0.8);
 }
 @keyframes dl-wave {
   0%, 100% { filter: brightness(0.82); }

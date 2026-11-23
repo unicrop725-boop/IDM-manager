@@ -297,7 +297,7 @@
         border: 1px solid #2A2A32;
         border-radius: 16px;
         padding: 8px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(139,92,246,0.18);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 0 1px rgba(254,210,79,0.18);
         color: #F4F4F5;
         display: flex;
         align-items: center;
@@ -309,11 +309,11 @@
           width: 30px;
           height: 30px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+          background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #fff;
+          color: #15200A;
         ">${FLOWGET_GLYPH}</div>
         <div style="display: flex; flex-direction: column; line-height: 1.25;">
           <span style="font-weight: 600; font-size: 12px; color: #F4F4F5;">Download with FlowGet</span>
@@ -322,9 +322,9 @@
         <button id="flowget-bar-download-all" style="
           padding: 7px 13px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+          background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
           border: none;
-          color: #fff;
+          color: #15200A;
           font-family: inherit;
           font-weight: 600;
           font-size: 12px;
@@ -410,8 +410,8 @@
     .btn {
       pointer-events: auto; position: relative; overflow: hidden; display: flex; align-items: center; gap: 9px;
       padding: 7px 16px 7px 7px; border: 0; border-radius: 9999px; cursor: pointer; white-space: nowrap;
-      color: #fff; font: 600 13px/1 ${WIDGET_FONT}; letter-spacing: .2px;
-      background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%);
+      color: #15200A; font: 600 13px/1 ${WIDGET_FONT}; letter-spacing: .2px;
+      background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
       box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9);
       animation: pulse 2s ease-out infinite;
       transition: transform .15s ease, filter .15s ease;
@@ -431,7 +431,7 @@
     .btn[data-state="sending"], .btn[data-state="ok"], .btn[data-state="error"], .btn[data-open="true"] { animation: none; }
     .btn[data-state="sending"] .icon svg, .btn[data-state="ok"] .icon svg, .btn[data-state="error"] .icon svg, .btn[data-open="true"] .icon svg { animation: none; }
     .btn[data-state="sending"]::after, .btn[data-state="ok"]::after, .btn[data-state="error"]::after, .btn[data-open="true"]::after { display: none; }
-    .btn[data-state="ok"] { background: #059669; }
+    .btn[data-state="ok"] { background: #7EC151; }
     .btn[data-state="error"] { background: #DC2626; }
 
     .hint {
@@ -464,24 +464,24 @@
       transition: border-color .12s ease, background .12s ease;
     }
     .row:last-child { margin-bottom: 0; }
-    .row:hover, .row:focus-visible { background: #26262E; border-color: #8B5CF6; outline: none; }
-    .row.rec { border-color: #2DD4BF; background: linear-gradient(135deg, rgba(139,92,246,.18), rgba(45,212,191,.14)); }
+    .row:hover, .row:focus-visible { background: #26262E; border-color: #FED24F; outline: none; }
+    .row.rec { border-color: #7EC151; background: linear-gradient(135deg, rgba(254,210,79,.18), rgba(126,193,81,.14)); }
     .row .q { font-weight: 650; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
     .row .m { margin-top: 3px; font-size: 11px; color: #A1A1AA; }
     .row .z { font-size: 12px; color: #D4D4D8; white-space: nowrap; }
-    .tag { padding: 2px 7px; border-radius: 9999px; background: linear-gradient(135deg, #8B5CF6, #2DD4BF); color: #fff; font-size: 9.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+    .tag { padding: 2px 7px; border-radius: 9999px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; font-size: 9.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
     .msg { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px; text-align: center; color: #A1A1AA; font-size: 12.5px; }
     .msg b { color: #F4F4F5; font-weight: 600; }
-    .spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #2A2A32; border-top-color: #2DD4BF; animation: spin .8s linear infinite; }
-    .go { padding: 9px 14px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #8B5CF6, #2DD4BF); color: #fff; font: 650 12.5px ${WIDGET_FONT}; cursor: pointer; }
+    .spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #2A2A32; border-top-color: #7EC151; animation: spin .8s linear infinite; }
+    .go { padding: 9px 14px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; font: 650 12.5px ${WIDGET_FONT}; cursor: pointer; }
     .go:hover { filter: brightness(1.1); }
     .foot { display: block; width: 100%; padding: 10px 14px; border: 0; border-top: 1px solid #2A2A32; background: transparent; color: #A1A1AA; font: 500 12px ${WIDGET_FONT}; text-align: center; cursor: pointer; }
     .foot:hover { color: #fff; background: #1E1E24; }
 
     @keyframes pulse {
-      0% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 0 rgba(139,92,246,.75); }
-      70% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 14px rgba(139,92,246,0); }
-      100% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 0 rgba(139,92,246,0); }
+      0% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 0 rgba(254,210,79,.75); }
+      70% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 14px rgba(254,210,79,0); }
+      100% { box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9), 0 0 0 0 rgba(254,210,79,0); }
     }
     @keyframes bounce { 0%, 100% { transform: translateY(-1.5px); } 50% { transform: translateY(2.5px); } }
     @keyframes shine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
@@ -1124,14 +1124,14 @@
         <div id="flowget-batch-list" style="padding: 12px; overflow-y: auto; max-height: 50vh; display: flex; flex-direction: column; gap: 6px;">
           ${uniqueLinks.slice(0, 100).map((l) => `
             <label style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: #A1A1AA; cursor: pointer;">
-              <input type="checkbox" checked data-url="${escapeHtml(l)}" style="accent-color: #8B5CF6;" />
+              <input type="checkbox" checked data-url="${escapeHtml(l)}" style="accent-color: #FED24F;" />
               <span title="${escapeHtml(l)}" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 520px;">${escapeHtml(l)}</span>
             </label>
           `).join("")}
         </div>
         <div style="padding: 12px 16px; border-top: 1px solid #2A2A32; display: flex; justify-content: flex-end; gap: 8px;">
           <button id="flowget-batch-cancel" style="padding: 6px 14px; border-radius: 8px; background: #26262E; color: #F4F4F5; border: none; cursor: pointer; font-size: 12px;">Cancel</button>
-          <button id="flowget-batch-submit" style="padding: 6px 16px; border-radius: 8px; background: linear-gradient(135deg, #8B5CF6 0%, #2DD4BF 100%); color: white; border: none; cursor: pointer; font-weight: 600; font-size: 12px;">Download Selected</button>
+          <button id="flowget-batch-submit" style="padding: 6px 16px; border-radius: 8px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; border: none; cursor: pointer; font-weight: 600; font-size: 12px;">Download Selected</button>
         </div>
       </div>
     `;

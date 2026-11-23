@@ -238,8 +238,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <svg width="150" height="84" viewBox="0 0 150 84" className="overflow-visible">
             <defs>
               <linearGradient id="diskGaugeGrad" gradientUnits="userSpaceOnUse" x1="15" y1="0" x2="135" y2="0">
-                <stop offset="0%" stopColor="#3B82F6" />
-                <stop offset="50%" stopColor="#EC4899" />
+                <stop offset="0%" stopColor="#FED24F" />
+                <stop offset="50%" stopColor="#B2D959" />
                 <stop offset="100%" stopColor="#F59E0B" />
               </linearGradient>
             </defs>

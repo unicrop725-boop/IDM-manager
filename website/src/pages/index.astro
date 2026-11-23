@@ -1,0 +1,311 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE, buyHref } from "../config";
+import { getPosts, formatDate, readingMinutes } from "../lib/blog";
+
+const latest = (await getPosts()).slice(0, 3);
+const site = Astro.site!.href.replace(/\/$/, "");
+
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    url: site + "/",
+    logo: site + "/img/icon-256.png",
+    email: SITE.supportEmail,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    url: site + "/",
+    inLanguage: SITE.language,
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE.name,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Windows 10, Windows 11",
+    softwareVersion: SITE.version,
+    description: SITE.description,
+    image: site + SITE.ogImage,
+    url: site + "/",
+    offers: { "@type": "Offer", price: SITE.priceUsd, priceCurrency: "USD", availability: "https://schema.org/InStock", url: site + "/#pricing" },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [{ "@type": "Question", name: "Is there a free trial?", acceptedAnswer: { "@type": "Answer", text: "No. FlowGet is a paid app: one payment for a lifetime license, with no subscription. Every feature is included." } },{ "@type": "Question", name: "How do I get and use my license key?", acceptedAnswer: { "@type": "Answer", text: "After payment you receive your license key. Install FlowGet, open Help > Activate License and paste the key. It is checked on your PC, so it does not need the internet." } },{ "@type": "Question", name: "Which browsers does it work with?", acceptedAnswer: { "@type": "Answer", text: "The extension is built for Chrome, Edge and Brave. You can also paste a link into FlowGet directly, or copy a link and let FlowGet offer to download it." } },{ "@type": "Question", name: "Can it download videos from websites?", acceptedAnswer: { "@type": "Answer", text: "Yes, from many video sites, with a quality menu. FlowGet installs the helper tools it needs (yt-dlp and ffmpeg) by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded." } },{ "@type": "Question", name: "Does FlowGet collect my data?", acceptedAnswer: { "@type": "Answer", text: "No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The privacy page lists every one." } },{ "@type": "Question", name: "Windows says it doesn't recognise the app. Is it safe?", acceptedAnswer: { "@type": "Answer", text: "While an app is new, Windows SmartScreen can show a warning for software it has not seen often. You can check the installer's SHA-256 on the download page against the file you received before running it." } },{ "@type": "Question", name: "Does it work on Mac or Linux?", acceptedAnswer: { "@type": "Answer", text: "Not yet. FlowGet is for Windows 10 and 11 for now." } }],
+  },
+];
+---
+<Base
+  fullTitle
+  title="FlowGet – Fast, reliable download manager for Windows"
+  description="FlowGet is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave. One-time purchase."
+  current="home"
+  jsonLd={jsonLd}
+>
+
+  <!-- ======================= Hero ======================= -->
+  <section class="hero">
+    <div class="wrap">
+      <span class="pill"><b>New</b> Smart bandwidth control and built-in safety checks</span>
+      <h1>Downloads that <span class="grad-text">don't give up</span></h1>
+      <p class="lead">FlowGet is a fast download manager for Windows. It splits files across many connections, carries on after any interruption, and takes over downloads from your browser.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="/#pricing">Get FlowGet Pro · $19.99</a>
+        <a class="btn btn-ghost" href="/features/">See what it does</a>
+      </div>
+      <p class="meta">Windows 10 &amp; 11 · One-time payment, lifetime license · No ads · No tracking</p>
+      <div class="shot"><img src="/img/app-main.webp" width="1920" height="1200" alt="The FlowGet window with a list of downloads, categories on the left and progress bars"></div>
+    </div>
+  </section>
+
+  <!-- ======================= Features ======================= -->
+  <section id="features">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Features</div>
+        <h2>Everything a download manager should do, done properly</h2>
+        <p>Fast when the network is good, patient when it is not.</p>
+      </div>
+      <div class="grid g3">
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div>
+          <h3>Many connections, smartly</h3>
+          <p>Files are split into parts and fetched in parallel, up to 32 connections. When one part is slow, another connection takes over its remaining work, so nothing sits idle.</p>
+        </article>
+        <article class="card">
+          <div class="ico t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></div>
+          <h3>Resumes after anything</h3>
+          <p>Closed the app, lost your Wi-Fi, or the PC crashed? Downloads wait for the network and continue from the last saved byte. Expired links can be refreshed without starting over.</p>
+        </article>
+        <article class="card">
+          <div class="ico s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z"/></svg></div>
+          <h3>Browser extension</h3>
+          <p>Works with Chrome, Edge and Brave. Click a link and FlowGet takes over, with your login session passed along. Pick which file types it captures, and get a notification when the download starts.</p>
+        </article>
+        <article class="card">
+          <div class="ico a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg></div>
+          <h3>Videos with a quality menu</h3>
+          <p>A Download button appears on videos, with a list of qualities and a recommended choice. Streams (HLS and DASH) are joined for you. The tools needed are installed automatically.</p>
+        </article>
+        <article class="card">
+          <div class="ico g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <h3>Bandwidth control</h3>
+          <p>Limit speed by time of day and day of week, switch on slow mode while you work, and pause automatically on metered connections and phone hotspots.</p>
+        </article>
+        <article class="card">
+          <div class="ico t"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Safety checks</h3>
+          <p>Warnings for programs and disguised files like <em>invoice.pdf.exe</em>, a clear message when a site sends a login page instead of your file, and an optional VirusTotal lookup.</p>
+        </article>
+        <article class="card">
+          <div class="ico s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 7h.01M7 17h.01"/></svg></div>
+          <h3>Queues and scheduling</h3>
+          <p>Line downloads up, start them at night, and choose what happens afterwards: sleep, shut down, or run a program.</p>
+        </article>
+        <article class="card">
+          <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg></div>
+          <h3>Bring your downloads along</h3>
+          <p>Import from IDM, JDownloader, Free Download Manager link lists, or your browser's download history. Back up settings and history in one file.</p>
+        </article>
+        <article class="card">
+          <div class="ico a"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v6a6 6 0 0 0 12 0V3"/><path d="M6 7h4M14 7h4"/></svg></div>
+          <h3>Torrents, FTP and more</h3>
+          <p>Magnet links and torrents, FTP, FTPS and SFTP, batch downloads with patterns like <em>img_[001-100].jpg</em>, and a site grabber for whole folders.</p>
+        </article>
+      </div>
+      <p style="text-align:center;margin-top:34px"><a class="btn btn-ghost" href="/features/">See every feature in detail →</a></p>
+    </div>
+  </section>
+
+  <!-- ======================= Tour ======================= -->
+  <section class="alt" id="tour">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">A closer look</div>
+        <h2>Built to stay out of your way</h2>
+      </div>
+      <div class="tour">
+        <div class="tour-row">
+          <div class="tour-text">
+            <h3>Fast now, polite later</h3>
+            <p>Give downloads full speed when you are away and a gentle limit while you work.</p>
+            <ul>
+              <li>Schedules by day and time, including windows that run past midnight</li>
+              <li>One-click slow mode in the bar at the bottom</li>
+              <li>Holds downloads on metered connections, with a "Download anyway" button</li>
+            </ul>
+          </div>
+          <div class="shot" style="margin:0"><img loading="lazy" src="/img/app-bandwidth.webp" width="1428" height="924" alt="Bandwidth settings with a weekday schedule and slow mode"></div>
+        </div>
+        <div class="tour-row flip">
+          <div class="tour-text">
+            <h3>Know what you are opening</h3>
+            <p>FlowGet checks files when they finish and asks before opening anything that looks risky.</p>
+            <ul>
+              <li>Warns about programs and disguised double extensions</li>
+              <li>Optional VirusTotal lookup: only the file's fingerprint is sent, never the file</li>
+              <li>Passwords are kept in the Windows Credential Manager</li>
+            </ul>
+          </div>
+          <div class="shot" style="margin:0"><img loading="lazy" src="/img/app-safety.webp" width="1428" height="924" alt="Safety settings with the VirusTotal option"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= How it works ======================= -->
+  <section id="how">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">How it works</div>
+        <h2>Up and running in a minute</h2>
+      </div>
+      <div class="grid g3 steps">
+        <div class="step"><h3>Install FlowGet</h3><p class="fine" style="font-size:16px;margin-top:8px">Download the installer and run it. Windows 10 and 11 are supported.</p></div>
+        <div class="step"><h3>Add the browser extension</h3><p class="fine" style="font-size:16px;margin-top:8px">One click in Chrome, Edge or Brave. It connects to the app by itself.</p></div>
+        <div class="step"><h3>Download as usual</h3><p class="fine" style="font-size:16px;margin-top:8px">Click a download link or a video button. FlowGet takes it from there.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Speed ======================= -->
+  <section class="alt" id="speed">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Speed, measured</div>
+        <h2>Where FlowGet pulls ahead: bad networks</h2>
+        <p>On a healthy connection, a good downloader is already fast. The difference shows when connections stall, slow down or drop.</p>
+      </div>
+      <div class="bars" style="max-width:820px;margin-inline:auto">
+        <div class="bar-group">
+          <h3>One connection is slow</h3>
+          <div class="bar"><span>One connection</span><i style="--w:87%"></i><span>14.4 s</span></div>
+          <div class="bar"><span>8 fixed parts</span><i style="--w:100%"></i><span>16.5 s</span></div>
+          <div class="bar us"><span>FlowGet</span><i style="--w:33%"></i><span>5.5 s</span></div>
+        </div>
+        <div class="bar-group">
+          <h3>A connection goes silent</h3>
+          <div class="bar"><span>One connection</span><i style="--w:48%"></i><span>15.3 s</span></div>
+          <div class="bar"><span>8 fixed parts</span><i style="--w:100%"></i><span>32.0 s</span></div>
+          <div class="bar us"><span>FlowGet</span><i style="--w:13%"></i><span>4.0 s</span></div>
+        </div>
+        <div class="bar-group">
+          <h3>30-second internet outage</h3>
+          <div class="bar"><span>One connection</span><i style="--w:100%"></i><span>70.3 s</span></div>
+          <div class="bar"><span>8 fixed parts</span><i style="--w:87%"></i><span>61.4 s</span></div>
+          <div class="bar us"><span>FlowGet</span><i style="--w:52%"></i><span>36.6 s</span></div>
+        </div>
+      </div>
+      <p class="fine" style="max-width:820px;margin-inline:auto">Time to download the same file, lower is better. Measured on a local test server that misbehaves in a repeatable way, every file checked against its SHA-256. "8 fixed parts" is a plain 8-connection downloader, not any particular product. On a healthy network the three are close, and in a short 5-second outage FlowGet was slightly slower than the plain downloader. Real-world results depend on your connection.</p>
+    </div>
+  </section>
+
+  <!-- ======================= Pricing ======================= -->
+  <section id="pricing">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Pricing</div>
+        <h2>Pay once. Use it for good.</h2>
+        <p>One license, every feature, no subscription.</p>
+      </div>
+      <div class="plans" style="max-width:460px">
+        <article class="card plan pro">
+          <h3>FlowGet Pro</h3>
+          <div class="price">$19.99 <small>lifetime · ₹999 in India</small></div>
+          <ul>
+            <li>Every feature included, including Turbo Mode and video downloads</li>
+            <li>One payment, no subscription and no renewals</li>
+            <li>A license key after payment; it activates offline</li>
+            <li>Windows 10 and 11</li>
+          </ul>
+          <a class="btn btn-primary" href={buyHref()}>Buy FlowGet Pro</a>
+          <p class="fine" style="text-align:center;margin-top:14px">Already bought it? <a href="/download/" style="color:var(--sky)">Download the installer</a></p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= FAQ ======================= -->
+  <section class="alt" id="faq">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Questions</div>
+        <h2>Frequently asked</h2>
+      </div>
+      <div class="faq">
+        <details>
+          <summary>Is there a free trial?</summary>
+          <p>No. FlowGet is a paid app: one payment for a lifetime license, with no subscription. Every feature is included.</p>
+        </details>
+        <details>
+          <summary>How do I get and use my license key?</summary>
+          <p>After payment you receive your license key. Install FlowGet, open <b>Help &gt; Activate License</b> and paste the key. It is checked on your PC, so it does not need the internet.</p>
+        </details>
+        <details>
+          <summary>Which browsers does it work with?</summary>
+          <p>The extension is built for Chrome, Edge and Brave. You can also paste a link into FlowGet directly, or copy a link and let FlowGet offer to download it.</p>
+        </details>
+        <details>
+          <summary>Can it download videos from websites?</summary>
+          <p>Yes, from many video sites, with a quality menu. FlowGet installs the helper tools it needs (yt-dlp and ffmpeg) by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded.</p>
+        </details>
+        <details>
+          <summary>Does FlowGet collect my data?</summary>
+          <p>No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The <a href="/privacy/">privacy page</a> lists every one.</p>
+        </details>
+        <details>
+          <summary>Windows says it doesn't recognise the app. Is it safe?</summary>
+          <p>While an app is new, Windows SmartScreen can show a warning for software it has not seen often. You can check the installer's SHA-256 on the <a href="/download/">download page</a> against the file you received before running it.</p>
+        </details>
+        <details>
+          <summary>Does it work on Mac or Linux?</summary>
+          <p>Not yet. FlowGet is for Windows 10 and 11 for now.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ======================= From the blog ======================= -->
+  {latest.length > 0 && (
+    <section>
+      <div class="wrap">
+        <div class="sec-head center">
+          <div class="eyebrow">From the blog</div>
+          <h2>Guides for faster, safer downloads</h2>
+        </div>
+        <div class="post-grid">
+          {latest.map((p) => (
+            <a class="post-card" href={`/blog/${p.id}/`}>
+              <div class="cover"><span>{p.data.title}</span></div>
+              <div class="body">
+                <div class="post-meta"><time datetime={p.data.pubDate.toISOString()}>{formatDate(p.data.pubDate)}</time><span>{readingMinutes(p.body)} min read</span></div>
+                <h3>{p.data.title}</h3>
+                <p>{p.data.description}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+        <p style="text-align:center;margin-top:30px"><a class="btn btn-ghost" href="/blog/">All articles →</a></p>
+      </div>
+    </section>
+  )}
+
+  <!-- ======================= CTA ======================= -->
+  <section>
+    <div class="wrap">
+      <div class="band">
+        <h2>Give your downloads a better engine</h2>
+        <p>One payment. Every feature. Yours for good.</p>
+        <a class="btn btn-primary" href="/#pricing">Get FlowGet Pro · $19.99</a>
+      </div>
+    </div>
+  </section>
+
+</Base>

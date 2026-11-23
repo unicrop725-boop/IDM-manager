@@ -16,11 +16,11 @@
   --text: #f4f4f5;
   --text-2: #a1a1aa;
   --text-3: #52525b;
-  --purple: #8b5cf6;
-  --teal: #2dd4bf;
+  --purple: #FED24F;
+  --teal: #7EC151;
   --ok: #34d399;
   --bad: #f87171;
-  --gradient: linear-gradient(135deg, #8b5cf6 0%, #2dd4bf 100%);
+  --gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
   --field: #202027;
   --shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
@@ -36,11 +36,11 @@
     --text: #18181b;
     --text-2: #71717a;
     --text-3: #a1a1aa;
-    --purple: #7c3aed;
-    --teal: #0d9488;
-    --ok: #059669;
+    --purple: #B58A2C;
+    --teal: #4F9A2E;
+    --ok: #7EC151;
     --bad: #dc2626;
-    --gradient: linear-gradient(135deg, #7c3aed 0%, #0d9488 100%);
+    --gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
     --field: #eef0f3;
     --shadow: 0 6px 20px rgba(24, 24, 27, 0.1);
     color-scheme: light;
@@ -130,8 +130,8 @@ svg {
   background: var(--gradient);
   display: grid;
   place-items: center;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+  color: #15200A;
+  box-shadow: 0 4px 14px rgba(254,210,79, 0.35);
 }
 
 .brand-name {
@@ -222,7 +222,7 @@ svg {
   padding: 1px 6px;
   border-radius: 9999px;
   background: var(--gradient);
-  color: #fff;
+  color: #15200A;
   font-size: 10px;
   font-weight: 700;
   text-align: center;
@@ -349,11 +349,11 @@ svg {
   color: var(--c);
   background: color-mix(in srgb, var(--c) 14%, transparent);
 }
-.type-video { --c: #8b5cf6; }
-.type-audio { --c: #14b8a6; }
-.type-doc { --c: #38bdf8; }
+.type-video { --c: #FED24F; }
+.type-audio { --c: #7EC151; }
+.type-doc { --c: #B2D959; }
 .type-archive { --c: #f59e0b; }
-.type-image { --c: #ec4899; }
+.type-image { --c: #E6C53C; }
 
 .item-body {
   flex: 1;
@@ -392,7 +392,7 @@ svg {
   border: 0;
   border-radius: 9px;
   background: var(--gradient);
-  color: #fff;
+  color: #15200A;
   display: grid;
   place-items: center;
   transition: transform 0.1s, filter 0.15s;
@@ -601,8 +601,8 @@ kbd {
 }
 .btn-primary {
   background: var(--gradient);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.28);
+  color: #15200A;
+  box-shadow: 0 4px 16px rgba(254,210,79, 0.28);
 }
 .btn-primary:hover:not([disabled]) {
   filter: brightness(1.08);

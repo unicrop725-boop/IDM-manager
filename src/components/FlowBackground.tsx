@@ -46,7 +46,8 @@ interface Palette {
   h1: number; h2: number; s1: number; s2: number; l1: number; l2: number;
 }
 const newPalette = (): Palette => ({
-  h1: rand(0, 360), h2: rand(0, 360), s1: rand(20, 90), s2: rand(20, 90), l1: rand(30, 80), l2: rand(30, 80),
+  // Hues stay in the brand range, amber to green.
+  h1: rand(20, 90), h2: rand(20, 90), s1: rand(45, 85), s2: rand(45, 85), l1: rand(45, 70), l2: rand(45, 70),
 });
 
 interface P {

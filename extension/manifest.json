@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FlowGet Download Manager Integration",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Seamless one-click download capture, cookie passing, and media detection for FlowGet.",
   "permissions": [
     "downloads",

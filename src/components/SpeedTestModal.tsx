@@ -304,7 +304,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
       <div
         className={`notch-card w-[500px] border shadow-2xl overflow-hidden flex flex-col text-xs transition-colors duration-200 ${
           isDark
-            ? "bg-[#090F17] border-cyan-500/20 shadow-[0_0_50px_rgba(6,182,212,0.15)] text-slate-300"
+            ? "bg-[#090F17] border-cyan-500/20 shadow-[0_0_50px_rgba(126,193,81,0.15)] text-slate-300"
             : "bg-white border-slate-200 shadow-2xl text-slate-700"
         }`}
       >
@@ -520,12 +520,12 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
                 </span>
               )}
               {phase === "upload" && (
-                <span className={`font-bold animate-pulse ${isDark ? "text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" : "text-sky-600"}`}>
+                <span className={`font-bold animate-pulse ${isDark ? "text-sky-400 drop-shadow-[0_0_8px_rgba(178,217,89,0.5)]" : "text-sky-600"}`}>
                   Testing Upload Speed...
                 </span>
               )}
               {phase === "finished" && (
-                <span className={`font-bold ${isDark ? "text-teal-300 drop-shadow-[0_0_8px_rgba(45,212,191,0.6)]" : "text-teal-700"}`}>
+                <span className={`font-bold ${isDark ? "text-teal-300 drop-shadow-[0_0_8px_rgba(126,193,81,0.6)]" : "text-teal-700"}`}>
                   Test Complete
                 </span>
               )}

@@ -136,7 +136,7 @@ export default function ShareModal({ download, onClose }: Props) {
             {/* Email */}
             <button
               onClick={handleEmail}
-              style={{ ["--brand" as string]: "#38bdf8" } as React.CSSProperties}
+              style={{ ["--brand" as string]: "#B2D959" } as React.CSSProperties}
               className="share-tile p-3 rounded-xl border flex items-center gap-3 font-medium text-left cursor-pointer"
             >
               <div className="share-tile-icon w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 text-sky-400">

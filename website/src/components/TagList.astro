@@ -1,0 +1,16 @@
+---
+import { linkableTagSlugs, tagSlug } from "../lib/blog";
+interface Props {
+  tags: string[];
+  limit?: number;
+}
+const { tags, limit = 99 } = Astro.props;
+const linkable = await linkableTagSlugs();
+---
+{tags.length > 0 && (
+  <div class="tags">
+    {tags.slice(0, limit).map((t) =>
+      linkable.has(tagSlug(t)) ? <a class="tag" href={`/blog/tag/${tagSlug(t)}/`}>{t}</a> : <span class="tag">{t}</span>
+    )}
+  </div>
+)}

@@ -57,13 +57,13 @@ export function makeDefaultLiquidTexture(): string {
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
   const base = g.createLinearGradient(0, 0, size, size);
-  base.addColorStop(0, "#1b1245");
-  base.addColorStop(0.5, "#3a1670");
-  base.addColorStop(1, "#0c3a52");
+  base.addColorStop(0, "#1f2a0c");
+  base.addColorStop(0.5, "#3d4a14");
+  base.addColorStop(1, "#16331a");
   g.fillStyle = base;
   g.fillRect(0, 0, size, size);
 
-  const colors = ["#8b5cf6", "#2dd4bf", "#ec4899", "#3b82f6", "#a855f7", "#14b8a6", "#f472b6", "#60a5fa"];
+  const colors = ["#FED24F", "#FFF449", "#B2D959", "#7EC151", "#FED24F", "#B2D959", "#7EC151", "#FFF449"];
 
   // broad flowing ribbons (normal blending keeps the colours deep)
   g.lineCap = "round";

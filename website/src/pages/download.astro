@@ -1,0 +1,83 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE, buyHref } from "../config";
+import { getPosts, formatDate, readingMinutes } from "../lib/blog";
+
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
+      { "@type": "ListItem", position: 2, name: 'Download', item: site + '/download/' },
+    ],
+  },
+];
+---
+<Base
+  title='Download FlowGet for Windows 10 and 11'
+  description='Download the FlowGet installer for Windows 10 and 11, with installation steps, system requirements and the browser extension.'
+  current='download'
+  jsonLd={jsonLd}
+>
+
+  <div class="wrap">
+    <div class="page-head">
+      <h1>Download <span class="grad-text">FlowGet</span></h1>
+      <p>FlowGet needs a license key to use. Don't have one yet? <a href="/#pricing" style="color:var(--sky)">Get FlowGet Pro</a> for a one-time $19.99.</p>
+    </div>
+
+    <div class="dl-box">
+      <article class="card">
+        <h3>FlowGet for Windows</h3>
+        <p style="margin:6px 0 22px">Version {SITE.version} · Windows 10 and 11 (64-bit)</p>
+        <a class="btn btn-primary" href={SITE.downloadUrl}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
+          Download the installer
+        </a>
+        <div class="kv" style="margin-top:26px">
+          <div><span>Version</span><span>{SITE.version}</span></div>
+          {SITE.fileSize && <div><span>File size</span><span>{SITE.fileSize}</span></div>}
+          <div><span>SHA-256</span><span class="code" style="text-align:right">{SITE.sha256 || "Published with each release"}</span></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Browser extension</h3>
+        <p style="margin:6px 0 20px">Lets FlowGet take over downloads in Chrome, Edge and Brave, and adds a Download button to videos.</p>
+        <a class="btn btn-ghost" href={SITE.extensionUrl || "/download/#extension"} target="_blank" rel="noopener">Get the extension</a>
+        <p class="fine">The extension talks only to FlowGet on your own PC. Install FlowGet first, then add the extension.</p>
+      </article>
+    </div>
+
+    <div class="prose" style="margin-top:56px">
+      <h2>Install in four steps</h2>
+      <ul>
+        <li>Run the installer and follow the prompts.</li>
+        <li>Open FlowGet, choose <b>Help &gt; Activate License</b> and paste your license key.</li>
+        <li>That first start also connects FlowGet to the browser extension.</li>
+        <li>Add the browser extension and download something.</li>
+      </ul>
+
+      <h2>System requirements</h2>
+      <ul>
+        <li>Windows 10 or Windows 11, 64-bit</li>
+        <li>Microsoft Edge WebView2 runtime (already part of current Windows 10 and 11)</li>
+        <li>An internet connection to download files. FlowGet itself works offline.</li>
+      </ul>
+
+      <h2>Verify your download</h2>
+      <p>Compare the SHA-256 above with your file. In PowerShell: <code>Get-FileHash .\FlowGet-setup.exe</code></p>
+
+      <h2>If Windows shows "Windows protected your PC"</h2>
+      <div class="note">
+        New apps are not yet widely seen by Windows SmartScreen, which can show this message even for safe software. Check the SHA-256 above, then choose <b>More info</b> and <b>Run anyway</b>.
+      </div>
+
+      <h2>Need help?</h2>
+      <p>Write to <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a> and tell us your Windows version and what you saw.</p>
+    </div>
+  </div>
+
+</Base>

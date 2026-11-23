@@ -179,8 +179,9 @@ reconnect, and a benchmark (`docs/benchmarks.md`).
 
 **Pending / known limits:**
 
-- Passwords for authenticated downloads are stored in the local SQLite file in plain text. They should move to
-  the OS credential store (Windows Credential Manager) in a later phase.
+- Passwords for authenticated downloads are kept in the Windows Credential Manager (target `FlowGet/download/<id>`), not
+  in the SQLite file; an older plain-text password is moved there the first time the app starts. A password typed
+  inside the URL itself (`ftp://user:pass@host/...`) is still stored with the link.
 - Preallocation uses `SetEndOfFile`; on NTFS the first write far into a big file makes Windows zero-fill the gap.
   If this shows up in benchmarks, use sparse files / `SetFileValidData`.
 - HTTP/3 only follows an `Alt-Svc` that points at the same host and port (the common `h3=":443"`); other alternative
@@ -188,4 +189,4 @@ reconnect, and a benchmark (`docs/benchmarks.md`).
 - Proxies, FTP, queues/scheduler, categories, clipboard monitor, yt-dlp/ffmpeg media downloads, browser extension and
   native host, installer polish: later phases.
 - Dynamic re-segmentation (a fast segment taking over the tail of a slow one) is not implemented yet.
-- Automatic resume of paused downloads at startup is not implemented; they come back paused.
+- Downloads that were running when the app closed (or crashed) resume at startup unless "Resume paused downloads on restart" is switched off; ones the user paused stay paused.

@@ -21,7 +21,7 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-subtle)] bg-[var(--bg-card)]">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <Activity className="w-4 h-4 text-purple-400" />
-            <span>Per-App Bandwidth View</span>
+            <span>Bandwidth Usage</span>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
           {/* Apps Breakdown List */}
           <div className="space-y-2">
             <div className="text-[11px] font-semibold text-[var(--text-disabled)] uppercase tracking-wider">
-              Network Traffic by Application
+              FlowGet downloads right now
             </div>
 
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] divide-y divide-[var(--border-subtle)]">
@@ -54,9 +54,9 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
                     FG
                   </div>
                   <div>
-                    <div className="font-semibold text-[var(--text-primary)]">FlowGet Download Manager</div>
+                    <div className="font-semibold text-[var(--text-primary)]">FlowGet</div>
                     <div className="text-[11px] text-purple-300">
-                      {activeDownloads.length} active connection{activeDownloads.length === 1 ? "" : "s"}
+                      {activeDownloads.length} active download{activeDownloads.length === 1 ? "" : "s"}
                     </div>
                   </div>
                 </div>

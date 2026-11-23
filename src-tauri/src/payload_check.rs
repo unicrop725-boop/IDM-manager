@@ -49,6 +49,23 @@ pub fn validate_download_payload(v: &Value) -> Result<(), String> {
         Some(Value::Number(n)) if n.is_u64() => {}
         Some(_) => return Err("field 'totalSize' is invalid".into()),
     }
+    // Video quality chosen in the browser: a height / frame rate within sane bounds, audio-only, and an output kind.
+    for (key, max) in [("mediaHeight", 8640u64), ("mediaFps", 240u64)] {
+        match obj.get(key) {
+            None | Some(Value::Null) => {}
+            Some(Value::Number(n)) if n.as_u64().map_or(false, |v| (1..=max).contains(&v)) => {}
+            Some(_) => return Err(format!("field '{key}' is invalid")),
+        }
+    }
+    match obj.get("mediaAudioOnly") {
+        None | Some(Value::Null) | Some(Value::Bool(_)) => {}
+        Some(_) => return Err("field 'mediaAudioOnly' is invalid".into()),
+    }
+    match obj.get("convertTo") {
+        None | Some(Value::Null) => {}
+        Some(Value::String(s)) if matches!(s.as_str(), "mp4" | "mkv" | "mp3" | "m4a") => {}
+        Some(_) => return Err("field 'convertTo' is invalid".into()),
+    }
     Ok(())
 }
 
@@ -70,6 +87,22 @@ mod tests {
             assert!(validate_download_url(bad).is_err(), "should reject {bad:?}");
         }
         assert!(validate_download_url(&format!("https://e.com/{}", "a".repeat(MAX_URL_LEN))).is_err());
+    }
+
+    #[test]
+    fn video_quality_fields_are_checked() {
+        let ok = json!({"url": "https://youtu.be/x", "mediaHeight": 1080, "mediaFps": 30, "mediaAudioOnly": false, "convertTo": "mp4"});
+        assert!(validate_download_payload(&ok).is_ok());
+        for bad in [
+            json!({"url": "https://youtu.be/x", "mediaHeight": 0}),
+            json!({"url": "https://youtu.be/x", "mediaHeight": 99999}),
+            json!({"url": "https://youtu.be/x", "mediaHeight": "1080"}),
+            json!({"url": "https://youtu.be/x", "mediaFps": -5}),
+            json!({"url": "https://youtu.be/x", "mediaAudioOnly": "yes"}),
+            json!({"url": "https://youtu.be/x", "convertTo": "exe"}),
+        ] {
+            assert!(validate_download_payload(&bad).is_err(), "should reject {bad}");
+        }
     }
 
     #[test]

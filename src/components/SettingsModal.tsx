@@ -15,10 +15,12 @@ import {
   Check,
   Sparkles,
   Battery,
-  Smartphone,
-  BarChart3,
-  HardDrive,
+  Play,
+  Clock,
+  ShieldCheck,
+  Wrench,
 } from "lucide-react";
+import { BandwidthPanel, SafetyPanel, ToolsPanel } from "./SettingsAdvanced";
 import { api } from "../api";
 import { setLanguage as updateI18nLanguage } from "../i18n";
 import type { AdapterInfo, Category, Settings } from "../types";
@@ -32,7 +34,7 @@ interface Props {
   onClose: () => void;
 }
 
-type TabType = "general" | "connection" | "proxy" | "categories" | "automation" | "smartFeatures";
+type TabType = "general" | "connection" | "proxy" | "categories" | "automation" | "smartFeatures" | "bandwidth" | "safety" | "tools";
 
 export default function SettingsModal({
   settings,
@@ -75,9 +77,7 @@ export default function SettingsModal({
   // Smart Features tab (Phase 7)
   const [batterySaver, setBatterySaver] = useState(settings.batterySaver ?? true);
   const [smartNaming, setSmartNaming] = useState(settings.smartNaming ?? true);
-  const [portableMode, setPortableMode] = useState(settings.portableMode ?? false);
-  const [mobileSharingEnabled, setMobileSharingEnabled] = useState(settings.mobileSharingEnabled ?? true);
-  const [bandwidthMonitorEnabled, setBandwidthMonitorEnabled] = useState(settings.bandwidthMonitorEnabled ?? true);
+  const [resumeOnStart, setResumeOnStart] = useState(settings.resumeOnStart ?? true);
   const [clipboardMonitor, setClipboardMonitor] = useState(settings.clipboardMonitor ?? true);
   const [background, setBackground] = useState(settings.background ?? "flow");
   const [defaultDrive, setDefaultDrive] = useState(settings.defaultDrive ?? "");
@@ -145,9 +145,7 @@ export default function SettingsModal({
       // Smart Features (Phase 7)
       await api.setSetting("battery_saver", batterySaver ? "1" : "0");
       await api.setSetting("smart_naming", smartNaming ? "1" : "0");
-      await api.setSetting("portable_mode", portableMode ? "1" : "0");
-      await api.setSetting("mobile_sharing_enabled", mobileSharingEnabled ? "1" : "0");
-      await api.setSetting("bandwidth_monitor_enabled", bandwidthMonitorEnabled ? "1" : "0");
+      await api.setSetting("resume_on_start", resumeOnStart ? "1" : "0");
       await api.setSetting("clipboard_monitor", clipboardMonitor ? "1" : "0");
       await api.setSetting("background", background);
       await api.setSetting("default_drive", defaultDrive);
@@ -189,7 +187,7 @@ export default function SettingsModal({
         onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; setDraggingImage(true); }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDraggingImage(false); }}
         onDrop={(e) => void dropLiquidImage(e)}
-        className="notch-card flex h-[560px] w-full max-w-2xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden"
+        className="notch-card flex h-[560px] w-full max-w-4xl flex-col border border-[var(--border-subtle)] bg-[var(--bg-panel)] shadow-2xl text-xs text-[var(--text-secondary)] overflow-hidden"
       >
         {draggingImage && (
           <div className="pointer-events-none absolute inset-0 z-40 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-purple-400 bg-[var(--bg-panel)]/90 text-purple-300">
@@ -257,6 +255,30 @@ export default function SettingsModal({
               }`}
             >
               <Sparkles size={17} className="text-purple-400" /> Smart Features
+            </button>
+            <button
+              onClick={() => setActiveTab("bandwidth")}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
+                activeTab === "bandwidth" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              <Clock size={17} /> Bandwidth
+            </button>
+            <button
+              onClick={() => setActiveTab("safety")}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
+                activeTab === "safety" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              <ShieldCheck size={17} /> Safety
+            </button>
+            <button
+              onClick={() => setActiveTab("tools")}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition ${
+                activeTab === "tools" ? "bg-[var(--bg-hover)] text-[var(--text-primary)] font-medium shadow-xs" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              <Wrench size={17} /> Video Tools
             </button>
           </div>
 
@@ -583,6 +605,10 @@ export default function SettingsModal({
               </div>
             )}
 
+            {activeTab === "bandwidth" && <BandwidthPanel />}
+            {activeTab === "safety" && <SafetyPanel />}
+            {activeTab === "tools" && <ToolsPanel />}
+
             {/* Smart Features Tab (Phase 7) */}
             {activeTab === "smartFeatures" && (
               <div className="space-y-4">
@@ -597,8 +623,27 @@ export default function SettingsModal({
                 </div>
 
                 <div className="space-y-3">
-                  {/* Battery Saver */}
+                  {/* Resume on restart */}
                   <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={resumeOnStart}
+                      onChange={(e) => setResumeOnStart(e.target.checked)}
+                      className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Play size={20} className="text-sky-400" />
+                        <span>Resume paused downloads on restart</span>
+                      </div>
+                      <p className="text-[11px] font-normal text-[var(--text-secondary)]">
+                        Downloads that were running when FlowGet closed (or the PC restarted or crashed) continue by themselves the next time FlowGet starts. Downloads you paused yourself stay paused.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Battery Saver */}
+                  <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer pt-2 border-t border-[var(--border-subtle)]">
                     <input
                       type="checkbox"
                       checked={batterySaver}
@@ -650,63 +695,6 @@ export default function SettingsModal({
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
                         Cleans messy URL characters (%20), tracking query parameters (?utm_source=...), and random generated hash strings automatically.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Mobile Link Sharing */}
-                  <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer pt-2 border-t border-[var(--border-subtle)]">
-                    <input
-                      type="checkbox"
-                      checked={mobileSharingEnabled}
-                      onChange={(e) => setMobileSharingEnabled(e.target.checked)}
-                      className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Smartphone size={20} className="text-teal-400" />
-                        <span>Mobile Link Sharing (Local Wi-Fi)</span>
-                      </div>
-                      <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-                        Enables local Wi-Fi QR code listener so you can seamlessly beam links from phone or tablet straight into FlowGet.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Bandwidth Monitor */}
-                  <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer pt-2 border-t border-[var(--border-subtle)]">
-                    <input
-                      type="checkbox"
-                      checked={bandwidthMonitorEnabled}
-                      onChange={(e) => setBandwidthMonitorEnabled(e.target.checked)}
-                      className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <BarChart3 size={20} className="text-blue-400" />
-                        <span>Per-App Bandwidth View</span>
-                      </div>
-                      <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-                        Tracks and computes real-time download bandwidth share compared to the rest of the Windows system and browsers.
-                      </p>
-                    </div>
-                  </label>
-
-                  {/* Portable Mode */}
-                  <label className="flex items-start gap-2.5 font-medium text-[var(--text-secondary)] cursor-pointer pt-2 border-t border-[var(--border-subtle)]">
-                    <input
-                      type="checkbox"
-                      checked={portableMode}
-                      onChange={(e) => setPortableMode(e.target.checked)}
-                      className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <HardDrive size={20} className="text-amber-400" />
-                        <span>Portable Mode</span>
-                      </div>
-                      <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-                        Store configuration and SQLite database in the application folder instead of %APPDATA%, suitable for USB drives.
                       </p>
                     </div>
                   </label>

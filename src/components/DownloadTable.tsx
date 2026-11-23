@@ -16,8 +16,12 @@ import {
   FileText,
   Image as ImageIcon,
   File,
+  ShieldAlert,
+  ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
-import { DownloadInfo } from "../types";
+import { DownloadInfo, SafetyReport } from "../types";
+import { safetyLines } from "./SafetyConfirmModal";
 import { formatBytes, formatDate, getFileTypeLabel, FileCategoryType } from "../format";
 import { Checkbox } from "./Checkbox";
 import { TickProgress } from "./DownloadViz";
@@ -39,6 +43,8 @@ interface DownloadTableProps {
   onToggleSelectAll?: () => void;
   onPause?: (id: string) => void;
   onResume?: (id: string) => void;
+  /** Safety check results by download id (warnings, VirusTotal). */
+  safety?: Record<string, SafetyReport>;
 }
 
 /** File name, or the last part of the URL when the name is empty. */
@@ -52,6 +58,25 @@ const displayName = (d: DownloadInfo): string => {
   }
   return d.url || "(unnamed)";
 };
+
+/** A few words for the status column; the whole message (with the fix) is shown on hover. */
+const FAILURE_HEADLINES: Record<string, string> = {
+  wrong_file: "Web page, not a file",
+  certificate: "Untrusted certificate",
+  dns: "Site not found",
+  timeout: "Server not answering",
+  refused: "Connection refused",
+  network: "Connection lost",
+  auth_failed: "Wrong password",
+  not_found: "File not found",
+  disk_full: "Disk is full",
+  file_changed: "File changed",
+  checksum_mismatch: "Checksum differs",
+  size_mismatch: "Wrong size",
+  http: "Server refused",
+};
+const failureHeadline = (code?: string, message?: string): string =>
+  (code && FAILURE_HEADLINES[code]) || (message ? message.split(/[.!]/)[0].slice(0, 40) : "Failed");
 
 const formatTimeLeft = (secs: number | null | undefined): string => {
   if (secs == null || !isFinite(secs) || secs <= 0) return "0 Sec";
@@ -76,6 +101,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
   onToggleSelectAll,
   onPause,
   onResume,
+  safety = {},
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -144,6 +170,21 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
     );
   };
 
+  /** A small shield next to the name: red = risky, amber = program, green = VirusTotal found nothing. */
+  const safetyBadge = (report?: SafetyReport) => {
+    if (!report) return null;
+    const lines = safetyLines(report);
+    const title = lines.map((l) => l.text).join("\n");
+    const cls = "h-3.5 w-3.5 flex-shrink-0";
+    if (lines.some((l) => l.level === "high"))
+      return <span title={title}><ShieldAlert className={`${cls} text-red-400`} /></span>;
+    if (lines.some((l) => l.level === "medium"))
+      return <span title={title}><TriangleAlert className={`${cls} text-amber-400`} /></span>;
+    if (report.vt?.status === "clean")
+      return <span title={title}><ShieldCheck className={`${cls} text-emerald-400`} /></span>;
+    return null;
+  };
+
   const renderStatus = (d: DownloadInfo) => {
     const pct = d.totalSize && d.totalSize > 0
       ? Math.min(100, Math.max(0, (d.downloaded / d.totalSize) * 100))
@@ -152,8 +193,18 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
     switch (d.state) {
       case "completed":
         return <span className="text-[13px] text-[var(--text-primary)]">Complete</span>;
-      case "downloading":
       case "probing":
+        // Not a vague "0%": say what is happening, and what went wrong while retrying.
+        return (
+          <div className="flex min-w-0 flex-col gap-0.5" title={d.note || "Contacting the server…"}>
+            <span className="flex items-center gap-1.5 text-[13px] text-[var(--text-primary)]">
+              <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-sky-400" />
+              Connecting…
+            </span>
+            {d.note && <span className="truncate text-[11px] text-amber-400">{d.note}</span>}
+          </div>
+        );
+      case "downloading":
       case "verifying":
         return (
           <div className="flex flex-col gap-1.5">
@@ -193,9 +244,13 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
           </span>
         );
       case "failed":
+        // Short reason in the row; the full explanation (with what to do) is in the tooltip and Properties.
         return (
-          <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 truncate max-w-[180px]">
-            {d.error?.message || "Failed"}
+          <span
+            title={d.error?.message || "The download failed."}
+            className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-400 border border-rose-500/30 truncate max-w-[200px]"
+          >
+            {failureHeadline(d.error?.code, d.error?.message)}
           </span>
         );
       default:
@@ -311,8 +366,11 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                   <div className="dt-col-name flex-1 flex items-center gap-4 min-w-0 pr-4 pl-1">
                     {renderTypeIcon(typeLabel)}
                     <div className="min-w-0 flex flex-col">
-                      <span className="truncate font-medium text-[var(--text-primary)]" title={displayName(d)}>
-                        {displayName(d)}
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="truncate font-medium text-[var(--text-primary)]" title={displayName(d)}>
+                          {displayName(d)}
+                        </span>
+                        {safetyBadge(safety[d.id])}
                       </span>
                       <span className="text-[11px] text-[var(--text-secondary)]">{typeLabel}</span>
                     </div>

@@ -50,7 +50,7 @@ KEY HIGHLIGHTS:
 💡 INTELLIGENCE BEYOND IDM
 • Built-in Speed Test measuring ping, download speed, and upload speed with saved historical logs.
 • Disk Cleaner utility: finds duplicate files, leftover temporary chunks, and old completed files to free up disk space.
-• Mobile Link Sharing: Beam links from your smartphone or tablet to your PC over local Wi-Fi with a vector QR code.
+• Resume on restart: downloads that were running when you closed FlowGet carry on by themselves, and passwords are kept in the Windows Credential Manager.
 • Smart Naming: Automatically strips messy URL encoding (%20), tracking query parameters, and random generated hash strings.
 • Laptop Battery Saver: Pauses heavy downloading automatically when battery level drops below 20%.
 

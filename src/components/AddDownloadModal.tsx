@@ -1,10 +1,11 @@
+import { findTrustedSite } from "../data/trustedSites";
 import { Select } from "./Select";
 import { ModalCorner } from "./NotchCorner";
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Wand2 } from "lucide-react";
+import { BadgeCheck, ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Wand2 } from "lucide-react";
 import { api } from "../api";
 import { cleanFileName } from "../utils/smartNaming";
-import type { AddRequest, Category, DuplicateCheckResult, QueueInfo } from "../types";
+import type { AddRequest, Category, DuplicateCheckResult, QueueInfo, SafetyWarning } from "../types";
 import DuplicateModal from "./DuplicateModal";
 
 interface Props {
@@ -53,6 +54,17 @@ export default function AddDownloadModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [duplicateData, setDuplicateData] = useState<DuplicateCheckResult | null>(null);
+  // Programs and disguised files (invoice.pdf.exe) are flagged before anything is downloaded.
+  const [nameWarnings, setNameWarnings] = useState<SafetyWarning[]>([]);
+  useEffect(() => {
+    const name = fileName.trim();
+    if (!name) {
+      setNameWarnings([]);
+      return;
+    }
+    const t = setTimeout(() => api.assessFileName(name).then(setNameWarnings).catch(() => setNameWarnings([])), 250);
+    return () => clearTimeout(t);
+  }, [fileName]);
 
   // Streaming Media & Video Quality Resolution
   // Auto-detect category and filename when URL changes
@@ -226,6 +238,11 @@ export default function AddDownloadModal({
                   className="w-full h-9 pl-9 pr-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-disabled)] outline-none focus:border-purple-500/50 font-mono text-[11px] transition-colors"
                 />
               </div>
+              {findTrustedSite(url) && (
+                <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
+                  <BadgeCheck className="h-3.5 w-3.5" /> Trusted site: {findTrustedSite(url)!.name}
+                </div>
+              )}
             </div>
 
             {/* File name & Category */}
@@ -252,6 +269,18 @@ export default function AddDownloadModal({
                   placeholder="Auto-detected from URL"
                   className="w-full h-9 px-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] text-[var(--text-primary)] placeholder-[var(--text-disabled)] outline-none focus:border-purple-500/50 transition-colors"
                 />
+                {nameWarnings.map((w) => (
+                  <div
+                    key={w.code}
+                    className={`mt-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] leading-snug ${
+                      w.severity === "high"
+                        ? "border-red-500/40 bg-red-500/10 text-red-200"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-200"
+                    }`}
+                  >
+                    ⚠ {w.message}
+                  </div>
+                ))}
               </div>
 
               <div>

@@ -124,6 +124,10 @@ impl Db {
         .execute(&pool)
         .await?;
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS safety (id TEXT PRIMARY KEY NOT NULL, report TEXT NOT NULL)")
+            .execute(&pool)
+            .await?;
+
         let db = Self { pool };
         db.seed_defaults(default_download_dir).await?;
         Ok(db)
@@ -332,6 +336,18 @@ impl Db {
     }
 
     pub async fn upsert_download(&self, rec: &DownloadRecord) -> Result<(), sqlx::Error> {
+        // The password goes to the Windows Credential Manager; the database keeps only the user name.
+        // If the vault refuses, the password stays in the record so it is not lost.
+        let stored;
+        let rec = match rec.http.password.as_deref().filter(|p| !p.is_empty()) {
+            Some(pw) if crate::vault::store(&rec.id, pw).is_ok() => {
+                let mut copy = rec.clone();
+                copy.http.password = None;
+                stored = copy;
+                &stored
+            }
+            _ => rec,
+        };
         let json = serde_json::to_string(rec).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
         sqlx::query(
             "INSERT INTO downloads (id, state, created_at, updated_at, record)
@@ -350,7 +366,24 @@ impl Db {
         Ok(())
     }
 
+    pub async fn save_safety(&self, report: &crate::safety::SafetyReport) -> Result<(), sqlx::Error> {
+        let json = serde_json::to_string(report).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
+        sqlx::query("INSERT INTO safety (id, report) VALUES (?1, ?2) ON CONFLICT(id) DO UPDATE SET report = excluded.report")
+            .bind(&report.id)
+            .bind(json)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn load_safety(&self) -> Result<Vec<crate::safety::SafetyReport>, sqlx::Error> {
+        let rows = sqlx::query("SELECT report FROM safety").fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().filter_map(|r| serde_json::from_str(&r.get::<String, _>("report")).ok()).collect())
+    }
+
     pub async fn delete_download(&self, id: &str) -> Result<(), sqlx::Error> {
+        crate::vault::delete(id);
+        let _ = sqlx::query("DELETE FROM safety WHERE id = ?1").bind(id).execute(&self.pool).await;
         sqlx::query("DELETE FROM downloads WHERE id = ?1").bind(id).execute(&self.pool).await?;
         Ok(())
     }
@@ -360,15 +393,35 @@ impl Db {
             .fetch_all(&self.pool)
             .await?;
         let mut out = Vec::with_capacity(rows.len());
+        let mut to_migrate = Vec::new();
         for row in rows {
             let id: String = row.get("id");
             let json: String = row.get("record");
             match serde_json::from_str::<DownloadRecord>(&json) {
-                Ok(rec) => out.push(rec),
+                Ok(mut rec) => {
+                    if rec.http.password.as_deref().is_some_and(|p| !p.is_empty()) {
+                        // Saved by an older version in plain text: moved into the vault below.
+                        to_migrate.push(rec.id.clone());
+                    } else if rec.http.username.as_deref().is_some_and(|u| !u.is_empty()) {
+                        rec.http.password = crate::vault::load(&rec.id);
+                    }
+                    out.push(rec);
+                }
                 Err(e) => eprintln!("[db] skipping unreadable download {id}: {e}"),
             }
         }
+        for rec in out.iter().filter(|r| to_migrate.contains(&r.id)) {
+            // Saving the record puts the password in the vault and removes it from the database file.
+            if let Err(e) = self.upsert_download(rec).await {
+                eprintln!("[db] could not move the password of {} into the vault: {e}", rec.id);
+            }
+        }
         Ok(out)
+    }
+
+    pub async fn all_settings(&self) -> Result<Vec<(String, String)>, sqlx::Error> {
+        let rows = sqlx::query("SELECT key, value FROM settings ORDER BY key").fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(|r| (r.get::<String, _>("key"), r.get::<String, _>("value"))).collect())
     }
 
     pub async fn get_setting(&self, key: &str) -> Option<String> {
@@ -391,5 +444,102 @@ impl Db {
         .execute(&self.pool)
         .await?;
         Ok(())
+    }
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+    use flowget_engine::{DownloadState, HttpOptions};
+
+    fn record(id: &str, password: Option<&str>) -> DownloadRecord {
+        DownloadRecord {
+            id: id.into(),
+            url: "https://example.com/private.zip".into(),
+            final_url: None,
+            save_dir: "C:/x".into(),
+            file_name: "private.zip".into(),
+            file_name_locked: false,
+            file_path: String::new(),
+            total_size: None,
+            downloaded: 0,
+            resume_supported: None,
+            mime: None,
+            etag: None,
+            last_modified: None,
+            segments: Vec::new(),
+            connections: 4,
+            speed_limit: 0,
+            http: HttpOptions {
+                username: Some("alice".into()),
+                password: password.map(str::to_string),
+                ..Default::default()
+            },
+            checksum: None,
+            checksum_verified: None,
+            mirrors: Vec::new(),
+            mirror_report: Vec::new(),
+            state: DownloadState::Paused,
+            error: None,
+            created_at: 1,
+            completed_at: None,
+            category: None,
+            queue_id: None,
+            queue_order: None,
+            interrupted: false,
+        }
+    }
+
+    async fn raw_json(db: &Db, id: &str) -> String {
+        sqlx::query("SELECT record FROM downloads WHERE id = ?1")
+            .bind(id)
+            .fetch_one(&db.pool)
+            .await
+            .unwrap()
+            .get::<String, _>("record")
+    }
+
+    #[tokio::test]
+    async fn passwords_live_in_the_vault_not_in_the_database_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("t.db"), dir.path()).await.unwrap();
+        let id = "db-vault-test-1";
+
+        db.upsert_download(&record(id, Some("hunter2 pässword"))).await.unwrap();
+        let json = raw_json(&db, id).await;
+        assert!(!json.contains("hunter2"), "the password is in the database file: {json}");
+        assert!(json.contains("alice"), "the user name is still kept");
+
+        // Loading brings the password back from the vault.
+        let loaded = db.load_downloads().await.unwrap();
+        let rec = loaded.iter().find(|r| r.id == id).unwrap();
+        assert_eq!(rec.http.password.as_deref(), Some("hunter2 pässword"));
+
+        // Removing the download removes the secret.
+        db.delete_download(id).await.unwrap();
+        assert_eq!(crate::vault::load(id), None);
+    }
+
+    #[tokio::test]
+    async fn an_old_plain_text_password_is_moved_into_the_vault_on_load() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = Db::open(&dir.path().join("t.db"), dir.path()).await.unwrap();
+        let id = "db-vault-test-2";
+        crate::vault::delete(id);
+
+        // What an older version wrote: the password inside the JSON.
+        let legacy = serde_json::to_string(&record(id, Some("old-secret"))).unwrap();
+        sqlx::query("INSERT INTO downloads (id, state, created_at, updated_at, record) VALUES (?1, 'Paused', 1, 1, ?2)")
+            .bind(id)
+            .bind(legacy)
+            .execute(&db.pool)
+            .await
+            .unwrap();
+
+        let loaded = db.load_downloads().await.unwrap();
+        assert_eq!(loaded[0].http.password.as_deref(), Some("old-secret"), "the app still has the password");
+        assert!(!raw_json(&db, id).await.contains("old-secret"), "the file no longer holds it");
+        assert_eq!(crate::vault::load(id).as_deref(), Some("old-secret"));
+        crate::vault::delete(id);
     }
 }

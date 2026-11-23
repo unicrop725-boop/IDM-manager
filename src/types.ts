@@ -184,9 +184,7 @@ export interface Settings {
   openFolderOnComplete: boolean;
   batterySaver?: boolean;
   smartNaming?: boolean;
-  portableMode?: boolean;
-  mobileSharingEnabled?: boolean;
-  bandwidthMonitorEnabled?: boolean;
+  resumeOnStart?: boolean;
   clipboardMonitor?: boolean;
   /** Animated background: none | flow | liquid | neon | starfield | tunnel | bokeh */
   background?: string;
@@ -264,4 +262,113 @@ export interface DriveEntry {
   kind: "Fixed" | "Removable" | "Network" | string;
   totalBytes: number;
   freeBytes: number;
+}
+
+// ---- Tools, bandwidth, safety, import/export ----
+
+export interface ToolInfo {
+  name: string;
+  installed: boolean;
+  /** "FlowGet" (managed copy), "System" (found on PATH) or "Missing". */
+  source: string;
+  version: string | null;
+  path: string | null;
+}
+
+export interface ToolsProgress {
+  tool: string;
+  stage: "checking" | "downloading" | "verifying" | "extracting" | "done" | "error";
+  downloaded: number;
+  total: number;
+  message: string;
+}
+
+export type BandwidthRuleMode = "limit" | "pause" | "unlimited";
+
+export interface BandwidthRule {
+  /** 0 = Sunday ... 6 = Saturday; empty = every day. */
+  days: number[];
+  start: string;
+  end: string;
+  mode: BandwidthRuleMode;
+  /** Bytes per second (for "limit"). */
+  limitBps: number;
+}
+
+export interface BandwidthPolicy {
+  rules: BandwidthRule[];
+  slowMode: boolean;
+  slowModeBps: number;
+  pauseOnMetered: boolean;
+  hotspotNames: string[];
+}
+
+export interface BandwidthEffective {
+  limitBps: number;
+  paused: boolean;
+  reason: string | null;
+  slowMode: boolean;
+  meteredPause: boolean;
+}
+
+export interface NetworkInfo {
+  metered: boolean;
+  why: string | null;
+  ssid: string | null;
+}
+
+export interface BandwidthStatus {
+  effective: BandwidthEffective;
+  network: NetworkInfo;
+}
+
+export interface SafetyWarning {
+  code: string;
+  severity: "high" | "medium";
+  message: string;
+}
+
+export interface VtResult {
+  status: "clean" | "suspicious" | "flagged" | "unknown" | "limit" | "error";
+  malicious: number;
+  suspicious: number;
+  harmless: number;
+  undetected: number;
+  total: number;
+  link: string;
+  message: string | null;
+}
+
+export interface SafetyReport {
+  id: string;
+  fileName: string;
+  warnings: SafetyWarning[];
+  sha256: string | null;
+  vt: VtResult | null;
+  checkedAt: number;
+}
+
+export interface ImportItem {
+  url: string;
+  fileName?: string | null;
+  referer?: string | null;
+  cookies?: string | null;
+  userAgent?: string | null;
+  saveDir?: string | null;
+  size?: number | null;
+  note?: string | null;
+}
+
+export interface BrowserProfile {
+  browser: string;
+  profile: string;
+  path: string;
+}
+
+export interface RestoreSummary {
+  settings: number;
+  categories: number;
+  queues: number;
+  downloads: number;
+  skippedDownloads: number;
 }

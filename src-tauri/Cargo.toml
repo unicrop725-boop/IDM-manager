@@ -33,6 +33,10 @@ base64 = "0.22"
 rfd = { version = "0.15", default-features = false }
 arboard = { version = "3", default-features = false }
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Security_Credentials"] }
+windows = { version = "0.62", features = ["Networking_Connectivity", "Win32_System_WinRT"] }
+
 [dev-dependencies]
 tempfile = "3"
 

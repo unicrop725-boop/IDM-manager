@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FlowGet Download Manager Integration",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Seamless one-click download capture, cookie passing, and media detection for FlowGet.",
   "permissions": [
     "downloads",
@@ -10,7 +10,10 @@
     "activeTab",
     "scripting",
     "storage",
-    "nativeMessaging"
+    "nativeMessaging",
+    "webRequest",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -24,6 +27,7 @@
         "<all_urls>"
       ],
       "js": [
+        "shared.js",
         "content.js"
       ],
       "run_at": "document_idle"

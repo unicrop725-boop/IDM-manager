@@ -285,7 +285,7 @@ export const PropertiesModal: React.FC<PropertiesModalProps> = ({
                   </span>
                 ) : d.state === "failed" ? (
                   <span className="text-rose-400">
-                    The data transfer was interrupted: {d.error?.message || "Connection closed"}. Resume supported: {d.resumeSupported ? "Yes" : "No"}.
+                    {d.error?.message || "The download failed."} Resume supported: {d.resumeSupported ? "Yes" : "No"}.
                   </span>
                 ) : (
                   <span>

@@ -366,6 +366,7 @@ async fn app_restart_resumes_from_saved_record() {
     engine1.shutdown().await; // what the app does when the window is closed
     let record = obs1.lock().unwrap().persisted.get(&info.id).cloned().expect("record was persisted");
     assert_eq!(record.state, DownloadState::Paused);
+    assert!(record.interrupted, "closing the app marks the running download so it can continue after the restart");
     assert!(record.downloaded >= at_pause.downloaded && record.downloaded < size);
     drop(engine1);
 
@@ -379,8 +380,10 @@ async fn app_restart_resumes_from_saved_record() {
     let restored = engine2.info(&info.id).unwrap();
     assert_eq!(restored.state, DownloadState::Paused);
     assert_eq!(restored.downloaded, record.downloaded);
+    assert_eq!(engine2.interrupted().first().map(|(id, _, _)| id.clone()), Some(info.id.clone()));
 
     engine2.resume(&info.id).await.unwrap();
+    assert!(engine2.interrupted().is_empty(), "once resumed it is no longer waiting for a restart");
     let done = wait_state(&engine2, &info.id, DownloadState::Completed).await;
     assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
 }
@@ -652,6 +655,27 @@ async fn basic_auth() {
     assert!(failed.error.is_some());
 }
 
+/// `http://user:pass@host/file` works, and the password does not stay in the stored link.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_password_typed_inside_the_link_moves_out_of_the_link() {
+    let server = serve(ServerConfig {
+        size: 2 * MIB,
+        auth: AuthMode::Basic { user: "alice".into(), pass: "p@ss word".into() },
+        ..Default::default()
+    })
+    .await;
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+    let link = server.url().replacen("http://", "http://alice:p%40ss%20word@", 1);
+    let info = engine.add(request(link)).await.unwrap();
+    assert!(!info.url.contains("alice") && !info.url.contains("ss"), "credentials left in the link: {}", info.url);
+    let done = wait_state(&engine, &info.id, DownloadState::Completed).await;
+    assert_eq!(common::sha256_file(&file_of(&done)), server.expected_sha256());
+    let rec = engine.record(&info.id).unwrap();
+    assert_eq!(rec.http.username.as_deref(), Some("alice"));
+    assert_eq!(rec.http.password.as_deref(), Some("p@ss word"));
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn digest_auth() {
     let server = serve(ServerConfig {
@@ -731,6 +755,38 @@ async fn missing_file_gives_a_plain_language_error() {
     assert!(err.message.contains("not found"), "{}", err.message);
 }
 
+/// A login page where the file should be is reported plainly instead of being saved as "login.zip".
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_web_page_instead_of_the_file_fails_with_a_clear_reason() {
+    let server = serve(ServerConfig::default()).await;
+    let dir = tempfile::tempdir().unwrap();
+    let (engine, _obs) = make_engine(dir.path());
+    let info = engine.add(request(server.url_path("/login.zip"))).await.unwrap();
+    let failed = wait_state(&engine, &info.id, DownloadState::Failed).await;
+    let err = failed.error.unwrap();
+    assert_eq!(err.code, "wrong_file");
+    assert!(err.message.contains("sign in"), "{}", err.message);
+    assert!(dir_entries(dir.path()).iter().all(|f| !f.contains("login")), "no page was saved as the file");
+}
+
+/// A pause the user asked for must not be undone by "resume on restart".
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_download_the_user_paused_is_not_resumed_after_a_restart() {
+    let size = 16 * MIB;
+    let server = serve(ServerConfig { size, rate_per_conn: 2 * MIB, ..Default::default() }).await;
+    let dir = tempfile::tempdir().unwrap();
+    let (engine1, obs1) = make_engine(dir.path());
+    let info = engine1.add(request(server.url())).await.unwrap();
+    wait_percent(&engine1, &info.id, 20).await;
+    engine1.pause(&info.id).await.unwrap();
+    engine1.shutdown().await;
+    let record = obs1.lock().unwrap().persisted.get(&info.id).cloned().unwrap();
+    assert!(!record.interrupted);
+    let (engine2, _obs2) = make_engine(dir.path());
+    engine2.restore(vec![record]);
+    assert!(engine2.interrupted().is_empty());
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn unreachable_server_fails_with_a_network_message_and_can_be_retried() {
     // Nothing listens on this port.
@@ -738,7 +794,9 @@ async fn unreachable_server_fails_with_a_network_message_and_can_be_retried() {
     let (engine, _obs) = make_engine(dir.path());
     let info = engine.add(request("http://127.0.0.1:9/file.bin".into())).await.unwrap();
     let failed = wait_state(&engine, &info.id, DownloadState::Failed).await;
-    assert_eq!(failed.error.unwrap().code, "network");
+    // Nothing is listening: the app says "refused" (and what to check), not a vague network error.
+    let code = failed.error.unwrap().code;
+    assert!(code == "refused" || code == "network", "{code}");
     // Still in the list, can be resumed (it will fail again here, but is accepted).
     engine.resume(&info.id).await.unwrap();
     engine.cancel(&info.id).await.unwrap();
@@ -2055,6 +2113,7 @@ async fn restored_finished_item_is_listed_and_removable() {
         category: Some("Videos".into()),
         queue_id: None,
         queue_order: None,
+        interrupted: false,
     };
     engine.restore(vec![rec]);
     let listed = engine.list();

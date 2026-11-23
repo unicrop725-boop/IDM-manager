@@ -26,6 +26,8 @@ pub struct ProbeResult {
     pub accepts_ranges: bool,
     pub file_name: String,
     pub mime: Option<String>,
+    /// The server marked the answer as a file to save (`Content-Disposition: attachment` or with a name).
+    pub attachment: bool,
     pub etag: Option<String>,
     pub last_modified: Option<String>,
     /// Port of an HTTP/3 service on the **same host**, from `Alt-Svc: h3=":443"`.
@@ -109,6 +111,36 @@ fn mime_of(h: &HeaderMap) -> Option<String> {
     header_str(h, CONTENT_TYPE).map(|v| v.split(';').next().unwrap_or("").trim().to_ascii_lowercase()).filter(|m| !m.is_empty())
 }
 
+fn is_attachment(h: &HeaderMap) -> bool {
+    header_str(h, CONTENT_DISPOSITION).is_some_and(|cd| {
+        let cd = cd.to_ascii_lowercase();
+        cd.starts_with("attachment") || cd.contains("filename")
+    })
+}
+
+/// Did the server answer with a web page where a file was expected (a login page, an error page, an
+/// expired-link page)? `requested` is the address the user gave, `chosen_name` the file name they locked in, if any.
+///
+/// A page is fine when the server says it is a file to save, when the user's name ends in .html, or when the
+/// address is an ordinary extension-less page that was not redirected anywhere.
+pub fn looks_like_web_page(p: &ProbeResult, requested: &Url, chosen_name: Option<&str>) -> bool {
+    let is_html = matches!(p.mime.as_deref(), Some("text/html") | Some("application/xhtml+xml"));
+    if !is_html || p.attachment {
+        return false;
+    }
+    let name = chosen_name.unwrap_or(&p.file_name);
+    let ext = name.rsplit_once('.').map(|(_, e)| e.to_ascii_lowercase()).unwrap_or_default();
+    if matches!(ext.as_str(), "html" | "htm" | "xhtml" | "shtml" | "mhtml") {
+        return false;
+    }
+    let script_or_none = ext.is_empty() || matches!(ext.as_str(), "php" | "asp" | "aspx" | "jsp" | "cgi" | "do" | "action");
+    if script_or_none {
+        // Ambiguous (could be a real page). Only a redirect, typically to a sign-in page, gives it away.
+        return p.final_url.path() != requested.path() || p.final_url.host_str() != requested.host_str();
+    }
+    true
+}
+
 fn name_of(h: &HeaderMap, final_url: &Url) -> String {
     header_str(h, CONTENT_DISPOSITION)
         .and_then(|cd| filename::from_content_disposition(&cd))
@@ -159,6 +191,7 @@ pub async fn probe(session: &HttpSession, url: &Url) -> Result<ProbeResult, Engi
                 accepts_ranges,
                 file_name: result_name,
                 mime,
+                attachment: is_attachment(h),
                 etag,
                 last_modified,
                 h3_port,
@@ -191,6 +224,7 @@ pub async fn probe(session: &HttpSession, url: &Url) -> Result<ProbeResult, Engi
     Ok(ProbeResult {
         file_name: name_of(&h, &final_url),
         mime: mime_of(&h),
+        attachment: is_attachment(&h),
         etag: header_str(&h, ETAG),
         last_modified: header_str(&h, LAST_MODIFIED),
         h3_port: alt_svc_h3(&h),
@@ -237,6 +271,37 @@ mod tests {
         assert_eq!(parse_alt_svc_h3(r#"h3=":notaport""#), None);
         assert_eq!(parse_alt_svc_h3(""), None);
         assert_eq!(parse_alt_svc_h3("garbage"), None);
+    }
+
+    fn page(mime: &str, name: &str, final_url: &str, attachment: bool) -> ProbeResult {
+        ProbeResult {
+            final_url: Url::parse(final_url).unwrap(),
+            total_size: Some(2048),
+            accepts_ranges: false,
+            file_name: name.into(),
+            mime: Some(mime.into()),
+            attachment,
+            etag: None,
+            last_modified: None,
+            h3_port: None,
+        }
+    }
+
+    #[test]
+    fn a_web_page_instead_of_a_file_is_detected() {
+        let u = |s: &str| Url::parse(s).unwrap();
+        // A zip that answers with a login page: wrong.
+        assert!(looks_like_web_page(&page("text/html", "setup.zip", "https://a.com/setup.zip", false), &u("https://a.com/setup.zip"), None));
+        // Redirected to a sign-in page from an extension-less download link: wrong.
+        assert!(looks_like_web_page(&page("text/html", "login", "https://a.com/login?next=/get/5", false), &u("https://a.com/get/5"), None));
+        // The server says it is a file: fine, even though it is typed html.
+        assert!(!looks_like_web_page(&page("text/html", "report.html", "https://a.com/d?id=1", true), &u("https://a.com/d?id=1"), None));
+        // An extension-less page with no redirect is left alone.
+        assert!(!looks_like_web_page(&page("text/html", "about", "https://a.com/about", false), &u("https://a.com/about"), None));
+        // The user asked for an .html name.
+        assert!(!looks_like_web_page(&page("text/html", "setup.zip", "https://a.com/setup.zip", false), &u("https://a.com/setup.zip"), Some("page.html")));
+        // A real file type is never flagged.
+        assert!(!looks_like_web_page(&page("application/zip", "setup.zip", "https://a.com/setup.zip", false), &u("https://a.com/setup.zip"), None));
     }
 
     #[test]

@@ -1,19 +1,25 @@
 //! FlowGet desktop app: wires the download engine to the database, queue manager, and UI.
 
+pub mod bandwidth;
 pub mod batch;
 pub mod categories;
 pub mod clipboard_watch;
 pub mod commands;
 pub mod db;
+pub mod import_export;
 pub mod ipc_server;
 pub mod licensing;
+pub mod metered;
 pub mod media_stream;
 pub mod payload_check;
 pub mod post_download;
 pub mod protocols;
 pub mod queue_manager;
+pub mod safety;
 pub mod site_grabber;
+pub mod tools;
 pub mod torrent;
+pub mod vault;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -29,6 +35,7 @@ pub struct AppState {
     pub db: db::Db,
     pub queue_mgr: Arc<QueueManager>,
     pub torrent_mgr: Arc<torrent::TorrentManager>,
+    pub bandwidth: Arc<bandwidth::BandwidthManager>,
     pub app_handle: AppHandle,
     shutting_down: AtomicBool,
 }
@@ -47,6 +54,14 @@ async fn event_pump(app: AppHandle, db: db::Db, mut rx: UnboundedReceiver<Engine
                 if info.state == DownloadState::Completed && !info.file_path.is_empty() {
                     let db_clone = db.clone();
                     let file_path = info.file_path.clone();
+                    // Warn about risky names and (if switched on) look the file up on VirusTotal.
+                    tokio::spawn(safety::on_completed(
+                        app.clone(),
+                        db.clone(),
+                        info.id.clone(),
+                        info.file_name.clone(),
+                        info.file_path.clone(),
+                    ));
                     tokio::spawn(async move {
                         let auto_extract = db_clone.get_setting("auto_extract").await.as_deref() == Some("1");
                         let virus_scan = db_clone.get_setting("virus_scan").await.as_deref() == Some("1");
@@ -87,7 +102,61 @@ async fn event_pump(app: AppHandle, db: db::Db, mut rx: UnboundedReceiver<Engine
     }
 }
 
+/// True when another FlowGet already answers on the extension port (so a second copy must not start).
+fn another_instance_running() -> bool {
+    use std::io::{Read, Write};
+    use std::net::{SocketAddr, TcpStream};
+    use std::time::Duration;
+
+    let addr: SocketAddr = "127.0.0.1:21588".parse().expect("valid address");
+    let Ok(mut s) = TcpStream::connect_timeout(&addr, Duration::from_millis(400)) else { return false };
+    let _ = s.set_read_timeout(Some(Duration::from_millis(1500)));
+    let _ = s.set_write_timeout(Some(Duration::from_millis(1500)));
+    // /api/show also brings the running window to the front, which is what the user wanted by starting FlowGet again.
+    if s.write_all(b"GET /api/show HTTP/1.1\r\nHost: 127.0.0.1:21588\r\nConnection: close\r\n\r\n").is_err() {
+        return false;
+    }
+    let mut buf = String::new();
+    let _ = s.take(4096).read_to_string(&mut buf);
+    buf.starts_with("HTTP/1.1 200")
+}
+
+/// Make `flowget://...` links open this program, so the browser extension can start FlowGet when it is closed.
+/// Per-user (HKCU), no administrator rights; rewritten on every start so it always points at the current exe.
+#[cfg(windows)]
+fn register_url_protocol() {
+    use std::os::windows::process::CommandExt;
+    let Ok(exe) = std::env::current_exe() else { return };
+    let command = format!("\"{}\" \"%1\"", exe.display());
+    let reg = |args: &[&str]| {
+        let _ = std::process::Command::new("reg.exe").args(args).creation_flags(0x0800_0000).output();
+    };
+    reg(&["add", r"HKCU\Software\Classes\flowget", "/ve", "/d", "URL:FlowGet", "/f"]);
+    reg(&["add", r"HKCU\Software\Classes\flowget", "/v", "URL Protocol", "/d", "", "/f"]);
+    reg(&["add", r"HKCU\Software\Classes\flowget\shell\open\command", "/ve", "/d", &command, "/f"]);
+}
+
+#[cfg(not(windows))]
+fn register_url_protocol() {}
+
+/// Plain http(s) file downloads run in the engine and can simply be resumed. Everything else (magnet links,
+/// torrent files, video pages) is handled by its own manager and is left alone.
+fn auto_resumable(url: &str) -> bool {
+    let lower = url.trim().to_ascii_lowercase();
+    (lower.starts_with("http://") || lower.starts_with("https://"))
+        && !media_stream::is_video_page_url(url)
+        && !media_stream::is_manifest_url(url)
+        && !lower.split(['?', '#']).next().unwrap_or("").ends_with(".torrent")
+}
+
 pub fn run() {
+    if another_instance_running() {
+        return;
+    }
+    // Managed yt-dlp / ffmpeg first on PATH, before any other thread starts programs.
+    tools::prepend_to_path();
+    std::thread::spawn(register_url_protocol);
+
     let app = tauri::Builder::default()
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
@@ -105,13 +174,14 @@ pub fn run() {
             let engine = Engine::new(EngineConfig::new(default_dir.clone()), tx);
 
             // Saved settings
-            let (limit, conns, turbo, records, domains) = tauri::async_runtime::block_on(async {
+            let (limit, conns, turbo, records, domains, resume_on_start) = tauri::async_runtime::block_on(async {
                 let limit = db.get_setting("global_speed_limit").await;
                 let conns = db.get_setting("default_connections").await;
                 let turbo = db.get_setting("turbo_mode").await;
                 let records = db.load_downloads().await;
                 let domains = db.load_domains().await;
-                (limit, conns, turbo, records, domains)
+                let resume = db.get_setting("resume_on_start").await.as_deref() != Some("0"); // on by default
+                (limit, conns, turbo, records, domains, resume)
             });
 
             engine.set_domain_hints(domains.unwrap_or_else(|e| {
@@ -131,6 +201,32 @@ pub fn run() {
                 Vec::new()
             }));
 
+            // Downloads that were running when the app last closed carry on by themselves (the user's own pauses stay).
+            if resume_on_start {
+                let eng = engine.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+                    for (id, queue, url) in eng.interrupted() {
+                        if !auto_resumable(&url) {
+                            continue; // torrents, videos and other kinds are started by their own managers
+                        }
+                        // A download in a scheduled queue goes back to that queue; the rest start right away.
+                        let queued_elsewhere = queue.as_deref().is_some_and(|q| q != "main");
+                        let _ = if queued_elsewhere { eng.mark_queued(&id).await } else { eng.resume(&id).await };
+                        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+                    }
+                });
+            }
+
+            tools::init(app.handle().clone());
+            {
+                let db = db.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(45)).await;
+                    tools::auto_update(&db).await;
+                });
+            }
+
             tauri::async_runtime::spawn(event_pump(app.handle().clone(), db.clone(), rx));
             clipboard_watch::start(app.handle().clone(), db.clone());
 
@@ -148,11 +244,16 @@ pub fn run() {
 
             let torrent_mgr = Arc::new(torrent::TorrentManager::new(default_dir.clone()));
 
+            // Schedules, slow mode and metered-connection pausing, applied continuously.
+            let bandwidth = bandwidth::BandwidthManager::new(engine.clone(), db.clone(), Some(app.handle().clone()));
+            tauri::async_runtime::spawn(bandwidth.clone().run());
+
             app.manage(AppState {
                 engine,
                 db,
                 queue_mgr,
                 torrent_mgr,
+                bandwidth,
                 app_handle: app.handle().clone(),
                 shutting_down: AtomicBool::new(false),
             });
@@ -218,6 +319,25 @@ pub fn run() {
             commands::resolve_video_media,
             commands::download_stream_media,
             commands::update_ytdlp,
+            commands::get_tools_status,
+            commands::install_tool,
+            commands::get_bandwidth_policy,
+            commands::set_bandwidth_policy,
+            commands::set_slow_mode,
+            commands::get_bandwidth_state,
+            commands::set_metered_override,
+            commands::get_safety_reports,
+            commands::assess_file_name,
+            commands::get_virustotal_status,
+            commands::set_virustotal_key,
+            commands::clear_virustotal_key,
+            commands::rescan_virustotal,
+            commands::pick_file,
+            commands::open_url,
+            commands::list_browser_profiles,
+            commands::import_preview,
+            commands::export_backup,
+            commands::restore_backup,
             commands::get_license_status,
             commands::activate_license_key,
             commands::deactivate_license_key,

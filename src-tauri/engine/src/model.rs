@@ -149,6 +149,10 @@ pub struct DownloadRecord {
     pub queue_id: Option<String>,
     #[serde(default)]
     pub queue_order: Option<i32>,
+    /// The download was running when the app closed (or crashed), as opposed to paused by the user.
+    /// "Resume paused downloads on restart" only picks these up.
+    #[serde(default)]
+    pub interrupted: bool,
 }
 
 impl DownloadRecord {

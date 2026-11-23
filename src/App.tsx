@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { api, errorText } from "./api";
 import { TitleBar } from "./components/TitleBar";
 import { BackgroundLayer } from "./components/BackgroundLayer";
 import { MenuBar } from "./components/MenuBar";
 import { Sidebar, type SidebarFilter } from "./components/Sidebar";
+import { sidebarCategory } from "./format";
 import { Toolbar } from "./components/Toolbar";
 import { DownloadTable, type SortField, type SortOrder } from "./components/DownloadTable";
 import { FooterBar } from "./components/FooterBar";
@@ -20,12 +21,15 @@ import { isImageDrop, liquidImageFromDrop, setLiquidImage } from "./utils/liquid
 import { DropTargetWidget } from "./components/DropTargetWidget";
 import AddDownloadModal from "./components/AddDownloadModal";
 import BatchDownloadModal from "./components/BatchDownloadModal";
+import ImportExportModal from "./components/ImportExportModal";
+import TrustedSites from "./components/TrustedSites";
+import { TRUSTED_SITES } from "./data/trustedSites";
+import { SafetyConfirmModal, needsConfirmation } from "./components/SafetyConfirmModal";
 import SiteGrabberModal from "./components/SiteGrabberModal";
 import QueueModal from "./components/QueueModal";
 import CategoryModal from "./components/CategoryModal";
 import SettingsModal from "./components/SettingsModal";
 import BandwidthModal from "./components/BandwidthModal";
-import MobileSharingModal from "./components/MobileSharingModal";
 import StatisticsModal from "./components/StatisticsModal";
 import ShareModal from "./components/ShareModal";
 import LicenseModal from "./components/LicenseModal";
@@ -35,11 +39,14 @@ import { recordCrashReport } from "./utils/crashReporter";
 import { setLanguage as updateI18nLanguage } from "./i18n";
 import type {
   AdapterInfo,
+  BandwidthEffective,
   Category,
   DownloadInfo,
   ProgressEvent,
   QueueInfo,
+  SafetyReport,
   Settings,
+  ToolsProgress,
   TrialAndLicenseStatus,
 } from "./types";
 
@@ -57,6 +64,8 @@ export default function App() {
   // Filtering & Selection
   const [filter, setFilter] = useState<SidebarFilter>({ type: "all" });
   const [searchQuery, setSearchQuery] = useState("");
+  // The search box stays instant while the (possibly long) list is filtered a moment later.
+  const deferredQuery = useDeferredValue(searchQuery);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Sorting
@@ -79,8 +88,12 @@ export default function App() {
   const [isSiteGrabberOpen, setIsSiteGrabberOpen] = useState(false);
   const [isDiskCleanerOpen, setIsDiskCleanerOpen] = useState(false);
   const [isSpeedTestOpen, setIsSpeedTestOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  // Safety check results per download, what the bandwidth rules decide now, and a file waiting for "open anyway".
+  const [safety, setSafety] = useState<Record<string, SafetyReport>>({});
+  const [bandwidth, setBandwidth] = useState<BandwidthEffective | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<DownloadInfo | null>(null);
   const [isBandwidthOpen, setIsBandwidthOpen] = useState(false);
-  const [isMobileSharingOpen, setIsMobileSharingOpen] = useState(false);
   const [isStatisticsOpen, setIsStatisticsOpen] = useState(false);
   const [shareDownload, setShareDownload] = useState<DownloadInfo | null>(null);
   const [licenseStatus, setLicenseStatus] = useState<TrialAndLicenseStatus | null>(null);
@@ -176,8 +189,6 @@ export default function App() {
       setIsSettingsOpen(true);
     } else if (view === "bandwidth") {
       setIsBandwidthOpen(true);
-    } else if (view === "mobile_sharing") {
-      setIsMobileSharingOpen(true);
     } else if (view === "statistics") {
       setIsStatisticsOpen(true);
     } else if (view === "share") {
@@ -203,6 +214,32 @@ export default function App() {
     return () => {
       window.removeEventListener("error", handleErr);
       window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, []);
+
+  // Safety reports, bandwidth state and tool installs
+  useEffect(() => {
+    api.getSafetyReports().then((list) => setSafety(Object.fromEntries(list.map((r) => [r.id, r])))).catch(() => {});
+    api.getBandwidthState().then((s) => setBandwidth(s.effective)).catch(() => {});
+    const un = [
+      listen<SafetyReport>("safety-updated", ({ payload }) => setSafety((cur) => ({ ...cur, [payload.id]: payload }))),
+      listen<BandwidthEffective>("bandwidth-state", ({ payload }) => setBandwidth(payload)),
+      // yt-dlp / ffmpeg are installed on first use: say so, with progress, instead of looking stuck.
+      listen<ToolsProgress>("tools-progress", ({ payload: p }) => {
+        if (p.stage === "downloading") {
+          const pct = p.total > 0 ? ` ${Math.round((p.downloaded / p.total) * 100)}%` : "";
+          setNotice(`Installing ${p.tool}…${pct}`);
+        } else if (p.stage === "done") {
+          setNotice(`${p.tool} is ready.`);
+        } else if (p.stage === "error") {
+          setNotice(`Could not install ${p.tool}: ${p.message}`);
+        } else if (p.message) {
+          setNotice(p.message);
+        }
+      }),
+    ];
+    return () => {
+      un.forEach((p) => p.then((fn) => fn()));
     };
   }, []);
 
@@ -265,6 +302,28 @@ export default function App() {
         setQueues((cur) => cur.map((item) => (item.id === q.id ? q : item)));
       }),
       listen<any>("browser-download-captured", ({ payload }) => {
+        // quality already chosen in the browser's video menu: start straight away
+        if (
+          payload.url &&
+          (getVideoSite(payload.url) || /\.(m3u8|mpd)(\?|#|$)/i.test(payload.url)) &&
+          (payload.mediaHeight || payload.mediaFps || payload.mediaAudioOnly || payload.convertTo)
+        ) {
+          api
+            .addDownload({
+              url: payload.url,
+              fileName: payload.fileName || undefined,
+              referer: payload.referer || undefined,
+              userAgent: payload.userAgent || undefined,
+              cookies: payload.cookies || undefined,
+              mediaHeight: payload.mediaHeight || undefined,
+              mediaFps: payload.mediaFps || undefined,
+              mediaAudioOnly: payload.mediaAudioOnly || undefined,
+              convertTo: payload.convertTo || undefined,
+            })
+            .then(() => refreshAll())
+            .catch((e) => setNotice(typeof e === "string" ? e : e?.message || "Could not start the video download."));
+          return;
+        }
         // a video page sent from the browser menu: open the quality picker instead of the file dialog
         if (payload.url && getVideoSite(payload.url)) {
           window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
@@ -471,7 +530,7 @@ export default function App() {
 
     // Sidebar filter
     if (filter.type === "category") {
-      list = list.filter((d) => (d.category || "").toLowerCase() === filter.name.toLowerCase());
+      list = list.filter((d) => sidebarCategory(d) === filter.name);
     } else if (filter.type === "status") {
       if (filter.status === "unfinished") {
         list = list.filter((d) => d.state !== "completed" && d.state !== "failed");
@@ -481,18 +540,30 @@ export default function App() {
     }
 
     // Search query
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (d) =>
-          d.fileName.toLowerCase().includes(q) ||
-          d.url.toLowerCase().includes(q) ||
-          (d.category && d.category.toLowerCase().includes(q))
-      );
+    // Every word must match somewhere in the name, address or category (so "holiday mp4" finds holiday.mp4).
+    const words = deferredQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length) {
+      list = list.filter((d) => {
+        const hay = `${d.fileName} ${d.url} ${d.category || ""} ${sidebarCategory(d)}`.toLowerCase();
+        return words.every((w) => hay.includes(w));
+      });
     }
 
     return list;
-  }, [downloads, filter, searchQuery]);
+  }, [downloads, filter, deferredQuery]);
+
+  // How many downloads each sidebar entry holds (one pass, only when the list changes).
+  const sidebarCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: 0, unfinished: 0, finished: 0, trusted: TRUSTED_SITES.length };
+    for (const d of Object.values(downloads)) {
+      counts.all += 1;
+      if (d.state === "completed" || d.state === "failed") counts.finished += 1;
+      else counts.unfinished += 1;
+      const cat = sidebarCategory(d);
+      if (cat) counts[cat] = (counts[cat] || 0) + 1;
+    }
+    return counts;
+  }, [downloads]);
 
   // Sorting downloads
   const filteredAndSortedDownloads = useMemo(() => {
@@ -569,11 +640,18 @@ export default function App() {
   };
 
   // Row double-click
+  /** Open a finished file, asking first when it looks risky (programs, disguised names, VirusTotal hits). */
+  const openChecked = (d: DownloadInfo, onFail?: () => void) => {
+    if (needsConfirmation(safety[d.id])) {
+      setPendingOpen(d);
+      return;
+    }
+    api.openFile(d.filePath).catch(() => onFail?.());
+  };
+
   const handleRowDoubleClick = (d: DownloadInfo) => {
     if (d.state === "completed" && d.filePath) {
-      api.openFile(d.filePath).catch(() => {
-        setActiveProgressModalId(d.id);
-      });
+      openChecked(d, () => setActiveProgressModalId(d.id));
     } else {
       setActiveProgressModalId(d.id);
     }
@@ -698,7 +776,7 @@ export default function App() {
 
   const handleOpenFile = (d: DownloadInfo) => {
     if (d.filePath) {
-      api.openFile(d.filePath).catch(() => {});
+      openChecked(d);
     }
   };
 
@@ -800,6 +878,7 @@ export default function App() {
         }}
         onOpenBatchModal={() => setIsBatchModalOpen(true)}
         onOpenSiteGrabber={() => setIsSiteGrabberOpen(true)}
+        onOpenImportExport={() => setIsImportOpen(true)}
         onResumeAll={handleResumeAll}
         onPauseAll={handlePauseAll}
         onDeleteSelected={handleDeleteSelected}
@@ -807,7 +886,6 @@ export default function App() {
         onOpenDiskCleaner={() => setIsDiskCleanerOpen(true)}
         onOpenSpeedTest={() => setIsSpeedTestOpen(true)}
         onOpenBandwidth={() => setIsBandwidthOpen(true)}
-        onOpenMobileSharing={() => setIsMobileSharingOpen(true)}
         onOpenStatistics={() => setIsStatisticsOpen(true)}
         onOpenLicense={() => setIsLicenseModalOpen(true)}
         onOpenUpdate={() => setIsUpdateModalOpen(true)}
@@ -821,7 +899,7 @@ export default function App() {
         <Sidebar
           currentFilter={filter}
           onSelectFilter={setFilter}
-          downloads={Object.values(downloads)}
+          counts={sidebarCounts}
           saveDir={settings?.defaultDrive || settings?.downloadDir || ""}
           onOpenDiskCleaner={() => setIsDiskCleanerOpen(true)}
         />
@@ -852,7 +930,10 @@ export default function App() {
             onShare={handleShareSelected}
           />
 
-          {/* 5. Virtualized Download Table */}
+          {/* 5. Virtualized Download Table, or the Trusted Sites page */}
+          {filter.type === "trusted" ? (
+            <TrustedSites onNotice={setNotice} />
+          ) : (
           <DownloadTable
             downloads={filteredAndSortedDownloads}
             selectedIds={selectedIds}
@@ -866,7 +947,9 @@ export default function App() {
             onToggleSelectAll={handleToggleSelectAll}
             onPause={(id) => api.pause(id).catch(() => {})}
             onResume={(id) => api.resume(id).catch(() => {})}
+            safety={safety}
           />
+          )}
         </main>
       </div>
 
@@ -877,6 +960,9 @@ export default function App() {
         totalDownloadBps={totalDownloadBps}
         totalUploadBps={totalUploadBps}
         onOpenSpeedTest={() => setIsSpeedTestOpen(true)}
+        bandwidth={bandwidth}
+        onToggleSlowMode={() => api.setSlowMode(!bandwidth?.slowMode).catch((e) => setNotice(typeof e === "string" ? e : e?.message || "Could not change slow mode."))}
+        onDownloadAnyway={() => api.setMeteredOverride(true).catch(() => {})}
       />
 
       {/* 6. Right-Click Context Menu */}
@@ -934,6 +1020,26 @@ export default function App() {
       )}
 
       {/* Batch Download Modal */}
+      {isImportOpen && <ImportExportModal onClose={() => setIsImportOpen(false)} onChanged={refreshAll} />}
+
+      {pendingOpen && safety[pendingOpen.id] && (
+        <SafetyConfirmModal
+          fileName={pendingOpen.fileName}
+          report={safety[pendingOpen.id]}
+          onOpenAnyway={() => {
+            const d = pendingOpen;
+            setPendingOpen(null);
+            api.openFile(d.filePath).catch(() => {});
+          }}
+          onShowFolder={() => {
+            const d = pendingOpen;
+            setPendingOpen(null);
+            api.openFolder(d.filePath || d.saveDir).catch(() => {});
+          }}
+          onClose={() => setPendingOpen(null)}
+        />
+      )}
+
       {isBatchModalOpen && (
         <BatchDownloadModal
           onClose={() => setIsBatchModalOpen(false)}
@@ -1010,17 +1116,6 @@ export default function App() {
         <BandwidthModal
           downloads={Object.values(downloads)}
           onClose={() => setIsBandwidthOpen(false)}
-        />
-      )}
-
-      {/* Mobile Link Sharing Modal */}
-      {isMobileSharingOpen && (
-        <MobileSharingModal
-          onClose={() => setIsMobileSharingOpen(false)}
-          onAddUrl={(url: string) => {
-            setQuickAddUrl(url);
-            setIsAddModalOpen(true);
-          }}
         />
       )}
 

@@ -86,6 +86,12 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
 
     // 1. Direct HLS or DASH stream inspection
     if lower.contains(".m3u8") || lower.contains(".mpd") {
+        // A master playlist lists every quality (IDM shows these as 416p / 640p / 960p ...): let yt-dlp read them.
+        if let Ok(r) = resolve_via_ytdlp(trimmed).await {
+            if r.is_drm || !r.video_options.is_empty() {
+                return Ok(r);
+            }
+        }
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(10))
             .build()
@@ -140,7 +146,12 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
         });
     }
 
-    // 2. Use yt-dlp sidecar
+    resolve_via_ytdlp(trimmed).await
+}
+
+/// Ask yt-dlp for the qualities of a video page or stream manifest.
+async fn resolve_via_ytdlp(trimmed: &str) -> Result<MediaResolveResult, String> {
+    crate::tools::ensure("yt-dlp").await?;
     let output = Command::new("yt-dlp")
         .args(["--dump-single-json", "--no-warnings", "--no-playlist", "--", trimmed])
         .output();
@@ -533,6 +544,13 @@ fn kill_process_tree(pid: u32) {
     let _ = cmd.output();
 }
 
+/// A link to an HLS (.m3u8) or DASH (.mpd) playlist, judged by its path (not the query string).
+pub fn is_manifest_url(url: &str) -> bool {
+    let Ok(u) = Url::parse(url.trim()) else { return false };
+    let path = u.path().to_ascii_lowercase();
+    path.ends_with(".m3u8") || path.ends_with(".mpd")
+}
+
 /// Video-page sites that yt-dlp can resolve (the URL is a web page, not a file).
 pub fn is_video_page_url(url: &str) -> bool {
     let Ok(u) = Url::parse(url.trim()) else { return false };
@@ -541,6 +559,7 @@ pub fn is_video_page_url(url: &str) -> bool {
     const HOSTS: &[&str] = &[
         "youtube.com", "youtu.be", "vimeo.com", "dailymotion.com", "twitch.tv", "tiktok.com",
         "instagram.com", "facebook.com", "fb.watch", "twitter.com", "x.com", "reddit.com",
+        "pinterest.com", "pin.it",
     ];
     HOSTS.iter().any(|h| host == *h || host.ends_with(&format!(".{h}")))
 }
@@ -727,6 +746,23 @@ pub async fn auto_update_ytdlp() -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn playlist_links_are_recognised_by_path_not_query() {
+        assert!(is_manifest_url("https://v1.pinimg.com/videos/iht/hls/abc.m3u8"));
+        assert!(is_manifest_url("https://cdn.example.com/a/master.M3U8?token=1&x=2"));
+        assert!(is_manifest_url("https://cdn.example.com/stream/manifest.mpd"));
+        assert!(!is_manifest_url("https://example.com/watch?file=a.m3u8"));
+        assert!(!is_manifest_url("https://example.com/video.mp4"));
+        assert!(!is_manifest_url("not a url"));
+    }
+
+    #[test]
+    fn pinterest_pins_are_video_pages() {
+        assert!(is_video_page_url("https://in.pinterest.com/pin/123/"));
+        assert!(is_video_page_url("https://www.pinterest.com/pin/AYipSb9/"));
+        assert!(is_video_page_url("https://pin.it/abc"));
+    }
 
     #[tokio::test]
     #[ignore]

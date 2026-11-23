@@ -4,11 +4,19 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   AddRequest,
   AdapterInfo,
+  BandwidthPolicy,
+  BandwidthStatus,
+  BrowserProfile,
   Category,
   DownloadInfo,
   DuplicateCheckResult,
+  ImportItem,
   QueueInfo,
+  RestoreSummary,
+  SafetyReport,
+  SafetyWarning,
   Settings,
+  ToolInfo,
   TrialAndLicenseStatus,
 } from "./types";
 
@@ -64,9 +72,7 @@ const mockSettings: Settings = {
   openFolderOnComplete: false,
   batterySaver: true,
   smartNaming: true,
-  portableMode: false,
-  mobileSharingEnabled: true,
-  bandwidthMonitorEnabled: true,
+  resumeOnStart: true,
   clipboardMonitor: true,
   background: "flow",
   defaultDrive: "",
@@ -248,6 +254,8 @@ export const api = {
     isTauri
       ? invoke<string>("scan_file_defender", { path })
       : Promise.resolve("Windows Defender scan clean. No threats found."),
+  openUrl: (url: string) =>
+    isTauri ? invoke<void>("open_url", { url }) : Promise.resolve(void window.open(url, "_blank", "noopener")),
   openFolder: (path: string) =>
     isTauri ? invoke<void>("open_folder", { path }) : Promise.resolve(),
   openFile: (path: string) =>
@@ -324,6 +332,61 @@ export const api = {
       : Promise.resolve(""),
   updateYtdlp: () =>
     isTauri ? invoke<string>("update_ytdlp") : Promise.resolve("yt-dlp is up to date."),
+
+  // yt-dlp / ffmpeg installed and updated by FlowGet itself
+  getToolsStatus: () =>
+    isTauri
+      ? invoke<ToolInfo[]>("get_tools_status")
+      : Promise.resolve<ToolInfo[]>([
+          { name: "yt-dlp", installed: true, source: "FlowGet", version: "2026.01.01", path: null },
+          { name: "ffmpeg", installed: false, source: "Missing", version: null, path: null },
+        ]),
+  installTool: (tool: string, force = false) =>
+    isTauri ? invoke<string>("install_tool", { tool, force }) : Promise.resolve("Installed."),
+
+  // Bandwidth control
+  getBandwidthPolicy: () =>
+    isTauri
+      ? invoke<BandwidthPolicy>("get_bandwidth_policy")
+      : Promise.resolve<BandwidthPolicy>({ rules: [], slowMode: false, slowModeBps: 1048576, pauseOnMetered: false, hotspotNames: [] }),
+  setBandwidthPolicy: (policy: BandwidthPolicy) =>
+    isTauri ? invoke<void>("set_bandwidth_policy", { policy }) : Promise.resolve(),
+  setSlowMode: (on: boolean) => (isTauri ? invoke<void>("set_slow_mode", { on }) : Promise.resolve()),
+  getBandwidthState: () =>
+    isTauri
+      ? invoke<BandwidthStatus>("get_bandwidth_state")
+      : Promise.resolve<BandwidthStatus>({
+          effective: { limitBps: 0, paused: false, reason: null, slowMode: false, meteredPause: false },
+          network: { metered: false, why: null, ssid: null },
+        }),
+  setMeteredOverride: (on: boolean) => (isTauri ? invoke<void>("set_metered_override", { on }) : Promise.resolve()),
+
+  // Safety checks
+  getSafetyReports: () => (isTauri ? invoke<SafetyReport[]>("get_safety_reports") : Promise.resolve<SafetyReport[]>([])),
+  assessFileName: (fileName: string) =>
+    isTauri ? invoke<SafetyWarning[]>("assess_file_name", { fileName }) : Promise.resolve<SafetyWarning[]>([]),
+  getVirusTotalStatus: () =>
+    isTauri
+      ? invoke<{ hasKey: boolean; enabled: boolean }>("get_virustotal_status")
+      : Promise.resolve({ hasKey: false, enabled: false }),
+  setVirusTotalKey: (key: string) => (isTauri ? invoke<void>("set_virustotal_key", { key }) : Promise.resolve()),
+  clearVirusTotalKey: () => (isTauri ? invoke<void>("clear_virustotal_key") : Promise.resolve()),
+  rescanVirusTotal: (id: string) => (isTauri ? invoke<void>("rescan_virustotal", { id }) : Promise.resolve()),
+
+  // Import / backup
+  pickFile: (title: string, extensions: string[], save = false, defaultName?: string) =>
+    isTauri
+      ? invoke<string | null>("pick_file", { title, extensions, save, defaultName })
+      : Promise.resolve<string | null>(null),
+  listBrowserProfiles: () =>
+    isTauri ? invoke<BrowserProfile[]>("list_browser_profiles") : Promise.resolve<BrowserProfile[]>([]),
+  importPreview: (kind: string, path: string) =>
+    isTauri ? invoke<ImportItem[]>("import_preview", { kind, path }) : Promise.resolve<ImportItem[]>([]),
+  exportBackup: (path: string) => (isTauri ? invoke<number>("export_backup", { path }) : Promise.resolve(0)),
+  restoreBackup: (path: string) =>
+    isTauri
+      ? invoke<RestoreSummary>("restore_backup", { path })
+      : Promise.resolve<RestoreSummary>({ settings: 0, categories: 0, queues: 0, downloads: 0, skippedDownloads: 0 }),
 
   // Phase 8: Licensing & 30-Day Trial
   getLicenseStatus: (): Promise<TrialAndLicenseStatus> =>

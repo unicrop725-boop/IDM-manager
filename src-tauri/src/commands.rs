@@ -38,9 +38,8 @@ pub struct Settings {
     pub open_folder_on_complete: bool,
     pub battery_saver: bool,
     pub smart_naming: bool,
-    pub portable_mode: bool,
-    pub mobile_sharing_enabled: bool,
-    pub bandwidth_monitor_enabled: bool,
+    /// Continue downloads that were running when the app last closed.
+    pub resume_on_start: bool,
     pub clipboard_monitor: bool,
     pub background: String,
     /// Drive shown on the Disk Space card and preselected in Disk Cleaner, e.g. "D:\". Empty = the download folder's drive.
@@ -114,7 +113,9 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
 
     tokio::spawn(async move {
         let (job_b, app_b, ctl_b) = (job.clone(), app.clone(), ctl.clone());
-        let res = tokio::task::spawn_blocking(move || {
+        // yt-dlp and ffmpeg are installed automatically the first time a video download needs them.
+        let tools_ready = crate::tools::ensure_video_tools().await;
+        let res = if let Err(e) = tools_ready { Err(e) } else { tokio::task::spawn_blocking(move || {
             let p = &job_b.params;
             let mut last_emit = std::time::Instant::now();
             crate::media_stream::download_ytdlp_blocking(
@@ -145,7 +146,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
         })
         .await
         .map_err(|e| format!("Task error: {e}"))
-        .and_then(|r| r);
+        .and_then(|r| r) };
 
         let id = job.info.lock().unwrap().id.clone();
 
@@ -223,6 +224,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
             category: done.category.clone(),
             queue_id: done.queue_id.clone(),
             queue_order: done.queue_order,
+            interrupted: false,
         };
         let _ = db.upsert_download(&rec).await;
         // registered with the engine so it stays in the list, can be removed and reloads on restart
@@ -334,6 +336,7 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
                 category: Some("Torrents".to_string()),
                 queue_id: None,
                 queue_order: None,
+                interrupted: false,
             };
             let _ = db_clone.upsert_download(&rec).await;
             let _ = app_handle.emit("download-updated", &info_clone);
@@ -420,8 +423,11 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
         return Ok(info);
     }
 
-    // 2b. Video pages (YouTube, Vimeo, ...): resolve and download with yt-dlp
-    if crate::media_stream::is_video_page_url(&request.url) {
+    // 2b. Video pages (YouTube, Vimeo, ...): resolve and download with yt-dlp. A streaming playlist whose quality
+    // was chosen in the browser menu goes the same way: yt-dlp picks the right variant of the playlist.
+    let manifest_with_quality = crate::media_stream::is_manifest_url(&request.url)
+        && (request.media_height.is_some() || request.media_audio_only == Some(true));
+    if crate::media_stream::is_video_page_url(&request.url) || manifest_with_quality {
         crate::media_stream::validate_remote_url(&request.url)?;
         let lic_status = crate::licensing::get_status(&state.db).await;
         if !lic_status.media_download_allowed {
@@ -436,7 +442,7 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
             state.engine.default_dir().join(default_sub).to_string_lossy().to_string()
         });
         // Only trust a typed/auto-filled name when a quality was resolved; otherwise yt-dlp names it by title.
-        let name_stem = if request.media_format.is_some() { request.file_name.clone() } else { None };
+        let name_stem = if request.media_format.is_some() || manifest_with_quality { request.file_name.clone() } else { None };
         let shown_name = name_stem.clone().unwrap_or_else(|| "Video (fetching title...)".to_string());
         let now = chrono::Utc::now().timestamp();
 
@@ -685,11 +691,14 @@ pub async fn set_speed_limit(state: State<'_, AppState>, id: Option<String>, byt
         Some(id) => state.engine.set_download_speed_limit(&id, bytes_per_sec).map_err(msg),
         None => {
             state.engine.set_global_speed_limit(bytes_per_sec);
-            state
+            let saved = state
                 .db
                 .set_setting("global_speed_limit", &bytes_per_sec.to_string())
                 .await
-                .map_err(|e| format!("Could not save setting: {e}"))
+                .map_err(|e| format!("Could not save setting: {e}"));
+            // Schedules and slow mode build on this value: let them look again.
+            state.bandwidth.refresh();
+            saved
         }
     }
 }
@@ -850,6 +859,21 @@ pub fn open_folder(path: String) -> CmdResult<()> {
     PostDownloadManager::reveal_in_explorer(&path)
 }
 
+/// Open a web address in the user's default browser (http and https only).
+#[tauri::command]
+pub fn open_url(url: String) -> CmdResult<()> {
+    let parsed = url::Url::parse(url.trim()).map_err(|_| "That is not a valid web address.".to_string())?;
+    if !matches!(parsed.scheme(), "http" | "https") {
+        return Err("Only http and https addresses can be opened.".into());
+    }
+    // explorer.exe hands the address to the default browser; the argument is not interpreted by a shell.
+    std::process::Command::new("explorer.exe")
+        .arg(parsed.as_str())
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("Could not open your browser: {e}"))
+}
+
 #[tauri::command]
 pub fn open_file(path: String) -> CmdResult<()> {
     PostDownloadManager::open_file(&path)
@@ -895,7 +919,14 @@ fn run_powershell(script: &str) -> Result<String, String> {
 /// Real total/free space of the drive that holds `path` (falls back to the system drive).
 #[tauri::command]
 pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
-    tokio::task::spawn_blocking(move || {
+    tokio::task::spawn_blocking(move || disk_space_blocking(&path))
+        .await
+        .map_err(|e| format!("Task error: {e}"))?
+}
+
+/// Blocking form of [`get_disk_space`], also used by the browser extension's storage card.
+pub fn disk_space_blocking(path: &str) -> CmdResult<DiskSpace> {
+    {
         let script = format!(
             r#"$p = '{p}'; if ($p -eq '' -or -not (Test-Path $p)) {{ $p = $env:SystemDrive + '\' }}; $d = New-Object System.IO.DriveInfo ([System.IO.Path]::GetPathRoot((Resolve-Path $p).Path)); Write-Output ($d.Name + '|' + $d.TotalSize + '|' + $d.AvailableFreeSpace)"#,
             p = path.replace('\'', "''")
@@ -909,9 +940,7 @@ pub async fn get_disk_space(path: String) -> CmdResult<DiskSpace> {
             (Some(total_bytes), Some(free_bytes)) if total_bytes > 0 => Ok(DiskSpace { drive, total_bytes, free_bytes }),
             _ => Err("Disk space is not available".to_string()),
         }
-    })
-    .await
-    .map_err(|e| format!("Task error: {e}"))?
+    }
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -1046,15 +1075,14 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
     let open_folder = state.db.get_setting("open_folder_on_complete").await.as_deref() == Some("1");
     let battery_saver = state.db.get_setting("battery_saver").await.as_deref() != Some("0"); // default true
     let smart_naming = state.db.get_setting("smart_naming").await.as_deref() != Some("0"); // default true
-    let portable_mode = state.db.get_setting("portable_mode").await.as_deref() == Some("1");
-    let mobile_sharing = state.db.get_setting("mobile_sharing_enabled").await.as_deref() != Some("0"); // default true
-    let bandwidth_monitor = state.db.get_setting("bandwidth_monitor_enabled").await.as_deref() != Some("0"); // default true
+    let resume_on_start = state.db.get_setting("resume_on_start").await.as_deref() != Some("0"); // default true
     let clipboard_monitor = state.db.get_setting("clipboard_monitor").await.as_deref() != Some("0"); // default true
     let background = state.db.get_setting("background").await.unwrap_or_else(|| "flow".to_string());
     let default_drive = state.db.get_setting("default_drive").await.unwrap_or_default();
 
     Ok(Settings {
-        global_speed_limit: state.engine.global_speed_limit(),
+        // The user's own limit; the engine's current limit may be lower because of a schedule or slow mode.
+        global_speed_limit: state.db.get_setting("global_speed_limit").await.and_then(|s| s.parse().ok()).unwrap_or(0),
         default_connections: state.engine.default_connections(),
         min_connections: MIN_CONNECTIONS,
         max_connections: MAX_CONNECTIONS,
@@ -1071,9 +1099,7 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
         open_folder_on_complete: open_folder,
         battery_saver,
         smart_naming,
-        portable_mode,
-        mobile_sharing_enabled: mobile_sharing,
-        bandwidth_monitor_enabled: bandwidth_monitor,
+        resume_on_start,
         clipboard_monitor,
         background,
         default_drive,
@@ -1153,6 +1179,7 @@ pub async fn download_stream_media(
         return Err("Media stream downloading requires an active 30-day trial or FlowGet Pro license.".to_string());
     }
 
+    crate::tools::ensure("ffmpeg").await?;
     let out_dir = PathBuf::from(&save_dir);
     let _ = std::fs::create_dir_all(&out_dir);
     let out_file = out_dir.join(&file_name);
@@ -1168,7 +1195,184 @@ pub async fn download_stream_media(
 
 #[tauri::command]
 pub async fn update_ytdlp() -> CmdResult<String> {
-    crate::media_stream::auto_update_ytdlp().await
+    crate::tools::install("yt-dlp", false).await
+}
+
+#[tauri::command]
+pub async fn get_bandwidth_policy(state: State<'_, AppState>) -> CmdResult<crate::bandwidth::Policy> {
+    Ok(crate::bandwidth::load_policy(&state.db).await)
+}
+
+#[tauri::command]
+pub async fn set_bandwidth_policy(state: State<'_, AppState>, policy: crate::bandwidth::Policy) -> CmdResult<()> {
+    crate::bandwidth::save_policy(&state.db, &policy).await?;
+    state.bandwidth.refresh();
+    Ok(())
+}
+
+/// Switch slow mode on or off (the footer button).
+#[tauri::command]
+pub async fn set_slow_mode(state: State<'_, AppState>, on: bool) -> CmdResult<()> {
+    let mut policy = crate::bandwidth::load_policy(&state.db).await;
+    policy.slow_mode = on;
+    crate::bandwidth::save_policy(&state.db, &policy).await?;
+    state.bandwidth.refresh();
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BandwidthStatus {
+    pub effective: crate::bandwidth::Effective,
+    pub network: crate::metered::Network,
+}
+
+#[tauri::command]
+pub fn get_bandwidth_state(state: State<'_, AppState>) -> BandwidthStatus {
+    BandwidthStatus { effective: state.bandwidth.state(), network: state.bandwidth.network() }
+}
+
+/// "Download anyway" on a metered connection (until the app restarts).
+#[tauri::command]
+pub fn set_metered_override(state: State<'_, AppState>, on: bool) {
+    state.bandwidth.set_override(on);
+}
+
+#[tauri::command]
+pub async fn get_safety_reports(state: State<'_, AppState>) -> CmdResult<Vec<crate::safety::SafetyReport>> {
+    state.db.load_safety().await.map_err(|e| e.to_string())
+}
+
+/// Warnings for a file name (used by the Add Download dialog before anything is downloaded).
+#[tauri::command]
+pub fn assess_file_name(file_name: String) -> Vec<crate::safety::Warning> {
+    crate::safety::assess_name(&file_name)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VirusTotalStatus {
+    pub has_key: bool,
+    pub enabled: bool,
+}
+
+#[tauri::command]
+pub async fn get_virustotal_status(state: State<'_, AppState>) -> CmdResult<VirusTotalStatus> {
+    Ok(VirusTotalStatus {
+        has_key: crate::vault::load(crate::safety::VT_KEY_ID).is_some_and(|k| !k.trim().is_empty()),
+        enabled: state.db.get_setting("virustotal_enabled").await.as_deref() == Some("1"),
+    })
+}
+
+/// Save the VirusTotal API key (in the Windows Credential Manager) after checking that VirusTotal accepts it.
+#[tauri::command]
+pub async fn set_virustotal_key(state: State<'_, AppState>, key: String) -> CmdResult<()> {
+    let key = key.trim().to_string();
+    if key.is_empty() {
+        return Err("Paste your VirusTotal API key first.".into());
+    }
+    crate::safety::check_key(&key).await?;
+    crate::vault::store(crate::safety::VT_KEY_ID, &key)?;
+    state.db.set_setting("virustotal_enabled", "1").await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn clear_virustotal_key(state: State<'_, AppState>) -> CmdResult<()> {
+    crate::vault::delete(crate::safety::VT_KEY_ID);
+    state.db.set_setting("virustotal_enabled", "0").await.map_err(|e| e.to_string())
+}
+
+/// Look a finished download up on VirusTotal again (for example after the limit was reached).
+#[tauri::command]
+pub async fn rescan_virustotal(state: State<'_, AppState>, id: String) -> CmdResult<()> {
+    let info = state.engine.info(&id).map_err(msg)?;
+    if info.file_path.is_empty() {
+        return Err("This download has no file to check.".into());
+    }
+    // Forget the old answer so the check runs again.
+    let mut old = state.db.load_safety().await.unwrap_or_default().into_iter().find(|r| r.id == id);
+    if let Some(r) = old.as_mut() {
+        r.vt = None;
+        let _ = state.db.save_safety(r).await;
+    }
+    tokio::spawn(crate::safety::on_completed(
+        state.app_handle.clone(),
+        state.db.clone(),
+        id,
+        info.file_name,
+        info.file_path,
+    ));
+    Ok(())
+}
+
+/// A native "open file" / "save file" dialog. `extensions` filters by ending (without the dot).
+#[tauri::command]
+pub async fn pick_file(
+    window: tauri::WebviewWindow,
+    title: String,
+    extensions: Vec<String>,
+    save: bool,
+    default_name: Option<String>,
+) -> CmdResult<Option<String>> {
+    tokio::task::spawn_blocking(move || {
+        let mut dialog = rfd::FileDialog::new().set_title(&title).set_parent(&window);
+        if !extensions.is_empty() {
+            dialog = dialog.add_filter("Files", &extensions);
+        }
+        if let Some(n) = default_name.filter(|n| !n.is_empty()) {
+            dialog = dialog.set_file_name(n);
+        }
+        let picked = if save { dialog.save_file() } else { dialog.pick_file() };
+        Ok(picked.map(|p| p.to_string_lossy().to_string()))
+    })
+    .await
+    .map_err(|e| format!("Task error: {e}"))?
+}
+
+#[tauri::command]
+pub fn list_browser_profiles() -> Vec<crate::import_export::BrowserProfile> {
+    crate::import_export::list_browser_profiles()
+}
+
+/// Read an import file (`kind`: idm, fdm, jdownloader, text, or browser with the History file path) and list what
+/// it contains. Nothing is added yet; the dialog lets the user choose.
+#[tauri::command]
+pub async fn import_preview(kind: String, path: String) -> CmdResult<Vec<crate::import_export::ImportItem>> {
+    if kind == "browser" {
+        return crate::import_export::read_browser_history(Path::new(&path)).await;
+    }
+    let text = crate::import_export::read_import_file(Path::new(&path))?;
+    crate::import_export::parse_import(&kind, &text)
+}
+
+/// Save settings, categories, queues and the download list (without passwords or cookies) to one file.
+#[tauri::command]
+pub async fn export_backup(state: State<'_, AppState>, path: String) -> CmdResult<usize> {
+    let backup = crate::import_export::build_backup(&state.db, &state.engine).await?;
+    let json = serde_json::to_string_pretty(&backup).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| format!("Could not write the backup file: {e}"))?;
+    Ok(backup.downloads.len())
+}
+
+#[tauri::command]
+pub async fn restore_backup(state: State<'_, AppState>, path: String) -> CmdResult<crate::import_export::RestoreSummary> {
+    let text = crate::import_export::read_import_file(Path::new(&path))?;
+    let backup = crate::import_export::parse_backup(&text)?;
+    let summary = crate::import_export::restore_backup(&state.db, &state.engine, backup).await?;
+    state.bandwidth.refresh();
+    Ok(summary)
+}
+
+/// What yt-dlp and ffmpeg are installed (and where they come from).
+#[tauri::command]
+pub async fn get_tools_status() -> CmdResult<Vec<crate::tools::ToolInfo>> {
+    tokio::task::spawn_blocking(crate::tools::status).await.map_err(|e| e.to_string())
+}
+
+/// Install or update "yt-dlp" or "ffmpeg" (`force` installs again even when present).
+#[tauri::command]
+pub async fn install_tool(tool: String, force: bool) -> CmdResult<String> {
+    crate::tools::install(&tool, force).await
 }
 
 #[tauri::command]

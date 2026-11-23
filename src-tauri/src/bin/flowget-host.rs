@@ -78,11 +78,38 @@ fn handle_message(bytes: &[u8]) -> Result<String, String> {
     forward_to_app(&body).map_err(|e| format!("FlowGet is not running or not reachable ({e})"))
 }
 
+/// Start the FlowGet app (it sits next to this executable) and wait until it accepts connections.
+fn launch_app_and_wait(addr: &std::net::SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
+    use std::net::TcpStream;
+
+    let exe = std::env::current_exe()?;
+    let app = exe.parent().ok_or("no parent directory")?.join(if cfg!(windows) { "flowget.exe" } else { "flowget" });
+    if !app.is_file() {
+        return Err("FlowGet is not running and its program was not found next to the native host".into());
+    }
+    Command::new(&app).spawn()?;
+    // Starting the window and the local server takes a few seconds.
+    for _ in 0..60 {
+        std::thread::sleep(Duration::from_millis(500));
+        if TcpStream::connect_timeout(addr, Duration::from_millis(400)).is_ok() {
+            return Ok(());
+        }
+    }
+    Err("FlowGet did not start in time".into())
+}
+
 fn forward_to_app(payload: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
     use std::net::{SocketAddr, TcpStream};
 
     let addr: SocketAddr = APP_ADDR.parse()?;
-    let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(3))?;
+    let mut stream = match TcpStream::connect_timeout(&addr, Duration::from_secs(3)) {
+        Ok(s) => s,
+        Err(_) => {
+            // The app is closed: open it, then deliver the download.
+            launch_app_and_wait(&addr)?;
+            TcpStream::connect_timeout(&addr, Duration::from_secs(3))?
+        }
+    };
     stream.set_read_timeout(Some(Duration::from_secs(10)))?;
     stream.set_write_timeout(Some(Duration::from_secs(10)))?;
 

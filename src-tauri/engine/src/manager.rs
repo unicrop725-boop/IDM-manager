@@ -181,6 +181,8 @@ const REASON_NONE: u8 = 0;
 const REASON_PAUSE: u8 = 1;
 const REASON_CANCEL: u8 = 2;
 const REASON_NETWORK: u8 = 3;
+/// The app is closing: the download stops, and is marked so it can continue after the next start.
+const REASON_SHUTDOWN: u8 = 4;
 
 enum Outcome {
     Completed,
@@ -431,11 +433,26 @@ impl Engine {
         let mut map = self.inner.entries.lock().unwrap();
         for mut rec in records {
             if rec.state.is_active() || rec.state == DownloadState::WaitingForNetwork {
+                // Running when the app went away (crash, power loss, kill): it should carry on after the restart.
                 rec.state = DownloadState::Paused;
+                rec.interrupted = true;
             }
             let entry = Entry::new(rec);
             map.insert(entry.id.clone(), entry);
         }
+    }
+
+    /// Downloads that were running when the app last closed and are now paused: `(id, queue id, url)`.
+    pub fn interrupted(&self) -> Vec<(String, Option<String>, String)> {
+        let map = self.inner.entries.lock().unwrap();
+        let mut v: Vec<_> = map
+            .values()
+            .map(|e| e.snapshot())
+            .filter(|r| r.interrupted && r.state == DownloadState::Paused)
+            .map(|r| (r.created_at, r.id, r.queue_id, r.url))
+            .collect();
+        v.sort();
+        v.into_iter().map(|(_, id, q, u)| (id, q, u)).collect()
     }
 
     /// Pause everything and wait until all progress has been written and persisted.
@@ -444,7 +461,7 @@ impl Engine {
         let stops = entries
             .iter()
             .filter(|e| e.state().is_active())
-            .map(|e| self.stop(e, REASON_PAUSE));
+            .map(|e| self.stop(e, REASON_SHUTDOWN));
         futures_util::future::join_all(stops).await;
         // Wait for the event consumer to catch up so the last checkpoint is in the database.
         let (tx, rx) = oneshot::channel();
@@ -537,8 +554,19 @@ impl Engine {
     // ---- commands -------------------------------------------------------------------------
 
     /// Add a download and (unless `start_paused`) start it right away.
-    pub async fn add(&self, req: AddRequest) -> Result<DownloadInfo, EngineError> {
-        let url = Url::parse(req.url.trim())?;
+    pub async fn add(&self, mut req: AddRequest) -> Result<DownloadInfo, EngineError> {
+        let mut url = Url::parse(req.url.trim())?;
+        // A user name and password typed inside the link (https://user:pass@host/file) must not be stored with the
+        // link: they move to the separate credentials, which the app keeps in the Windows Credential Manager.
+        if !url.username().is_empty() || url.password().is_some() {
+            if req.http.username.is_none() {
+                let decode = |s: &str| percent_encoding::percent_decode_str(s).decode_utf8_lossy().into_owned();
+                req.http.username = Some(decode(url.username()));
+                req.http.password = url.password().map(decode);
+            }
+            let _ = url.set_username("");
+            let _ = url.set_password(None);
+        }
         policy::check_url(&url)?;
         req.http.validate()?;
         let checksum = match req.checksum.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
@@ -618,6 +646,7 @@ impl Engine {
             category: req.category,
             queue_id: req.queue_id.or_else(|| Some("main".to_string())),
             queue_order: req.queue_order.or(Some(0)),
+            interrupted: false,
         };
         let entry = Entry::new(record);
         self.inner.entries.lock().unwrap().insert(entry.id.clone(), entry.clone());
@@ -783,6 +812,7 @@ impl Engine {
     async fn start_run(&self, entry: &Arc<Entry>) {
         let cancel = CancellationToken::new();
         let reason = Arc::new(AtomicU8::new(REASON_NONE));
+        entry.with(|r| r.interrupted = false);
         self.inner.set_state(entry, DownloadState::Probing, None);
         let join = tokio::spawn(run_task(self.inner.clone(), entry.clone(), cancel.clone(), reason.clone()));
         *entry.run.lock().await = Some(RunHandle { cancel, reason, join });
@@ -831,6 +861,8 @@ async fn run_task(inner: Arc<Inner>, entry: Arc<Entry>, cancel: CancellationToke
             inner.set_state(&entry, DownloadState::Completed, None);
         }
         Ok(Outcome::Stopped) | Err(EngineError::Stopped) => {
+            // Closing the app is not the same as the user pausing: only the former continues after a restart.
+            entry.with(|r| r.interrupted = reason == REASON_SHUTDOWN);
             let state = if reason == REASON_NETWORK { DownloadState::WaitingForNetwork } else { DownloadState::Paused };
             inner.set_state(&entry, state, None);
         }
@@ -980,6 +1012,7 @@ async fn probe_with_retry(
     url: &Url,
     cancel: &CancellationToken,
     retry: &RetryPolicy,
+    entry: &Entry,
 ) -> Result<ProbeResult, EngineError> {
     let mut attempt = 0u32;
     loop {
@@ -988,7 +1021,12 @@ async fn probe_with_retry(
             r = probe::probe(session, url) => r,
         };
         let err = match result {
-            Ok(p) => return Ok(p),
+            Ok(p) => {
+                if attempt > 0 {
+                    entry.live.lock().unwrap().note = None;
+                }
+                return Ok(p);
+            }
             Err(e) => e,
         };
         let class = err.retry_class();
@@ -996,6 +1034,13 @@ async fn probe_with_retry(
             return Err(err);
         }
         attempt += 1;
+        // Say what is going on instead of a silent "probing" (this shows under the status).
+        entry.live.lock().unwrap().note = Some(format!(
+            "{} Retrying ({attempt} of {})…",
+            err.user_message().split(['.', '!']).next().unwrap_or("Could not reach the server"),
+            retry.max_probe_retries
+        ));
+        inner.emit_updated(entry);
         if class == RetryClass::Network {
             inner.net.request_check(); // is the whole internet down?
         }
@@ -1047,7 +1092,7 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
     let session = Arc::new(HttpSession::new(&rec.http, &url));
 
     // ---- 1. Probe ---------------------------------------------------------------------------
-    let probed = match probe_with_retry(inner, &session, &url, cancel, &cfg.retry).await {
+    let probed = match probe_with_retry(inner, &session, &url, cancel, &cfg.retry, entry).await {
         Ok(p) => p,
         // A link that worked before and is now refused has probably expired.
         Err(EngineError::Http(403 | 410)) if rec.downloaded > 0 || rec.final_url.is_some() => {
@@ -1055,6 +1100,12 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
         }
         Err(e) => return Err(e),
     };
+
+    // A login page or error page where the file should be: say so instead of saving a web page as the file.
+    let chosen_name = if rec.file_name_locked { Some(rec.file_name.as_str()) } else { None };
+    if probe::looks_like_web_page(&probed, &url, chosen_name) {
+        return Err(EngineError::WrongFile);
+    }
 
     // ---- 2. Resume or start fresh ------------------------------------------------------------
     let mut resuming = false;
@@ -1807,6 +1858,7 @@ mod tests {
 
     fn probe_of(size: Option<u64>, etag: Option<&str>, lm: Option<&str>, ranges: bool) -> ProbeResult {
         ProbeResult {
+            attachment: false,
             final_url: Url::parse("https://x.example/f").unwrap(),
             total_size: size,
             accepts_ranges: ranges,

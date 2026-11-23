@@ -89,8 +89,17 @@ Select a row and use the toolbar, or right-click for: *Open*, *Open With*, *Open
 *Delete from Queue*, *Share* and *Properties*.
 
 * **Resume**: FlowGet resumes any download whose server supports byte ranges, including after closing the
-  app, a crash, or a lost connection. It saves progress as it goes, and checks on resume that the file on
+  app, a crash, or a lost connection. With **Resume paused downloads on restart** (Options > Smart Features,
+  on by default) the downloads that were running when FlowGet closed continue by themselves the next time it
+  starts; downloads you paused yourself stay paused. It saves progress as it goes, and checks on resume that the file on
   the server has not changed. If it has, the download stops with an explanation and you can *Redownload*.
+* **Wrong file**: when a server answers with a web page instead of the file (usually a sign-in page or an
+  expired link), the download stops with "The server sent a web page instead of the file" and nothing is
+  saved. Sign in in your browser and download it from there with the extension. If you really want the page,
+  name the file with an `.html` ending.
+* **Clear reasons**: while FlowGet contacts a server the row says "Connecting…", and if that fails it names
+  the problem (site not found, certificate not trusted, connection refused, server not answering) with what
+  to do. Hover over a failed row for the full text.
 * **Servers that do not support resume**: the row shows a "Resume not supported" badge and uses one
   connection.
 * **Network loss**: when the internet drops, downloads wait ("Waiting for network") and continue by
@@ -119,10 +128,49 @@ Add a download to a queue from the Add dialog or the right-click menu.
 
 *Options* opens: default download directory, launch on Windows startup, language (English or Deutsch),
 theme (Dark, Light, System), default connections, **global speed limit**, **Turbo Mode**, a proxy
-(`http://host:port` or `socks5://host:port`), and the post-download actions above. Under *Next-Generation
-Features* are: **Battery-Saver Mode** (pauses active downloads when a laptop is unplugged and below 20%
-battery), **Smart Naming** (cleans messy file names: query strings, `%20` and so on), Mobile Link Sharing,
-Per-App Bandwidth View and Portable Mode. The last three are not finished; see the limitations below.
+(`http://host:port` or `socks5://host:port`), and the post-download actions above. Under *Smart Features*
+are: **Battery-Saver Mode** (pauses active downloads when a laptop is unplugged and below 20%
+battery), **Smart Naming** (cleans messy file names: query strings, `%20` and so on),
+the *Resume paused downloads on restart* switch and clipboard link detection. Passwords of downloads that
+need a login are kept in the Windows Credential Manager, not in the database file.
+
+### Bandwidth control
+
+*Options > Bandwidth* builds on the global speed limit (Options > Connection); the stricter limit wins.
+
+* **Limits by time of day**: add schedules with days, a start and end time (a window that ends before it starts
+  runs past midnight), and an action: *Limit to* a speed, *Pause downloads*, or *No limit* (lifts the global limit
+  in that window, for example at night).
+* **Slow mode**: caps downloads at a gentle speed (default 1 MB/s) so browsing and calls stay smooth. Switch it
+  on and off from the bar at the bottom of the window.
+* **Metered and hotspot connections**: holds downloads on connections Windows marks as metered (phone hotspots,
+  mobile data) and on Wi-Fi names you list as hotspots. They continue by themselves on a normal network. The
+  bottom bar shows why downloads are held and has a *Download anyway* button.
+
+The rules apply to normal file downloads. Videos downloaded through yt-dlp are not throttled or paused by them.
+
+### Safety checks
+
+* FlowGet warns about programs (`.exe`, `.msi`, scripts, `.scr`, ...) and about disguised names such as
+  `invoice.pdf.exe`, extra spaces before the real ending, or hidden text-direction characters. The warning shows in
+  the Add Download dialog, as a small shield next to the file in the list, and FlowGet asks before opening a file
+  that has one.
+* **VirusTotal** (Options > Safety, off until you add a free API key): when a download finishes, FlowGet looks up
+  its SHA-256 fingerprint and shows how many antivirus engines flag it. Only the fingerprint is sent, never the
+  file. The key is kept in the Windows Credential Manager. "Unknown" means VirusTotal has never seen that exact
+  file, which is normal for new files. The free key allows 4 lookups a minute, so a long queue is checked slowly.
+
+### Import and backup
+
+*Tasks > Import & Backup...*
+
+* **Import** from IDM (an `.ef2` export or a text list, with its cookies and referrers), Free Download Manager
+  (a text list of links), JDownloader (`.crawljob` or a link list), any file that contains links, or the
+  **download history of Chrome, Edge and Brave**. You see what was found, tick what you want, and choose whether
+  to start right away.
+* **Backup**: one file with settings, categories, queues and download history. It never contains passwords,
+  cookies, request headers or your license key. **Restore** it on this or another PC; downloads that are already
+  in the list are left alone and nothing is deleted.
 
 ## 7. Turbo Mode
 
@@ -150,13 +198,36 @@ Set-up (Chrome, Edge, Brave):
    `flowget-host.exe --register --extension-id <ID>` once (add `--firefox-id <add-on id>` for Firefox). The
    command refuses to run without an explicit ID: browsers do not accept wildcards.
 
+In the extension's popup:
+
+* **Settings > File types to capture** is a dropdown of predefined groups (archives, programs, video, audio,
+  documents, other). Tick a whole group or single types, use *Recommended* / *Select all* / *Clear*, or add
+  your own type. Only the chosen types are captured, both from link clicks and from browser downloads.
+* The **storage card** shows the free and total space of your Disk Space drive (the one chosen in FlowGet's
+  settings). When FlowGet is closed it shows the last known value and an *Open FlowGet* button.
+* **Open FlowGet automatically** (on by default): grabbing a link while FlowGet is closed starts the app
+  through its `flowget://` link, waits for it, and delivers the download. FlowGet registers that link for
+  your Windows user each time it starts, so start it once. The browser may ask once whether `flowget://`
+  links may be opened; allow it (and tick "always"). If the app cannot be started, the download goes back to
+  the browser instead of being lost.
+
+* **Reliability**: the extension checks every 30 seconds that FlowGet is answering and retries short outages.
+  A download you grab while the app cannot be reached is kept (only in memory, for up to a day) and sent as
+  soon as FlowGet answers; the toolbar badge shows how many are waiting, and the popup status says so.
+  A desktop notification says "Download started in FlowGet" (switch it off with *Notify when a download
+  starts*) or explains what is wrong. Downloads the browser started itself are handed back to the browser
+  when FlowGet cannot be reached, so nothing is lost.
+
 Only browser extensions can reach the local port, not web pages, and every request is validated; see
 `docs/security-review.md`.
 
 ## 9. Video and streams
 
 * **HLS (`.m3u8`) and DASH (`.mpd`)** links are fetched and merged with `ffmpeg`; other video pages go
-  through `yt-dlp`. **Both programs must be installed and on your PATH**; FlowGet does not bundle them.
+  through `yt-dlp`. **FlowGet installs both by itself** the first time a video needs them (Options > Video
+  Tools shows what is installed and lets you update or reinstall). They are saved in
+  `%APPDATA%\com.flowget.app\tools`, checked against the checksum the publisher lists, and used before anything
+  on your PATH. yt-dlp is refreshed about once a week in the background (switch that off in Video Tools).
 * In the Add dialog you can pick a quality and convert to MP4, MP3 or M4A.
 * Streams protected by DRM are refused with "This video is protected and cannot be downloaded."
 * Media links must be plain `http://` or `https://`.
@@ -188,16 +259,17 @@ Activate License...*). Turbo Mode requires an active trial or license.
 These parts of the interface are present but not finished. They are listed here so they do not surprise
 you:
 
-* **Speed Test** shows generated numbers. It does not measure your connection.
-* **Mobile Link Sharing** shows a placeholder QR code and a fixed address; nothing is listening for a
-  phone, and the local server accepts connections from this PC only.
-* **Per-App Bandwidth**: FlowGet's own usage is real; the "other apps" figure is simulated.
+* **Speed Test** really measures: latency and jitter, then download and upload through Cloudflare's speed
+  servers (so it needs internet access to speed.cloudflare.com).
+* **Bandwidth Usage** shows FlowGet's own current speed only; it does not see other programs.
+* The import readers follow the file formats as documented and are tested with sample files; if a real export
+  from IDM, FDM or JDownloader is not understood, use *Any file with links*, which finds every link in it.
 * **Disk Cleaner** finds duplicates by identical URL (not by file contents), and lists old finished
   downloads and failed ones; it works on the download list.
 * **Download Statistics** are computed from your download list.
-* **Portable Mode** is saved as a setting but changes no behaviour yet; data always lives in `%APPDATA%\com.flowget.app`.
-* Certificate errors on HTTPS downloads are rejected safely, but the row only shows "probing" and does not
-  say why.
+* There is no portable mode; data always lives in `%APPDATA%\com.flowget.app`.
+* A link with the user name and password inside it (`ftp://user:pass@host/...`) is kept as typed in the
+  download list; only the separate password field is moved to the Credential Manager.
 * On a first run, three of my early test launches of the release build exited after seven to ten seconds
   with no error. I could not reproduce it in 18 later launches. If FlowGet closes by itself on its very
   first start, launch it again and report it.
@@ -208,9 +280,13 @@ you:
 use the optional native messaging fallback, re-run `flowget-host.exe --register --extension-id <ID>` with
 the correct ID.
 
-**A download keeps saying "probing".** The server may be unreachable, or its HTTPS certificate is not
-trusted (expired, self-signed, wrong name). FlowGet will not download from a site with an invalid
+**A download says "Connecting…" for a long time or fails right away.** The row (and its hover text) names the
+reason: the site was not found, the server did not answer, the connection was refused, or its HTTPS certificate
+is not trusted (expired, self-signed, wrong name). FlowGet will not download from a site with an invalid
 certificate.
+
+**"The server sent a web page instead of the file".** The site wants you signed in, or the link expired. Open it
+in your browser, sign in, and download it from there so the extension can pass your session to FlowGet.
 
 **Downloads stop with "file changed".** The file on the server was replaced since you started. Use
 *Redownload*.

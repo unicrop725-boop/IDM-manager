@@ -109,3 +109,40 @@ export function getFileTypeLabel(fileName: string): FileCategoryType {
       return 'Other';
   }
 }
+
+/** The sidebar groups, in display order. */
+export const SIDEBAR_CATEGORIES = ["Music", "Compressed", "Videos", "Programs", "Documents", "APKs", "Images", "Torrents"] as const;
+
+const EXT_GROUPS: Record<string, string[]> = {
+  Music: ["mp3", "wav", "wma", "m4a", "aac", "flac", "ogg", "opus", "alac", "aiff"],
+  Compressed: ["zip", "rar", "7z", "tar", "gz", "bz2", "xz", "iso", "tgz", "z", "dmg", "cab"],
+  Videos: ["mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "mpeg", "mpg", "3gp", "m3u8", "mpd"],
+  Programs: ["exe", "msi", "bat", "cmd", "sh", "bin", "appx", "msix", "com"],
+  Documents: ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf", "odt", "csv", "epub"],
+  APKs: ["apk", "xapk", "apks", "aab"],
+  Images: ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico", "tiff", "psd"],
+  Torrents: ["torrent"],
+};
+const EXT_TO_GROUP = new Map<string, string>();
+for (const [group, exts] of Object.entries(EXT_GROUPS)) for (const e of exts) EXT_TO_GROUP.set(e, group);
+
+/**
+ * The sidebar group a download belongs to. The stored category is used when it is one of the groups; downloads without
+ * one (added by the browser extension, older entries) are sorted by their file extension, so no list is ever empty
+ * just because a category was never saved.
+ */
+export function sidebarCategory(d: { category?: string | null; fileName?: string; url?: string }): string {
+  const stored = (d.category || "").toLowerCase();
+  const hit = SIDEBAR_CATEGORIES.find((c) => c.toLowerCase() === stored || (stored === "audio" && c === "Music") || (stored === "video" && c === "Videos"));
+  if (hit) return hit;
+  const nameExt = (d.fileName || "").split(".").pop()?.toLowerCase() || "";
+  if (EXT_TO_GROUP.has(nameExt)) return EXT_TO_GROUP.get(nameExt)!;
+  try {
+    const path = new URL(d.url || "").pathname;
+    const urlExt = path.split(".").pop()?.toLowerCase() || "";
+    if (EXT_TO_GROUP.has(urlExt)) return EXT_TO_GROUP.get(urlExt)!;
+  } catch {
+    /* not a URL */
+  }
+  return "";
+}

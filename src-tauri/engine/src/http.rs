@@ -380,7 +380,7 @@ pub async fn send_with_auth(
             None => send.await,
         };
         let resp = match result {
-            Err(_) => return Err(EngineError::Network("the server took too long to respond".into())),
+            Err(_) => return Err(EngineError::Timeout("the server took too long to respond".into())),
             Ok(Err(e)) => return Err(e.into()),
             Ok(Ok(r)) => r,
         };

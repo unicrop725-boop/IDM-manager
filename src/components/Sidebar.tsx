@@ -15,17 +15,19 @@ import {
   Smartphone,
   Image,
   Magnet,
+  Globe,
   type LucideIcon,
   MoreHorizontal,
   Rows2,
 } from "lucide-react";
 import { NotchCorner } from "./NotchCorner";
-import { DownloadInfo } from "../types";
 
 export type SidebarFilter =
   | { type: "all" }
   | { type: "category"; name: string }
-  | { type: "status"; status: "unfinished" | "finished" };
+  | { type: "status"; status: "unfinished" | "finished" }
+  /** The Trusted Sites page instead of the download list. */
+  | { type: "trusted" };
 
 /** Show the Disk Space card from this usage (percent) upwards. */
 const DISK_WARN_PERCENT = 85;
@@ -34,9 +36,18 @@ interface SidebarProps {
   saveDir?: string;
   currentFilter: SidebarFilter;
   onSelectFilter: (f: SidebarFilter) => void;
-  downloads: DownloadInfo[];
+  /** Number of downloads per entry: "all", "unfinished", "finished" and each category name. */
+  counts: Record<string, number>;
   onOpenDiskCleaner: () => void;
 }
+
+/** Small number badge on the right of a sidebar entry (hidden when zero). */
+const Count: React.FC<{ n?: number }> = ({ n }) =>
+  n ? (
+    <span className="ml-auto min-w-[20px] rounded-full bg-[var(--bg-hover)] px-1.5 py-px text-center text-[11px] tabular-nums text-[var(--text-secondary)]">
+      {n}
+    </span>
+  ) : null;
 
 interface GroupHeaderProps {
   icon: LucideIcon;
@@ -44,22 +55,26 @@ interface GroupHeaderProps {
   active: boolean;
   /** Only groups that have sub-items get an expand/collapse arrow. */
   expanded?: boolean;
+  count?: number;
+  /** Optional colours: the icon's colour, and the look of the entry while it is selected. */
+  accent?: { icon: string; active: string };
   onClick: () => void;
   onToggle?: () => void;
 }
 
-const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, expanded, onClick, onToggle }) => (
+const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, expanded, count, accent, onClick, onToggle }) => (
   <div
     onClick={onClick}
     className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
       active
-        ? "bg-[var(--bg-card)] text-[var(--text-primary)]"
+        ? accent?.active ?? "bg-[var(--bg-card)] text-[var(--text-primary)]"
         : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
     }`}
   >
-    <div className="flex items-center gap-3">
-      <Icon className="w-[22px] h-[22px] flex-shrink-0" strokeWidth={1.5} />
+    <div className="flex min-w-0 flex-1 items-center gap-3">
+      <Icon className={`w-[22px] h-[22px] flex-shrink-0 ${accent?.icon ?? ""}`} strokeWidth={1.5} />
       <span className="text-[14px] font-medium">{label}</span>
+      <Count n={count} />
     </div>
     {onToggle && (
       <span
@@ -79,6 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   saveDir = "",
   currentFilter,
   onSelectFilter,
+  counts,
   onOpenDiskCleaner,
 }) => {
   const [allExpanded, setAllExpanded] = useState(true);
@@ -133,6 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label="All Downloads"
             active={currentFilter.type === "all"}
             expanded={allExpanded}
+            count={counts.all}
             onClick={() => onSelectFilter({ type: "all" })}
             onToggle={() => setAllExpanded(!allExpanded)}
           />
@@ -154,6 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" strokeWidth={1.6} />
                     <span>{cat.label}</span>
+                    <Count n={counts[cat.name]} />
                   </div>
                 );
               })}
@@ -165,6 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <GroupHeader
           icon={FolderDown}
           label="Unfinished"
+          count={counts.unfinished}
           active={currentFilter.type === "status" && currentFilter.status === "unfinished"}
           onClick={() => onSelectFilter({ type: "status", status: "unfinished" })}
         />
@@ -173,8 +192,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <GroupHeader
           icon={FolderCheck}
           label="Finished"
+          count={counts.finished}
           active={currentFilter.type === "status" && currentFilter.status === "finished"}
           onClick={() => onSelectFilter({ type: "status", status: "finished" })}
+        />
+
+        {/* TRUSTED SITES */}
+        <GroupHeader
+          icon={Globe}
+          label="Trusted Sites"
+          count={counts.trusted}
+          accent={{
+            icon: "text-sky-400",
+            active: "bg-gradient-to-r from-sky-500/25 to-teal-500/15 text-sky-200 ring-1 ring-sky-400/50",
+          }}
+          active={currentFilter.type === "trusted"}
+          onClick={() => onSelectFilter({ type: "trusted" })}
         />
       </div>
 

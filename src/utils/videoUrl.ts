@@ -12,6 +12,8 @@ const VIDEO_HOSTS = [
   "twitter.com",
   "x.com",
   "reddit.com",
+  "pinterest.com",
+  "pin.it",
 ];
 
 export type VideoSite = "youtube" | "video";

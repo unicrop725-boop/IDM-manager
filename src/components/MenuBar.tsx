@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ThemeToggle } from "./ThemeToggle";
-import { Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, Smartphone, BarChart3, Activity, Key, RefreshCw } from "lucide-react";
+import { Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, BarChart3, Activity, Upload, Key, RefreshCw } from "lucide-react";
 
 interface MenuBarProps {
   searchQuery: string;
@@ -8,6 +8,7 @@ interface MenuBarProps {
   onOpenAddModal: () => void;
   onOpenBatchModal?: () => void;
   onOpenSiteGrabber?: () => void;
+  onOpenImportExport?: () => void;
   onResumeAll: () => void;
   onPauseAll: () => void;
   onDeleteSelected: () => void;
@@ -15,7 +16,6 @@ interface MenuBarProps {
   onOpenDiskCleaner: () => void;
   onOpenSpeedTest: () => void;
   onOpenBandwidth?: () => void;
-  onOpenMobileSharing?: () => void;
   onOpenStatistics?: () => void;
   onOpenLicense?: () => void;
   onOpenUpdate?: () => void;
@@ -29,6 +29,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onOpenAddModal,
   onOpenBatchModal,
   onOpenSiteGrabber,
+  onOpenImportExport,
   onResumeAll,
   onPauseAll,
   onDeleteSelected,
@@ -36,7 +37,6 @@ export const MenuBar: React.FC<MenuBarProps> = ({
   onOpenDiskCleaner,
   onOpenSpeedTest,
   onOpenBandwidth,
-  onOpenMobileSharing,
   onOpenStatistics,
   onOpenLicense,
   onOpenUpdate,
@@ -114,16 +114,16 @@ export const MenuBar: React.FC<MenuBarProps> = ({
                   <span>Site Grabber...</span>
                 </button>
               )}
-              {onOpenMobileSharing && (
+              {onOpenImportExport && (
                 <button
                   onClick={() => {
-                    onOpenMobileSharing();
+                    onOpenImportExport();
                     setActiveMenu(null);
                   }}
                   className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 text-[var(--text-primary)]"
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-teal-400" />
-                  <span>Mobile Link Sharing...</span>
+                  <Upload className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Import &amp; Backup...</span>
                 </button>
               )}
               <button
@@ -278,7 +278,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
                   className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 text-[var(--text-primary)]"
                 >
                   <Activity className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Per-App Bandwidth</span>
+                  <span>Bandwidth Usage</span>
                 </button>
               )}
             </div>

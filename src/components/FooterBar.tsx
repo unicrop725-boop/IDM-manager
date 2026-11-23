@@ -1,5 +1,6 @@
 import React from "react";
-import { CircleArrowDown, CircleArrowUp } from "lucide-react";
+import { CircleArrowDown, CircleArrowUp, Turtle, PauseCircle, Clock } from "lucide-react";
+import type { BandwidthEffective } from "../types";
 
 interface FooterBarProps {
   totalCount: number;
@@ -7,6 +8,10 @@ interface FooterBarProps {
   totalDownloadBps: number;
   totalUploadBps: number;
   onOpenSpeedTest: () => void;
+  /** What the bandwidth rules decide right now (slow mode, schedule, metered pause). */
+  bandwidth?: BandwidthEffective | null;
+  onToggleSlowMode?: () => void;
+  onDownloadAnyway?: () => void;
 }
 
 export const FooterBar: React.FC<FooterBarProps> = ({
@@ -15,6 +20,9 @@ export const FooterBar: React.FC<FooterBarProps> = ({
   totalDownloadBps,
   totalUploadBps,
   onOpenSpeedTest,
+  bandwidth,
+  onToggleSlowMode,
+  onDownloadAnyway,
 }) => {
   const toMbs = (bps: number) => ((bps * 8) / (1024 * 1024)).toFixed(2);
 
@@ -31,6 +39,34 @@ export const FooterBar: React.FC<FooterBarProps> = ({
 
       {/* Right: Speed Test + Live Download & Upload Speeds */}
       <div className="flex items-center gap-4">
+        {/* Bandwidth status: what is limiting or holding downloads right now */}
+        {bandwidth?.reason && (
+          <span
+            title={bandwidth.reason}
+            className={`flex max-w-[280px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              bandwidth.paused ? "bg-amber-500/15 text-amber-300" : "bg-sky-500/15 text-sky-300"
+            }`}
+          >
+            {bandwidth.paused ? <PauseCircle className="h-3.5 w-3.5 flex-shrink-0" /> : <Clock className="h-3.5 w-3.5 flex-shrink-0" />}
+            <span className="truncate">{bandwidth.reason}</span>
+            {bandwidth.meteredPause && onDownloadAnyway && (
+              <button onClick={onDownloadAnyway} className="ml-1 flex-shrink-0 rounded bg-amber-400/20 px-1.5 py-0.5 text-amber-100 hover:bg-amber-400/30">
+                Download anyway
+              </button>
+            )}
+          </span>
+        )}
+        {onToggleSlowMode && (
+          <button
+            onClick={onToggleSlowMode}
+            title={bandwidth?.slowMode ? "Slow mode is on. Click to download at full speed." : "Slow mode: keep downloads gentle so browsing stays smooth"}
+            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+              bandwidth?.slowMode ? "bg-emerald-500/20 text-emerald-300" : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
+            }`}
+          >
+            <Turtle className="h-3.5 w-3.5" /> Slow mode
+          </button>
+        )}
         {/* Speed Test Button */}
         <button
           onClick={onOpenSpeedTest}

@@ -443,6 +443,20 @@ async fn handle(mut sock: TcpStream, cfg: Arc<Mutex<ServerConfig>>, stats: Arc<S
             return;
         }
         "/file.bin" => {}
+        // A sign-in page where a file was expected.
+        "/login.zip" => {
+            let body = "<html><body>Please sign in to download</body></html>";
+            respond(
+                &mut sock,
+                "200 OK",
+                &[("Content-Type", "text/html; charset=utf-8".into()), ("Content-Length", body.len().to_string())],
+            )
+            .await;
+            if req.method != "HEAD" {
+                let _ = sock.write_all(body.as_bytes()).await;
+            }
+            return;
+        }
         _ => {
             respond(&mut sock, "404 Not Found", &[("Content-Length", "0".into())]).await;
             return;

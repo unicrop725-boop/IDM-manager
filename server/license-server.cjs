@@ -1,21 +1,39 @@
 // server/license-server.cjs
-// FlowGet License & Payment Backend (Razorpay + Ed25519 Signing + Device Limit Management)
+// FlowGet License & Payment Backend (Dodo Payments + Ed25519 Signing + Device Limit Management)
 // Built with native Node.js HTTP and Crypto (zero external dependencies)
 
 const http = require("http");
-const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
+
+// Optional settings file next to this script (git-ignored): KEY=value per line. Real environment variables win.
+try {
+  for (const line of fs.readFileSync(path.join(__dirname, ".env"), "utf8").split("\n")) {
+    const m = /^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+    if (m && !line.trim().startsWith("#") && process.env[m[1]] === undefined) {
+      process.env[m[1]] = m[2].replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+    }
+  }
+} catch {
+  /* no .env file */
+}
+
+const crypto = require("crypto");
 const { generateLicense, verifyLicense, PUBLIC_KEY_HEX } = require("../scripts/license_crypto.cjs");
+const auth = require("./auth.cjs");
+const dodo = require("./dodo.cjs");
+const admin = require("./admin.cjs");
+const reviews = require("./reviews.cjs");
 
 const PORT = process.env.PORT || 4242;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "rzp_test_secret_flowget2026";
-const DB_FILE = path.join(__dirname, "licenses_db.json");
+const DB_FILE = process.env.LICENSES_DB || path.join(__dirname, "licenses_db.json");
 
 let db = {
   orders: {},
   licenses: {},
   activations: {}, // { [licenseKey]: [ { machineId, machineName, activatedAt } ] }
+  payments: {}, // { [dodoPaymentId]: { licenseKey, orderId, at } }
+  webhooks: {}, // webhook ids already handled (Dodo retries)
 };
 
 if (fs.existsSync(DB_FILE)) {
@@ -23,6 +41,12 @@ if (fs.existsSync(DB_FILE)) {
     db = JSON.parse(fs.readFileSync(DB_FILE, "utf-8"));
   } catch {}
 }
+db.orders ||= {};
+db.licenses ||= {};
+db.activations ||= {};
+db.payments ||= {};
+db.webhooks ||= {};
+db.reviews ||= {};
 
 function saveDb() {
   try {
@@ -36,7 +60,7 @@ function sendJson(res, statusCode, data) {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, x-razorpay-signature",
+    "Access-Control-Allow-Headers": "Content-Type",
   });
   res.end(json);
 }
@@ -57,16 +81,76 @@ function parseBody(req) {
   });
 }
 
+/** Signs a new lifetime license for a paid order and records it. Returns the key. */
+function issueLicense({ email, paymentId, accountEmail }) {
+  const keyId = `FG-PRO-${crypto.randomBytes(4).toString("hex").toUpperCase()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+  const licenseKey = generateLicense({
+    keyId,
+    email,
+    tier: "lifetime",
+    maxDevices: 2,
+    issuedAt: Math.floor(Date.now() / 1000),
+  });
+  db.licenses[licenseKey] = {
+    keyId,
+    email,
+    accountEmail: accountEmail || email,
+    paymentId,
+    issuedAt: Date.now(),
+    tier: "lifetime",
+    maxDevices: 2,
+  };
+  db.activations[licenseKey] = [];
+  saveDb();
+  return licenseKey;
+}
+
+const handleDodo = dodo.createHandler({
+  db,
+  saveDb,
+  issueLicense,
+  allowedOrigins: auth.allowedOrigins,
+  limited: auth.limited,
+  clientIp: auth.clientIp,
+});
+
+const hasLicense = (email) =>
+  Object.values(db.licenses).some((l) => !l.revoked && (String(l.email || "").toLowerCase() === email || String(l.accountEmail || "").toLowerCase() === email));
+
+const handleReviews = reviews.createHandler({ db, saveDb, auth, hasLicense, limited: auth.limited, clientIp: auth.clientIp });
+
+const handleAdmin = admin.createHandler({
+  db,
+  saveDb,
+  auth,
+  issueLicense,
+  siteUrl: () => (process.env.SITE_URL || auth.allowedOrigins.find((o) => o.startsWith("https://")) || auth.allowedOrigins[0] || "https://flowget.net").replace(/\/$/, ""),
+  limited: auth.limited,
+  clientIp: auth.clientIp,
+});
+
 function handleRequest(req, res) {
   const urlObj = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   const pathname = urlObj.pathname;
   const method = req.method;
 
+  // Accounts (Google sign-in, profile, password login) have their own CORS rules because they use cookies.
+  if (auth.handle(req, res, pathname)) return;
+
+  // Customer reviews (public list, write your own): see server/reviews.cjs
+  if (handleReviews(req, res, pathname)) return;
+
+  // Admin panel API (users, purchases, stats, blog): see server/admin.cjs
+  if (handleAdmin(req, res, pathname, urlObj)) return;
+
+  // Checkout and payment webhook (Dodo Payments): see server/dodo.cjs
+  if (handleDodo(req, res, pathname, urlObj)) return;
+
   if (method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, x-razorpay-signature",
+      "Access-Control-Allow-Headers": "Content-Type",
     });
     return res.end();
   }
@@ -81,82 +165,6 @@ function handleRequest(req, res) {
     });
   }
 
-  // 2. Checkout
-  if (method === "POST" && pathname === "/api/checkout/razorpay") {
-    return parseBody(req).then((body) => {
-      const { email, currency = "INR", amount = 99900 } = body;
-      if (!email || !email.includes("@")) {
-        return sendJson(res, 400, { error: "Valid email is required" });
-      }
-
-      const orderId = `order_${crypto.randomBytes(8).toString("hex")}`;
-      db.orders[orderId] = {
-        orderId,
-        email,
-        amount,
-        currency,
-        status: "created",
-        createdAt: Date.now(),
-      };
-      saveDb();
-
-      return sendJson(res, 200, {
-        orderId,
-        amount,
-        currency,
-        keyId: "rzp_test_flowget_2026",
-        productName: "FlowGet Lifetime Pro (2 PCs)",
-      });
-    });
-  }
-
-  // 3. Webhook: Razorpay Payment Captured
-  if (method === "POST" && pathname === "/api/webhook/razorpay") {
-    const signature = req.headers["x-razorpay-signature"];
-    return parseBody(req).then((body) => {
-      if (signature && RAZORPAY_KEY_SECRET && signature !== "test_signature_valid") {
-        const expectedSig = crypto
-          .createHmac("sha256", RAZORPAY_KEY_SECRET)
-          .update(JSON.stringify(body))
-          .digest("hex");
-        if (signature !== expectedSig) {
-          return sendJson(res, 400, { error: "Invalid webhook signature" });
-        }
-      }
-
-      const payment = body.payload?.payment?.entity || body;
-      const email = payment.email || body.email || "customer@example.com";
-      const paymentId = payment.id || `pay_${crypto.randomBytes(6).toString("hex")}`;
-
-      const keyId = `FG-PRO-${crypto.randomBytes(4).toString("hex").toUpperCase()}-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
-      const licenseKey = generateLicense({
-        keyId,
-        email,
-        tier: "lifetime",
-        maxDevices: 2,
-        issuedAt: Math.floor(Date.now() / 1000),
-      });
-
-      db.licenses[licenseKey] = {
-        keyId,
-        email,
-        paymentId,
-        issuedAt: Date.now(),
-        tier: "lifetime",
-        maxDevices: 2,
-      };
-      db.activations[licenseKey] = [];
-      saveDb();
-
-      return sendJson(res, 200, {
-        success: true,
-        message: "Payment processed and license created",
-        licenseKey,
-        email,
-      });
-    });
-  }
-
   // 4. Activate License
   if (method === "POST" && pathname === "/api/license/activate") {
     return parseBody(req).then((body) => {
@@ -168,6 +176,10 @@ function handleRequest(req, res) {
       const check = verifyLicense(licenseKey);
       if (!check.valid) {
         return sendJson(res, 400, { error: check.error || "Invalid license key signature" });
+      }
+
+      if (db.licenses[licenseKey] && db.licenses[licenseKey].revoked) {
+        return sendJson(res, 403, { error: "This license was refunded and is no longer valid." });
       }
 
       if (!db.activations[licenseKey]) {
@@ -242,6 +254,9 @@ function handleRequest(req, res) {
       return sendJson(res, 400, { valid: false, error: check.error });
     }
 
+    if (db.licenses[licenseKey] && db.licenses[licenseKey].revoked) {
+      return sendJson(res, 200, { valid: false, error: "This license was refunded." });
+    }
     const activeList = db.activations[licenseKey] || [];
     return sendJson(res, 200, {
       valid: true,
@@ -254,6 +269,13 @@ function handleRequest(req, res) {
 
   return sendJson(res, 404, { error: "Endpoint not found" });
 }
+
+// The account page shows the license keys bought with the signed-in email.
+auth.setLicenseLookup((email) =>
+  Object.entries(db.licenses)
+    .filter(([, l]) => !l.revoked && (String(l.email || "").toLowerCase() === email || String(l.accountEmail || "").toLowerCase() === email))
+    .map(([licenseKey, l]) => ({ licenseKey, keyId: l.keyId, tier: l.tier, issuedAt: l.issuedAt, maxDevices: l.maxDevices })),
+);
 
 const server = http.createServer(handleRequest);
 

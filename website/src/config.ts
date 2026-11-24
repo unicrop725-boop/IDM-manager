@@ -17,9 +17,13 @@ export const SITE = {
   downloadUrl: "https://github.com/unicrop725-boop/IDM-manager/releases/latest",
   // Chrome Web Store / Edge Add-ons page. Leave empty until it is published.
   extensionUrl: "",
-  // Checkout page. While empty, "Buy" buttons open an email to the support address.
-  buyUrl: "",
+  // Where "Buy" buttons go. The on-site /buy/ page starts a Dodo Payments checkout (needs PUBLIC_API_URL and the server's DODO_* settings).
+  // Set a full URL here to use an external page instead.
+  buyUrl: "/buy/",
   supportEmail: "support@flowget.net",
+  // Address of the accounts API (server/license-server.cjs). Set PUBLIC_API_URL when building, e.g. https://api.flowget.net.
+  // While empty, the sign-in page says that sign-in is not available yet.
+  apiUrl: ((import.meta.env.PUBLIC_API_URL as string | undefined) || "").replace(/\/$/, ""),
 
   // Price (one paid plan, no free trial).
   priceUsd: "19.99",
@@ -29,6 +33,8 @@ export const SITE = {
   ogImage: "/img/og.png",
   // Name shown as the author of blog posts when a post does not set one.
   defaultAuthor: "FlowGet Team",
+  // Shown after the author name on blog cards.
+  defaultAuthorRole: "Editorial",
 } as const;
 
 export const buyHref = (): string =>

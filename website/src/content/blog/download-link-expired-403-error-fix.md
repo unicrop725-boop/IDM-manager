@@ -3,6 +3,8 @@ title: "Download link expired or 403 error? Why it happens and how to fix it"
 description: "Why a download works for a while and then fails with 403 Forbidden, 'link expired' or saves a web page instead of the file, and what to do about it."
 pubDate: 2026-11-23T08:30:00Z
 tags: ["troubleshooting", "errors", "resume"]
+cover: "/img/blog/download-link-expired-403-error-fix.jpg"
+coverAlt: "A broken chain link next to a 403 error badge"
 faq:
   - q: "What does a 403 Forbidden error mean for a download?"
     a: "The server understood your request but refuses it. For downloads it usually means the link has expired, you are not signed in, or the site blocks requests that do not look like a normal browser visit."

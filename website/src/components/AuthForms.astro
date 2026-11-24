@@ -1,0 +1,106 @@
+---
+import { SITE } from "../config";
+import GoogleButton from "./GoogleButton.astro";
+interface Props {
+  mode: "signin" | "signup";
+}
+const { mode } = Astro.props;
+const resetHref = `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("Reset my FlowGet password")}`;
+---
+<div id="auth" data-api={SITE.apiUrl} data-mode={mode}>
+  {mode === "signin" ? (
+    <section id="view-signin" class="view" hidden>
+      <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20c.9-3.7 3.7-5.6 7.2-5.6s6.3 1.9 7.2 5.6"/></svg></span>
+      <h1>Welcome back!</h1>
+      <p class="sub">Sign in to continue where you left off.</p>
+
+      <GoogleButton label="Continue with Google" />
+      <p class="note" id="g-missing" hidden>Google sign-in is not set up on this server yet.</p>
+      <p class="err" id="err-google" role="alert"></p>
+
+      <div class="dev" id="dev-box" hidden>
+        <p><b>Local testing only.</b> The server accepts a pretend Google account:</p>
+        <div class="dev-row"><input id="dev-email" type="email" placeholder="jordan@example.com" autocomplete="off" /><button type="button" id="dev-go" class="soft">Use it</button></div>
+      </div>
+
+      <div class="or"><span>Or</span></div>
+
+      <form id="form-login" novalidate>
+        <label for="l-email">Email address</label>
+        <input id="l-email" name="email" type="email" autocomplete="username" inputmode="email" placeholder="you@example.com" required />
+
+        <div class="label-row"><label for="l-pass">Password</label><a href={resetHref}>Forgot password?</a></div>
+        <div class="pw-row">
+          <input id="l-pass" name="password" type="password" autocomplete="current-password" placeholder="Your password" required />
+          <button type="button" class="soft" data-toggle="l-pass" aria-controls="l-pass">Show</button>
+        </div>
+
+        <label class="check"><input id="l-remember" type="checkbox" checked /><span>Keep me signed in on this device</span></label>
+
+        <p class="err" id="err-login" role="alert"></p>
+        <button class="primary" type="submit" id="btn-login">Login with Email</button>
+      </form>
+
+      <p class="legal">By continuing, you agree to the <a href="/privacy/">Privacy Policy</a>.</p>
+    </section>
+  ) : (
+    <section id="view-signup" class="view" hidden>
+      <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10" cy="8.5" r="3.6"/><path d="M3.6 20c.8-3.7 3.4-5.6 6.4-5.6 1.2 0 2.3.3 3.2.8"/><path d="M18 14v6M15 17h6"/></svg></span>
+      <h1>Create your account</h1>
+      <p class="sub">Continue with Google to verify your email. Then add your name, phone number and a password.</p>
+
+      <GoogleButton label="Sign up with Google" />
+      <p class="note" id="g-missing" hidden>Google sign-in is not set up on this server yet.</p>
+      <p class="err" id="err-google" role="alert"></p>
+
+      <div class="dev" id="dev-box" hidden>
+        <p><b>Local testing only.</b> The server accepts a pretend Google account:</p>
+        <div class="dev-row"><input id="dev-email" type="email" placeholder="jordan@example.com" autocomplete="off" /><button type="button" id="dev-go" class="soft">Use it</button></div>
+      </div>
+
+      <ol class="steps">
+        <li><b>1</b><span>Verify your email with Google</span></li>
+        <li><b>2</b><span>Add your name, phone and a password</span></li>
+        <li><b>3</b><span>Sign in any time with email and password</span></li>
+      </ol>
+
+      <p class="legal">By continuing, you agree to the <a href="/privacy/">Privacy Policy</a>.</p>
+    </section>
+  )}
+
+  <!-- After Google: add name, phone and password -->
+  <section id="view-profile" class="view" hidden>
+    <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+    <h1>Finish your account</h1>
+    <p class="sub">Signed in with Google as <b id="p-email"></b>. Add your details to finish.</p>
+
+    <form id="form-profile" novalidate>
+      <label for="p-name">Full name</label>
+      <input id="p-name" name="name" type="text" autocomplete="name" maxlength="80" required />
+
+      <label for="p-phone">Phone number</label>
+      <input id="p-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" required />
+
+      <label for="p-pass">Create a password</label>
+      <div class="pw-row">
+        <input id="p-pass" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="8+ characters, letters and a number" required />
+        <button type="button" class="soft" data-toggle="p-pass" aria-controls="p-pass">Show</button>
+      </div>
+
+      <label for="p-pass2">Confirm password</label>
+      <input id="p-pass2" name="password2" type="password" autocomplete="new-password" required />
+
+      <p class="err" id="err-profile" role="alert"></p>
+      <button class="primary" type="submit" id="btn-profile">Create account</button>
+    </form>
+
+    <p class="switch"><a href="#" id="p-back">Use a different Google account</a></p>
+  </section>
+
+  <!-- Not available -->
+  <section id="view-off" class="view" hidden>
+    <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16v.1"/></svg></span>
+    <h1>Sign in is not available yet</h1>
+    <p class="sub">Accounts are being set up. You can still <a href="/#pricing">get FlowGet Pro</a> or <a href={`mailto:${SITE.supportEmail}`}>contact support</a>.</p>
+  </section>
+</div>

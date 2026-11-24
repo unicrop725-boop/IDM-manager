@@ -22,6 +22,9 @@ interface Props {
   jsonLd?: Record<string, unknown>[];
   /** Mark the current section in the menu. */
   current?: "features" | "blog" | "download" | "home" | "";
+  /** No site header, footer or menu script (sign-in and account pages). */
+  bare?: boolean;
+  bodyClass?: string;
 }
 
 const {
@@ -37,6 +40,8 @@ const {
   noindex = false,
   jsonLd = [],
   current = "",
+  bare = false,
+  bodyClass = "",
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site).href;
@@ -53,13 +58,14 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
     {noindex ? <meta name="robots" content="noindex, follow" /> : <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />}
-    <meta name="theme-color" content="#0b0b0f" />
+    <meta name="theme-color" content="#f4f4f2" />
 
     <link rel="icon" type="image/png" href="/img/favicon-32.png" />
     <link rel="apple-touch-icon" href="/img/icon-256.png" />
     <link rel="alternate" type="application/rss+xml" title={`${SITE.name} blog`} href="/rss.xml" />
     <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href={cssHref} />
+    <slot name="head" />
 
     <meta property="og:site_name" content={SITE.name} />
     <meta property="og:type" content={type} />
@@ -79,13 +85,13 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
 
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
   </head>
-  <body>
+  <body class={bodyClass || undefined}>
     <a class="skip" href="#main">Skip to content</a>
-    <Header current={current} />
+    {!bare && <Header current={current} />}
     <main id="main">
       <slot />
     </main>
-    <Footer />
-    <script is:inline src="/js/menu.js"></script>
+    {!bare && <Footer />}
+    {!bare && <script is:inline src="/js/menu.js"></script>}
   </body>
 </html>

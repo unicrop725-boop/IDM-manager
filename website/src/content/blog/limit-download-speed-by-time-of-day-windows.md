@@ -3,6 +3,8 @@ title: "How to limit download speed by time of day on Windows"
 description: "Keep video calls and browsing smooth while big downloads run. Ways to cap download speed on Windows, schedule full speed at night and pause on metered connections."
 pubDate: 2026-11-23T07:30:00Z
 tags: ["bandwidth", "windows", "speed"]
+cover: "/img/blog/limit-download-speed-by-time-of-day-windows.jpg"
+coverAlt: "A weekly chart of download speed with a limit line and a clock"
 faq:
   - q: "Can Windows limit download speed for one app?"
     a: "Windows has a general limit for Windows Update downloads in its settings, and a Quality of Service policy for outgoing traffic. It has no simple per-app download limit for ordinary programs, so most people set the limit in the program itself or on the router."

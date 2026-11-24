@@ -1,0 +1,54 @@
+---
+import Base from "../layouts/Base.astro";
+import AuthShell from "../components/AuthShell.astro";
+import { SITE } from "../config";
+---
+<Base title="Your account" description="Your FlowGet account." noindex bare bodyClass="authx">
+  <link slot="head" rel="stylesheet" href={"/css/auth.css?v=" + Date.now()} />
+  <AuthShell hint="Need help?" linkText="Contact support" linkHref={`mailto:${SITE.supportEmail}`}>
+    <div id="acct" data-api={SITE.apiUrl}>
+      <p class="sub" id="a-loading">Loading your account…</p>
+
+      <section id="a-main" class="view" hidden>
+        <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.8 20c.9-3.7 3.7-5.6 7.2-5.6s6.3 1.9 7.2 5.6"/></svg></span>
+        <h1>Hi, <span id="a-first"></span></h1>
+        <p class="sub">You are signed in to your FlowGet account.</p>
+
+        <dl class="kv">
+          <div><dt>Name</dt><dd id="a-name"></dd></div>
+          <div><dt>Email</dt><dd id="a-email"></dd></div>
+          <div><dt>Phone</dt><dd id="a-phone"></dd></div>
+        </dl>
+
+        <h2>Your license</h2>
+        <div id="a-lic-empty">
+          <p class="sub">No license is linked to this email yet.</p>
+          <a class="primary link-btn" href="/#pricing">Get FlowGet Pro</a>
+        </div>
+        <ul class="lic" id="a-lic" hidden></ul>
+
+        <div id="a-review" class="review-box" hidden>
+          <h2>Your review</h2>
+          <p class="rv-state" id="rv-state" hidden></p>
+          <form id="form-review" novalidate>
+            <div class="stars-pick" id="stars" role="radiogroup" aria-label="Rating"></div>
+            <label for="rv-role">What do you do? <span class="opt">(optional)</span></label>
+            <input id="rv-role" type="text" maxlength="60" placeholder="e.g. Video editor, student" />
+            <label for="rv-text">Your experience with FlowGet</label>
+            <textarea id="rv-text" rows="4" maxlength="600" placeholder="What do you use it for, and how did it go?"></textarea>
+            <p class="err" id="err-review" role="alert"></p>
+            <button class="primary" type="submit" id="btn-review">Send review</button>
+          </form>
+          <p class="legal">Reviews are checked before they appear on the website. Only your first name and the first letter of your last name are shown.</p>
+        </div>
+
+        <div class="row-btns">
+          <a class="soft link-btn" href="/download/">Download FlowGet</a>
+          <a class="soft link-btn" id="a-admin" href="/admin/" hidden>Admin panel</a>
+          <button class="soft" type="button" id="a-out">Sign out</button>
+        </div>
+      </section>
+    </div>
+  </AuthShell>
+  <script is:inline src="/js/account.js" defer></script>
+</Base>

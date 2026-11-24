@@ -1,15 +1,31 @@
 // scripts/test-phase8-acceptance.js
 // Phase 8 Acceptance Test: Full End-to-End Product Lifecycle
-// (Install -> 30-Day Trial -> Expire/Gating -> Buy via Razorpay -> Activate -> 2-PC Limit -> Update -> Crash Reporter)
+// (Install -> 30-Day Trial -> Expire/Gating -> Buy via Dodo Payments -> Activate -> 2-PC Limit -> Update -> Crash Reporter)
 
 import assert from "assert";
 import fs from "fs";
 import { Readable } from "stream";
 import { createRequire } from "module";
+import crypto from "crypto";
+import os from "os";
+import path from "path";
 
 const require = createRequire(import.meta.url);
 const { generateLicense, verifyLicense, PUBLIC_KEY_HEX } = require("./license_crypto.cjs");
+const DODO_SECRET = "whsec_" + crypto.randomBytes(24).toString("base64");
+process.env.DODO_WEBHOOK_SECRET = DODO_SECRET;
+// Hermetic: own temporary databases, so a local server/.env (or the real license file) never leaks into the test.
+const LICENSES_TMP = path.join(os.tmpdir(), `fg-phase8-licenses-${process.pid}.json`);
+process.env.LICENSES_DB = LICENSES_TMP;
+process.env.ACCOUNTS_DB = path.join(os.tmpdir(), `fg-phase8-accounts-${process.pid}.json`);
 const licenseServer = require("../server/license-server.cjs");
+
+// Headers Dodo sends (Standard Webhooks): id, timestamp and an HMAC-SHA256 over "id.timestamp.body".
+function dodoHeaders(id, rawBody) {
+  const ts = String(Math.floor(Date.now() / 1000));
+  const sig = crypto.createHmac("sha256", Buffer.from(DODO_SECRET.slice(6), "base64")).update(`${id}.${ts}.${rawBody}`).digest("base64");
+  return { "webhook-id": id, "webhook-timestamp": ts, "webhook-signature": "v1," + sig };
+}
 
 function callServer(method, urlPath, body = {}, headers = {}) {
   return new Promise((resolve) => {
@@ -166,38 +182,28 @@ async function runAllTests() {
     assert.strictEqual(proState.showPremiumPopup, false);
   });
 
-  // 3. Razorpay Checkout & Webhook Auto-License Generation
+  // 3. Dodo Payments webhook -> automatic license
   let generatedKey = "";
-  await test("3. Buy FlowGet Key via Razorpay Checkout & Webhook", async () => {
-    // A. Create Checkout Order
-    const orderRes = await callServer("POST", "/api/checkout/razorpay", {
-      email: "buyer@example.com",
-      amount: 99900,
-    });
-    assert.strictEqual(orderRes.status, 200);
-    assert(orderRes.body.orderId.startsWith("order_"));
+  await test("3. Buy FlowGet Key via Dodo Payments webhook", async () => {
+    const payload = {
+      type: "payment.succeeded",
+      data: { payment_id: "pay_test_123456", customer: { email: "buyer@example.com", name: "Buyer" }, metadata: {} },
+    };
+    const raw = JSON.stringify(payload);
 
-    // B. Trigger Webhook Payment Captured
-    const webhookRes = await callServer(
-      "POST",
-      "/api/webhook/razorpay",
-      {
-        email: "buyer@example.com",
-        payload: {
-          payment: {
-            id: "pay_test_123456",
-            amount: 99900,
-            email: "buyer@example.com",
-            status: "captured",
-          },
-        },
-      },
-      { "x-razorpay-signature": "test_signature_valid" }
-    );
+    // An unsigned or wrongly signed webhook must never create a license.
+    const unsigned = await callServer("POST", "/api/webhook/dodo", payload);
+    assert.strictEqual(unsigned.status, 401);
+    const forged = await callServer("POST", "/api/webhook/dodo", payload, { ...dodoHeaders("evt_forged", raw), "webhook-signature": "v1,AAAA" });
+    assert.strictEqual(forged.status, 401);
 
-    assert.strictEqual(webhookRes.status, 200);
-    assert(webhookRes.body.licenseKey.startsWith("FG1."));
-    generatedKey = webhookRes.body.licenseKey;
+    const ok = await callServer("POST", "/api/webhook/dodo", payload, dodoHeaders("evt_test_1", raw));
+    assert.strictEqual(ok.status, 200);
+
+    // The key goes to the buyer through the account page; read it back from the license database here.
+    const db = JSON.parse(fs.readFileSync(LICENSES_TMP, "utf8"));
+    generatedKey = db.payments["pay_test_123456"].licenseKey;
+    assert(generatedKey.startsWith("FG1."));
   });
 
   // 4. Ed25519 Offline Verification

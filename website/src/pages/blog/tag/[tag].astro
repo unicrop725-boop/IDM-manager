@@ -41,7 +41,7 @@ const jsonLd = [
       <h1>Articles about <span class="grad-text">{tag}</span></h1>
       <p>{posts.length} guide{posts.length === 1 ? "" : "s"}. <a href="/blog/" style="color:var(--sky)">All articles</a></p>
     </div>
-    <div class="post-grid">
+    <div class="bgrid">
       {posts.map((p) => <PostCard post={p} />)}
     </div>
   </div>

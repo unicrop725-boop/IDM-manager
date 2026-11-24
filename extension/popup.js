@@ -187,6 +187,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const settings = await chrome.storage.local.get(DEFAULTS);
   $("intercept-toggle").checked = settings.enabled;
   $("autosuggest-toggle").checked = settings.autoSuggestBarEnabled;
+  $("videobtn-toggle").checked = settings.videoButtonEnabled !== false;
   $("autolaunch-toggle").checked = settings.autoLaunch;
   $("notify-toggle").checked = settings.notifyOnStart;
   $("min-size").value = settings.minSizeBytes ? Math.round(settings.minSizeBytes / 1024) : "";
@@ -195,6 +196,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("autosuggest-toggle").addEventListener("change", (e) =>
     chrome.storage.local.set({ autoSuggestBarEnabled: e.target.checked }),
   );
+  $("videobtn-toggle").addEventListener("change", (e) => chrome.storage.local.set({ videoButtonEnabled: e.target.checked }));
   $("autolaunch-toggle").addEventListener("change", (e) => chrome.storage.local.set({ autoLaunch: e.target.checked }));
   $("notify-toggle").addEventListener("change", (e) => chrome.storage.local.set({ notifyOnStart: e.target.checked }));
   $("min-size").addEventListener("change", (e) => {

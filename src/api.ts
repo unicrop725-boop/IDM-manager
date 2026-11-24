@@ -1,6 +1,8 @@
 // Typed wrappers around Tauri commands (src-tauri/src/commands.rs).
 
 import { invoke } from "@tauri-apps/api/core";
+import { IS_DEMO } from "./demo/flag";
+import { demoBackend } from "./demo/backend";
 import type {
   AddRequest,
   AdapterInfo,
@@ -79,17 +81,17 @@ const mockSettings: Settings = {
 };
 
 let mockLicenseStatus: TrialAndLicenseStatus = {
-  isLicensed: false,
+  isLicensed: IS_DEMO,
   isTrial: false,
-  isExpired: true,
+  isExpired: !IS_DEMO,
   daysRemaining: 0,
   trialStartedAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   maxConnections: 32,
   turboModeAllowed: true,
   mediaDownloadAllowed: true,
-  licenseKey: null,
-  licenseEmail: null,
-  licenseTier: null,
+  licenseKey: IS_DEMO ? "DEMO" : null,
+  licenseEmail: IS_DEMO ? "demo@flowget.net" : null,
+  licenseTier: IS_DEMO ? "pro" : null,
 };
 
 /** Browser-preview only: the list starts empty. This single entry is only a template for the `?stress=N` hook. */
@@ -166,7 +168,7 @@ function stressDownloads(): DownloadInfo[] | null {
 export const api = {
   // Downloads
   addDownload: (request: AddRequest) =>
-    isTauri ? invoke<DownloadInfo>("add_download", { request }) : Promise.resolve({
+    isTauri ? invoke<DownloadInfo>("add_download", { request }) : IS_DEMO ? Promise.resolve(demoBackend.add(request)) : Promise.resolve({
       id: "dl-" + Date.now(),
       url: request.url,
       fileName: request.fileName || "file.bin",
@@ -193,23 +195,23 @@ export const api = {
       category: request.category || "Others",
       queueId: request.queueId || "main",
     }),
-  pause: (id: string) => (isTauri ? invoke<void>("pause", { id }) : Promise.resolve()),
-  resume: (id: string) => (isTauri ? invoke<void>("resume", { id }) : Promise.resolve()),
-  markQueued: (id: string) => (isTauri ? invoke<void>("mark_queued", { id }) : Promise.resolve()),
-  cancel: (id: string) => (isTauri ? invoke<void>("cancel", { id }) : Promise.resolve()),
-  restart: (id: string) => (isTauri ? invoke<void>("restart", { id }) : Promise.resolve()),
+  pause: (id: string) => (isTauri ? invoke<void>("pause", { id }) : Promise.resolve(IS_DEMO ? demoBackend.pause(id) : undefined)),
+  resume: (id: string) => (isTauri ? invoke<void>("resume", { id }) : Promise.resolve(IS_DEMO ? demoBackend.resume(id) : undefined)),
+  markQueued: (id: string) => (isTauri ? invoke<void>("mark_queued", { id }) : Promise.resolve(IS_DEMO ? demoBackend.queue(id) : undefined)),
+  cancel: (id: string) => (isTauri ? invoke<void>("cancel", { id }) : Promise.resolve(IS_DEMO ? demoBackend.cancel(id) : undefined)),
+  restart: (id: string) => (isTauri ? invoke<void>("restart", { id }) : Promise.resolve(IS_DEMO ? demoBackend.restart(id) : undefined)),
   refreshLink: (id: string, newUrl: string) =>
-    isTauri ? invoke<void>("refresh_link", { id, newUrl }) : Promise.resolve(),
+    isTauri ? invoke<void>("refresh_link", { id, newUrl }) : Promise.resolve(IS_DEMO ? demoBackend.refreshLink(id, newUrl) : undefined),
   remove: (id: string, deleteFile: boolean) =>
-    isTauri ? invoke<void>("remove", { id, deleteFile }) : Promise.resolve(),
+    isTauri ? invoke<void>("remove", { id, deleteFile }) : Promise.resolve(IS_DEMO ? demoBackend.remove(id) : undefined),
   getDownloads: () =>
-    isTauri ? invoke<DownloadInfo[]>("get_downloads") : Promise.resolve(stressDownloads() ?? mockDownloads),
+    isTauri ? invoke<DownloadInfo[]>("get_downloads") : Promise.resolve(IS_DEMO ? demoBackend.list() : stressDownloads() ?? mockDownloads),
   setDownloadMeta: (id: string, category?: string | null, queueId?: string | null, queueOrder?: number | null) =>
     isTauri
       ? invoke<DownloadInfo>("set_download_meta", { id, category, queueId, queueOrder })
-      : Promise.resolve(stressTemplate),
+      : Promise.resolve((IS_DEMO ? demoBackend.setMeta(id, category, queueId, queueOrder) : undefined) ?? stressTemplate),
   setSpeedLimit: (id: string | null, bytesPerSec: number) =>
-    isTauri ? invoke<void>("set_speed_limit", { id, bytesPerSec }) : Promise.resolve(),
+    isTauri ? invoke<void>("set_speed_limit", { id, bytesPerSec }) : Promise.resolve(IS_DEMO ? demoBackend.setSpeedLimit(id, bytesPerSec) : undefined),
 
   // Duplicate Detection
   checkDuplicate: (url: string, saveDir?: string, fileName?: string) =>

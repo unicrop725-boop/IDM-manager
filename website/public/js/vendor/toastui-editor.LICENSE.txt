@@ -1,0 +1,5 @@
+﻿toastui-editor.js is TOAST UI Editor 3.2.2 (https://github.com/nhn/tui.editor), MIT License, (c) NHN Cloud Corp.
+It is bundled with its dependencies (ProseMirror, markdown-it style parsing, DOMPurify and others, each under its own permissive license)
+into one browser script with esbuild. The CSS in /css/vendor/toastui-editor.css is from the same package.
+The admin panel starts it with usageStatistics: false, so it sends nothing to Google Analytics.
+It is only loaded on the admin page, never on public pages.

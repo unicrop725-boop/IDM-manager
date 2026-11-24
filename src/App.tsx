@@ -1,5 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "./events";
+import { IS_DEMO } from "./demo/flag";
 import { api, errorText } from "./api";
 import { TitleBar } from "./components/TitleBar";
 import { BackgroundLayer } from "./components/BackgroundLayer";
@@ -124,7 +125,7 @@ export default function App() {
 
   // Request notification permissions
   useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
+    if (!IS_DEMO && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
   }, []);

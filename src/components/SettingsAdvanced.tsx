@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "../events";
 import { Download, RefreshCw, ShieldCheck, Plus, Trash2, Check, Wrench, Clock, ExternalLink } from "lucide-react";
 import { api } from "../api";
 import type { BandwidthPolicy, BandwidthRule, BandwidthStatus, ToolInfo, ToolsProgress } from "../types";

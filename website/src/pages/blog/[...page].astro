@@ -2,7 +2,6 @@
 import type { GetStaticPaths } from "astro";
 import Base from "../../layouts/Base.astro";
 import PostCard from "../../components/PostCard.astro";
-import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import { SITE } from "../../config";
 import { MIN_POSTS_FOR_TAG_PAGE, allTags, getPosts } from "../../lib/blog";
 
@@ -16,9 +15,6 @@ const posts = await getPosts();
 const tags = allTags(posts).filter((t) => t.count >= MIN_POSTS_FOR_TAG_PAGE);
 const site = Astro.site!.href.replace(/\/$/, "");
 const first = page.currentPage === 1;
-const [lead, ...rest] = page.data;
-const showFeatured = first && lead;
-const list = showFeatured ? rest : page.data;
 
 const title = first ? "Blog: guides for faster, safer downloads" : `Blog, page ${page.currentPage}`;
 const description = first
@@ -49,33 +45,34 @@ const jsonLd = [
   },
 ];
 ---
-<Base title={title} description={description} current="blog" jsonLd={jsonLd}>
-  <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Blog" }]} />
-  <div class="wrap">
-    <div class="page-head" style="padding-top:24px">
-      <h1>The FlowGet <span class="grad-text">blog</span></h1>
+<Base title={title} description={description} current="blog" jsonLd={jsonLd} bodyClass="blog">
+  <section class="blog-hero">
+    <div class="wrap">
+      <h1>{first ? "Blog & Guides" : `Blog, page ${page.currentPage}`}</h1>
       <p>Practical guides on faster downloads, resuming interrupted ones, video streams, bandwidth control and keeping files safe.</p>
+      {tags.length > 0 && (
+        <nav class="blog-tags" aria-label="Topics">
+          {tags.map((t) => <a href={`/blog/tag/${t.slug}/`}>{t.tag}</a>)}
+        </nav>
+      )}
     </div>
+  </section>
 
-    {tags.length > 0 && first && (
-      <div class="tags" style="margin-bottom:28px" aria-label="Topics">
-        {tags.map((t) => <a class="tag" href={`/blog/tag/${t.slug}/`}>{t.tag} · {t.count}</a>)}
+  <section class="blog-latest">
+    <div class="wrap">
+      <h2>Latest Posts</h2>
+      {posts.length === 0 && <p class="fine">The first articles are on their way.</p>}
+      <div class="bgrid">
+        {page.data.map((p) => <PostCard post={p} />)}
       </div>
-    )}
 
-    {posts.length === 0 && <p class="fine">The first articles are on their way.</p>}
-
-    {showFeatured && <PostCard post={lead} featured />}
-    <div class="post-grid">
-      {list.map((p) => <PostCard post={p} />)}
+      {(page.url.prev || page.url.next) && (
+        <nav class="pager" aria-label="Pagination">
+          <a class="btn btn-ghost" href={page.url.prev || "#"} aria-disabled={page.url.prev ? undefined : "true"} rel="prev">← Newer</a>
+          <span class="fine">Page {page.currentPage} of {page.lastPage}</span>
+          <a class="btn btn-ghost" href={page.url.next || "#"} aria-disabled={page.url.next ? undefined : "true"} rel="next">Older →</a>
+        </nav>
+      )}
     </div>
-
-    {(page.url.prev || page.url.next) && (
-      <nav class="pager" aria-label="Pagination">
-        <a class="btn btn-ghost" href={page.url.prev || "#"} aria-disabled={page.url.prev ? undefined : "true"} rel="prev">← Newer</a>
-        <span class="fine">Page {page.currentPage} of {page.lastPage}</span>
-        <a class="btn btn-ghost" href={page.url.next || "#"} aria-disabled={page.url.next ? undefined : "true"} rel="next">Older →</a>
-      </nav>
-    )}
-  </div>
+  </section>
 </Base>

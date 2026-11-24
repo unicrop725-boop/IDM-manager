@@ -9,7 +9,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "new-post": "node scripts/new-post.mjs",
-    "postbuild": "node scripts/check-build.mjs"
+    "postbuild": "node scripts/check-build.mjs && node scripts/finish-headers.mjs"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.19",

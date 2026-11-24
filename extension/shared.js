@@ -20,6 +20,7 @@ var FLOWGET_DEFAULT_TYPES = [
 var FLOWGET_DEFAULTS = {
   enabled: true,
   autoSuggestBarEnabled: true,
+  videoButtonEnabled: true, // the "Download Video" button that floats over videos
   autoLaunch: true, // start FlowGet when something is grabbed while it is closed
   notifyOnStart: true, // a desktop notification when FlowGet starts a download
   fileTypes: FLOWGET_DEFAULT_TYPES,

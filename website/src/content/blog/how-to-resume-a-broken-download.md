@@ -3,6 +3,8 @@ title: "How to resume a broken download on Windows (without starting over)"
 description: "Why downloads stop halfway, when they can be resumed, and how to continue from where they stopped instead of downloading the whole file again."
 pubDate: 2026-11-23T09:00:00Z
 tags: ["resume", "windows", "troubleshooting"]
+cover: "/img/blog/how-to-resume-a-broken-download.jpg"
+coverAlt: "A download progress bar that stops partway and then continues"
 featured: true
 faq:
   - q: "Can every broken download be resumed?"

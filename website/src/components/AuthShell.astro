@@ -1,0 +1,53 @@
+---
+import { SITE } from "../config";
+interface Props {
+  /** Small line + button in the top right, e.g. "Don't have an account?" + "Sign up". */
+  hint: string;
+  linkText: string;
+  linkHref: string;
+}
+const { hint, linkText, linkHref } = Astro.props;
+---
+<div class="shell">
+  <div class="pane">
+    <header class="pane-top">
+      <a class="brand" href="/">
+        <img src="/img/icon-128.png" alt="" width="34" height="34" />
+        <span><b>{SITE.name}</b><small>Download manager</small></span>
+      </a>
+      <p class="pane-link">{hint} <a href={linkHref}>{linkText}</a></p>
+    </header>
+
+    <main class="pane-main">
+      <slot />
+    </main>
+
+    <footer class="pane-foot">
+      <span>© {new Date().getFullYear()} {SITE.name}</span>
+      <span><a href="/">Back to website</a> · <a href="/privacy/">Privacy</a></span>
+    </footer>
+  </div>
+
+  <aside class="vis" data-api={SITE.apiUrl} data-sample={import.meta.env.PUBLIC_SAMPLE_REVIEWS === "1" ? "1" : undefined}>
+    <div class="vis-copy">
+      <h2>Download faster. Resume anything. Stay in control.</h2>
+      <p>One place for every download on your PC, with many connections at once, resume after any interruption and a speed limit you set.</p>
+    </div>
+
+    <div class="iso" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="hero-tile" aria-hidden="true">
+      <span class="side"></span>
+      <span class="top"></span>
+      <img src="/img/icon-128.png" alt="" width="64" height="64" />
+    </div>
+
+    <section class="reviews" id="reviews" aria-label="What buyers say" hidden>
+      <div class="rv-head">
+        <h3>Real Stories. Real Impact.</h3>
+        <p>Hear directly from the people who download with {SITE.name}.</p>
+      </div>
+      <div class="rv-track" id="rv-track" role="list"></div>
+    </section>
+  </aside>
+  <script is:inline src="/js/reviews.js" defer></script>
+</div>

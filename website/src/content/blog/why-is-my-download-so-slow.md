@@ -3,6 +3,8 @@ title: "Why is my download so slow? 9 fixes that actually help"
 description: "Slow downloads have a handful of real causes: the server, your Wi-Fi, a VPN, your disk or a single throttled connection. Here is how to find yours and fix it."
 pubDate: 2026-11-23T08:00:00Z
 tags: ["speed", "windows", "troubleshooting"]
+cover: "/img/blog/why-is-my-download-so-slow.jpg"
+coverAlt: "A speed gauge with the needle pointing at a low speed"
 faq:
   - q: "Why is my download slower than my internet speed?"
     a: "The download is limited by the slowest link in the chain. Often that is the server, which may cap speed per connection, rather than your own line."

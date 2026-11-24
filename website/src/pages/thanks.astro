@@ -1,0 +1,67 @@
+---
+import Base from "../layouts/Base.astro";
+import AuthShell from "../components/AuthShell.astro";
+import { SITE } from "../config";
+---
+<Base title="Thank you" description="Your FlowGet purchase." noindex bare bodyClass="authx">
+  <link slot="head" rel="stylesheet" href={"/css/auth.css?v=" + Date.now()} />
+  <AuthShell hint="Need help?" linkText="Contact support" linkHref={`mailto:${SITE.supportEmail}`}>
+    <div id="thanks" data-api={SITE.apiUrl}>
+      <section id="t-wait" class="view">
+        <span class="badge" aria-hidden="true"><span class="spin"></span></span>
+        <h1>Confirming your payment…</h1>
+        <p class="sub">This usually takes a few seconds. Please keep this page open.</p>
+      </section>
+
+      <section id="t-paid" class="view" hidden>
+        <span class="badge ok" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg></span>
+        <h1>Thank you!</h1>
+        <p class="sub">Your payment is confirmed. Here is your FlowGet Pro license key.</p>
+        <ul class="lic">
+          <li>
+            <div class="t" id="t-meta"></div>
+            <code id="t-key"></code>
+            <button class="soft" type="button" id="t-copy">Copy key</button>
+          </li>
+        </ul>
+        <ol class="steps how">
+          <li><b>1</b><span>Install and open FlowGet</span></li>
+          <li><b>2</b><span>Go to <i>Help &gt; Activate License</i></span></li>
+          <li><b>3</b><span>Paste your key and press Activate</span></li>
+        </ol>
+        <div class="row-btns">
+          <a class="soft link-btn" href="/download/">Download FlowGet</a>
+          <a class="primary link-btn" href="/account/">My account</a>
+        </div>
+      </section>
+
+      <section id="t-late" class="view" hidden>
+        <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+        <h1>Still confirming</h1>
+        <p class="sub">Your bank is taking a little longer. Your license key will appear on your <a href="/account/">account page</a> as soon as the payment clears, and Dodo Payments emails you a receipt. Nothing more is needed.</p>
+        <div class="row-btns">
+          <button class="soft" type="button" id="t-retry">Check again</button>
+          <a class="primary link-btn" href="/account/">My account</a>
+        </div>
+      </section>
+
+      <section id="t-refund" class="view" hidden>
+        <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16v.1"/></svg></span>
+        <h1>This payment was refunded</h1>
+        <p class="sub">The license for this order is no longer valid. You can buy again any time.</p>
+        <a class="primary link-btn" href="/buy/">Buy FlowGet Pro</a>
+      </section>
+
+      <section id="t-none" class="view" hidden>
+        <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16v.1"/></svg></span>
+        <h1>We could not find that order</h1>
+        <p class="sub">Open the link from your payment page again, or sign in to see your licenses.</p>
+        <div class="row-btns">
+          <a class="soft link-btn" href="/buy/">Buy FlowGet Pro</a>
+          <a class="primary link-btn" href="/signin/">Sign in</a>
+        </div>
+      </section>
+    </div>
+  </AuthShell>
+  <script is:inline src="/js/thanks.js" defer></script>
+</Base>

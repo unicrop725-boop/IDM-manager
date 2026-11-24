@@ -3,6 +3,8 @@ title: "How to check that a downloaded file is safe (hashes, VirusTotal, double 
 description: "Five quick checks before you run anything you downloaded: the source, the file name, the checksum, a VirusTotal lookup and Windows SmartScreen. With the commands to use."
 pubDate: 2026-11-23T06:00:00Z
 tags: ["safety", "windows", "security"]
+cover: "/img/blog/how-to-check-a-downloaded-file-is-safe.jpg"
+coverAlt: "A shield with a check mark between two files"
 faq:
   - q: "How do I get the SHA-256 of a file on Windows?"
     a: "Open PowerShell in the folder and run: Get-FileHash .\\file.exe -Algorithm SHA256. Compare the result with the hash published by the software's author."

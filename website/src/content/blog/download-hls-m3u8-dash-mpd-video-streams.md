@@ -3,6 +3,8 @@ title: "How to download HLS (.m3u8) and DASH (.mpd) video streams"
 description: "What .m3u8 and .mpd files are, why streaming videos are not single files, and how to save a stream you are allowed to keep with yt-dlp, ffmpeg or a download manager."
 pubDate: 2026-11-23T07:00:00Z
 tags: ["video", "streaming", "ffmpeg"]
+cover: "/img/blog/download-hls-m3u8-dash-mpd-video-streams.jpg"
+coverAlt: "Video stream segments joining into one MP4 file"
 faq:
   - q: "What is an .m3u8 file?"
     a: "It is a playlist used by HLS streaming. It does not contain the video itself, only a list of small video segments (and, in a master playlist, a list of quality levels) that the player downloads one by one."

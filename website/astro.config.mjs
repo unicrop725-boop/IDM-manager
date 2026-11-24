@@ -12,5 +12,6 @@ export default defineConfig({
     format: "directory",
   },
   compressHTML: true,
-  integrations: [sitemap()],
+  // Sign-in and account pages are private: keep them out of the sitemap.
+  integrations: [sitemap({ filter: (page) => !/\/(signin|signup|account|buy|thanks|admin)\/$/.test(page) })],
 });

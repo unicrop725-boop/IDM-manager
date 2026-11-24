@@ -407,6 +407,18 @@
     .stack.up { top: auto; bottom: 0; flex-direction: column-reverse; }
     .stack.up .hint { top: auto; bottom: calc(100% + 10px); }
     .stack.up .hint::before { display: none; }
+    .pill { position: relative; pointer-events: none; }
+    .ctl { position: absolute; top: -11px; right: -7px; display: flex; gap: 5px; pointer-events: auto; transition: opacity .15s ease, transform .15s ease; }
+    .pill.compact .ctl { opacity: 0; transform: scale(.85); }
+    .pill.compact:hover .ctl, .pill.compact:focus-within .ctl, .pill[data-help="true"] .ctl { opacity: 1; transform: none; }
+    .mini {
+      width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+      background: #16161A; color: #F4F4F5; font: 700 12px/1 ${WIDGET_FONT};
+      box-shadow: 0 4px 12px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.92); transition: transform .12s ease, background .12s ease;
+    }
+    .mini:hover { background: #000; transform: scale(1.14); }
+    .mini:focus-visible { outline: 2px solid #FED24F; outline-offset: 2px; }
+    .mini svg { width: 9px; height: 9px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; }
     .btn {
       pointer-events: auto; position: relative; overflow: hidden; display: flex; align-items: center; gap: 9px;
       padding: 7px 16px 7px 7px; border: 0; border-radius: 9999px; cursor: pointer; white-space: nowrap;
@@ -452,6 +464,16 @@
       box-shadow: 0 18px 48px rgba(0,0,0,.6); transform: translateX(var(--px, 0px));
     }
     .panel[hidden] { display: none; }
+    .help { width: 290px; }
+    .hbody { padding: 12px 14px 14px; color: #D4D4D8; font-size: 12.5px; line-height: 1.5; }
+    .hbody p { margin: 0 0 8px; }
+    .hbody b { color: #fff; font-weight: 650; }
+    .hbody ul { margin: 0 0 12px; padding-left: 18px; color: #A1A1AA; }
+    .hbody li { margin: 0 0 4px; }
+    .hbtns { display: flex; gap: 8px; }
+    .hbtns button { flex: 1; padding: 9px 10px; border: 1px solid #2A2A32; border-radius: 10px; background: #1E1E24; color: #F4F4F5; font: 600 12px ${WIDGET_FONT}; cursor: pointer; }
+    .hbtns button:hover { background: #26262E; border-color: #FED24F; }
+    .hnote { margin-top: 10px; font-size: 11px; color: #8A8A94; }
     .head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 8px 10px 14px; border-bottom: 1px solid #2A2A32; }
     .head .t { font-weight: 700; font-size: 13.5px; }
     .head .s { margin-top: 2px; font-size: 11px; color: #A1A1AA; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -494,7 +516,7 @@
 
   const grabber = {
     host: null, anchor: null, btn: null, label: null, hint: null, panel: null, panelTitle: null, panelSub: null, panelBody: null,
-    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, busy: false, hintShown: false, hintTimer: 0, formats: new Map(),
+    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, helpOpen: false, pill: null, help: null, busy: false, hintShown: false, hintTimer: 0, formats: new Map(),
   };
 
   function buildGrabber() {
@@ -506,10 +528,35 @@
     root.innerHTML = `
       <style>${grabberCss}</style>
       <div class="anchor"><div class="stack">
-        <button class="btn" type="button" data-action="toggle" data-state="idle" aria-haspopup="true" aria-label="Download this video with FlowGet">
-          <span class="icon">${FLOWGET_GLYPH}</span><span class="label">Download Video</span>
-        </button>
+        <div class="pill">
+          <button class="btn" type="button" data-action="toggle" data-state="idle" aria-haspopup="true" aria-label="Download this video with FlowGet">
+            <span class="icon">${FLOWGET_GLYPH}</span><span class="label">Download Video</span>
+          </button>
+          <div class="ctl">
+            <button class="mini" type="button" data-action="help" aria-label="What is this button?" title="What is this?">?</button>
+            <button class="mini" type="button" data-action="dismiss" aria-label="Hide this button" title="Hide this button"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button>
+          </div>
+        </div>
         <div class="hint" role="status">Click to choose a quality and download</div>
+        <div class="panel help" hidden role="dialog" aria-label="About the FlowGet video button">
+          <div class="head">
+            <div><div class="t">About this button</div></div>
+            <button class="x" type="button" data-action="help-close" aria-label="Close">✕</button>
+          </div>
+          <div class="hbody">
+            <p><b>Download Video</b> appears on videos. Click it, pick a quality, and FlowGet downloads the video using many connections at once.</p>
+            <ul>
+              <li>The FlowGet app must be installed on this PC.</li>
+              <li>The <b>✕</b> hides the button on this page until you reload it.</li>
+              <li>Videos protected by DRM, such as paid streaming services, cannot be downloaded.</li>
+            </ul>
+            <div class="hbtns">
+              <button type="button" data-action="hide-page">Hide on this page</button>
+              <button type="button" data-action="hide-always">Turn off everywhere</button>
+            </div>
+            <div class="hnote">Turn it back on any time in the FlowGet extension: Video download button.</div>
+          </div>
+        </div>
         <div class="panel" hidden role="dialog" aria-label="FlowGet video download">
           <div class="head">
             <div><div class="t">Download this video</div><div class="s"></div></div>
@@ -524,9 +571,11 @@
     grabber.anchor = root.querySelector(".anchor");
     grabber.stack = root.querySelector(".stack");
     grabber.btn = root.querySelector(".btn");
+    grabber.pill = root.querySelector(".pill");
+    grabber.help = root.querySelector(".help");
     grabber.label = root.querySelector(".label");
     grabber.hint = root.querySelector(".hint");
-    grabber.panel = root.querySelector(".panel");
+    grabber.panel = root.querySelector(".panel:not(.help)");
     grabber.panelSub = root.querySelector(".s");
     grabber.panelBody = root.querySelector(".body");
     grabber.btn.addEventListener("mouseenter", () => grabber.hint.setAttribute("data-show", "false"));
@@ -548,7 +597,7 @@
       type,
       (e) => {
         if (grabber.host && e.target === grabber.host) e.stopPropagation();
-        else if (type === "pointerdown" && grabber.open) setPanelOpen(false); // click elsewhere closes the menu
+        else if (type === "pointerdown" && (grabber.open || grabber.helpOpen)) { setPanelOpen(false); setHelpOpen(false); } // click elsewhere closes the menu
       },
       true,
     );
@@ -569,6 +618,24 @@
         case "close":
           setPanelOpen(false);
           break;
+        case "help":
+          setHelpOpen(!grabber.helpOpen);
+          break;
+        case "help-close":
+          setHelpOpen(false);
+          break;
+        case "dismiss":
+        case "hide-page":
+          dismissGrabber();
+          break;
+        case "hide-always":
+          try {
+            chrome.storage.local.set({ videoButtonEnabled: false });
+          } catch {
+            /* extension was reloaded */
+          }
+          dismissGrabber();
+          break;
         case "pick":
           sendDownload({
             height: Number(d.height) || undefined,
@@ -587,7 +654,7 @@
   window.addEventListener(
     "keydown",
     (e) => {
-      if (e.key === "Escape" && grabber.open) setPanelOpen(false);
+      if (e.key === "Escape" && (grabber.open || grabber.helpOpen)) { setPanelOpen(false); setHelpOpen(false); }
     },
     true,
   );
@@ -597,12 +664,54 @@
     grabber.label.textContent = text;
   }
 
+  function setHelpOpen(open) {
+    grabber.helpOpen = open;
+    if (grabber.help) grabber.help.hidden = !open;
+    if (grabber.pill) grabber.pill.dataset.help = String(open);
+    if (open) {
+      setPanelOpen(false);
+      grabber.hint.setAttribute("data-show", "false");
+    }
+  }
+
+  // The person hid the button: it stays away on this page until it is reloaded (or for good when they chose that).
+  let videoButtonEnabled = true;
+  let grabberDismissed = false;
+  function dismissGrabber() {
+    grabberDismissed = true;
+    hideGrabber();
+  }
+  function hideGrabber() {
+    if (grabber.open) setPanelOpen(false);
+    if (grabber.helpOpen) setHelpOpen(false);
+    grabber.video = null;
+    grabber.slot = null;
+    if (grabber.host && grabber.host.isConnected) grabber.host.remove();
+  }
+  try {
+    chrome.storage.local.get({ videoButtonEnabled: FLOWGET_DEFAULTS.videoButtonEnabled }).then((v) => {
+      videoButtonEnabled = v.videoButtonEnabled !== false;
+    });
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes.videoButtonEnabled) {
+        videoButtonEnabled = changes.videoButtonEnabled.newValue !== false;
+        if (videoButtonEnabled) grabberDismissed = false; // turned back on from the popup: show it again right away
+        scheduleGrabberUpdate();
+      }
+    });
+  } catch {
+    /* extension was reloaded; the default (shown) stays in force */
+  }
+
   function setPanelOpen(open) {
     grabber.open = open;
     grabber.panel.hidden = !open;
     grabber.btn.dataset.open = String(open);
     grabber.btn.setAttribute("aria-expanded", String(open));
-    if (open) grabber.hint.setAttribute("data-show", "false");
+    if (open) {
+      grabber.hint.setAttribute("data-show", "false");
+      if (grabber.helpOpen) setHelpOpen(false);
+    }
   }
 
   /** What to hand to the app: a direct file when the page exposes one, otherwise the page the video lives on. */
@@ -974,16 +1083,21 @@
   let recomputeSlot = true;
 
   function updateGrabber() {
+    if (!videoButtonEnabled || grabberDismissed) {
+      hideGrabber();
+      return;
+    }
     const fs = document.fullscreenElement;
     const picked = fs && fs.tagName === "VIDEO" ? null : pickVideo(); // a fullscreen <video> cannot host overlays
     if (!picked) {
       // The user is choosing a quality: ride out a momentary glitch (a player re-laying out, a scroll jump) as long
       // as the video is still on the page, instead of pulling the menu away.
-      if (grabber.open && grabber.video && grabber.video.isConnected) return;
+      if ((grabber.open || grabber.helpOpen) && grabber.video && grabber.video.isConnected) return;
       grabber.video = null;
       grabber.slot = null;
       if (grabber.host && grabber.host.isConnected) {
         if (grabber.open) setPanelOpen(false);
+        if (grabber.helpOpen) setHelpOpen(false);
         grabber.host.remove();
       }
       return;
@@ -997,6 +1111,7 @@
 
     if (grabber.video !== video) {
       if (grabber.open) setPanelOpen(false); // a different video: the open menu belongs to the old one
+      if (grabber.helpOpen) setHelpOpen(false);
       grabber.video = video;
       grabber.slot = null;
       recomputeSlot = true;
@@ -1010,13 +1125,14 @@
     }
 
     // Measure both sizes, then pick where the button goes (and whether it is the full pill or the round icon).
-    if (!grabber.open && (recomputeSlot || !grabber.slot)) {
+    if (!grabber.open && !grabber.helpOpen && (recomputeSlot || !grabber.slot)) {
       recomputeSlot = false;
       const dims = measureButton();
       grabber.slot = placeButton(vr, video, dims, grabber.slot) || { row: "top", variant: vr.width < 360 ? "compact" : "full", offset: EDGE };
     }
     const slot = grabber.slot;
     grabber.btn.classList.toggle("compact", slot.variant === "compact");
+    grabber.pill.classList.toggle("compact", slot.variant === "compact");
     const w = grabber.btn.offsetWidth || 40;
     const hgt = grabber.btn.offsetHeight || 40;
     const up = slot.row === "bottom"; // the menu opens upwards from a button at the bottom
@@ -1029,6 +1145,7 @@
     grabber.anchor.style.transform = `translate(${Math.round(right)}px, ${Math.round(y)}px)`;
     // keep the 300px menu on screen when the button sits near the left edge
     grabber.panel.style.setProperty("--px", `${Math.max(0, Math.round(8 - (right - 300)))}px`);
+    grabber.help.style.setProperty("--px", `${Math.max(0, Math.round(8 - (right - 290)))}px`);
     grabber.hint.style.setProperty("--hx", `${Math.max(0, Math.round(8 - (right - 230)))}px`);
   }
 

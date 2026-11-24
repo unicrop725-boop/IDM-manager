@@ -53,17 +53,19 @@
   ];
 
   // What the user chose in the popup (shared.js has the defaults): whether to capture, and which file types.
-  const captureSettings = { enabled: FLOWGET_DEFAULTS.enabled, fileTypes: new Set(FLOWGET_DEFAULT_TYPES) };
+  const captureSettings = { enabled: FLOWGET_DEFAULTS.enabled, captureAll: FLOWGET_DEFAULTS.captureAll, fileTypes: new Set(FLOWGET_DEFAULT_TYPES) };
   function applyCaptureSettings(values) {
     if (typeof values.enabled === "boolean") captureSettings.enabled = values.enabled;
+    if (typeof values.captureAll === "boolean") captureSettings.captureAll = values.captureAll;
     if (Array.isArray(values.fileTypes)) captureSettings.fileTypes = new Set(values.fileTypes);
   }
   try {
-    chrome.storage.local.get({ enabled: FLOWGET_DEFAULTS.enabled, fileTypes: FLOWGET_DEFAULT_TYPES }).then(applyCaptureSettings);
+    chrome.storage.local.get({ enabled: FLOWGET_DEFAULTS.enabled, captureAll: FLOWGET_DEFAULTS.captureAll, fileTypes: FLOWGET_DEFAULT_TYPES }).then(applyCaptureSettings);
     chrome.storage.onChanged.addListener((changes, area) => {
       if (area !== "local") return;
       const next = {};
       if (changes.enabled) next.enabled = changes.enabled.newValue;
+      if (changes.captureAll) next.captureAll = changes.captureAll.newValue;
       if (changes.fileTypes) next.fileTypes = changes.fileTypes.newValue;
       applyCaptureSettings(next);
     });
@@ -91,7 +93,9 @@
     // Only the file types the user picked are captured, whether the link says "download" or just ends in the extension.
     const ext = extensionOf(link.getAttribute("download")) || extensionOf(urlWithoutQuery);
 
-    if (ext && captureSettings.fileTypes.has(ext)) {
+    // A link that says "download" (like the Download buttons on Behance) is taken whatever its file type, when "capture every download" is on.
+    const isDownloadLink = captureSettings.captureAll && link.hasAttribute("download") && /^https?:/i.test(url);
+    if ((ext && captureSettings.fileTypes.has(ext)) || isDownloadLink) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -309,7 +313,7 @@
           width: 30px;
           height: 30px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
+          background: #B2D959;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -322,7 +326,7 @@
         <button id="flowget-bar-download-all" style="
           padding: 7px 13px;
           border-radius: 10px;
-          background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
+          background: #B2D959;
           border: none;
           color: #15200A;
           font-family: inherit;
@@ -423,7 +427,7 @@
       pointer-events: auto; position: relative; overflow: hidden; display: flex; align-items: center; gap: 9px;
       padding: 7px 16px 7px 7px; border: 0; border-radius: 9999px; cursor: pointer; white-space: nowrap;
       color: #15200A; font: 600 13px/1 ${WIDGET_FONT}; letter-spacing: .2px;
-      background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
+      background: #B2D959;
       box-shadow: 0 8px 24px rgba(0,0,0,.5), 0 0 0 2px rgba(255,255,255,.9);
       animation: pulse 2s ease-out infinite;
       transition: transform .15s ease, filter .15s ease;
@@ -487,15 +491,15 @@
     }
     .row:last-child { margin-bottom: 0; }
     .row:hover, .row:focus-visible { background: #26262E; border-color: #FED24F; outline: none; }
-    .row.rec { border-color: #7EC151; background: linear-gradient(135deg, rgba(254,210,79,.18), rgba(126,193,81,.14)); }
+    .row.rec { border-color: #7EC151; background: rgba(178,217,89,.16); }
     .row .q { font-weight: 650; font-size: 13.5px; display: flex; align-items: center; gap: 8px; }
     .row .m { margin-top: 3px; font-size: 11px; color: #A1A1AA; }
     .row .z { font-size: 12px; color: #D4D4D8; white-space: nowrap; }
-    .tag { padding: 2px 7px; border-radius: 9999px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; font-size: 9.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
+    .tag { padding: 2px 7px; border-radius: 9999px; background: #B2D959; color: #15200A; font-size: 9.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; }
     .msg { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 18px 12px; text-align: center; color: #A1A1AA; font-size: 12.5px; }
     .msg b { color: #F4F4F5; font-weight: 600; }
     .spin { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #2A2A32; border-top-color: #7EC151; animation: spin .8s linear infinite; }
-    .go { padding: 9px 14px; border: 0; border-radius: 10px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; font: 650 12.5px ${WIDGET_FONT}; cursor: pointer; }
+    .go { padding: 9px 14px; border: 0; border-radius: 10px; background: #B2D959; color: #15200A; font: 650 12.5px ${WIDGET_FONT}; cursor: pointer; }
     .go:hover { filter: brightness(1.1); }
     .foot { display: block; width: 100%; padding: 10px 14px; border: 0; border-top: 1px solid #2A2A32; background: transparent; color: #A1A1AA; font: 500 12px ${WIDGET_FONT}; text-align: center; cursor: pointer; }
     .foot:hover { color: #fff; background: #1E1E24; }
@@ -1248,7 +1252,7 @@
         </div>
         <div style="padding: 12px 16px; border-top: 1px solid #2A2A32; display: flex; justify-content: flex-end; gap: 8px;">
           <button id="flowget-batch-cancel" style="padding: 6px 14px; border-radius: 8px; background: #26262E; color: #F4F4F5; border: none; cursor: pointer; font-size: 12px;">Cancel</button>
-          <button id="flowget-batch-submit" style="padding: 6px 16px; border-radius: 8px; background: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%); color: #15200A; border: none; cursor: pointer; font-weight: 600; font-size: 12px;">Download Selected</button>
+          <button id="flowget-batch-submit" style="padding: 6px 16px; border-radius: 8px; background: #B2D959; color: #15200A; border: none; cursor: pointer; font-weight: 600; font-size: 12px;">Download Selected</button>
         </div>
       </div>
     `;

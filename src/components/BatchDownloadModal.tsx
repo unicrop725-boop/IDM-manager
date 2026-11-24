@@ -247,7 +247,7 @@ export default function BatchDownloadModal({
             type="button"
             onClick={handleQueueAll}
             disabled={loading || (!inputText.trim() && expandedUrls.length === 0)}
-            className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-teal-500 hover:opacity-95 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
+            className="px-5 py-2 rounded-xl text-xs font-semibold text-white gradient-accent hover:opacity-95 shadow-lg shadow-purple-500/20 disabled:opacity-50 transition-all"
           >
             {loading ? "Adding Downloads..." : `Queue ${expandedUrls.length > 0 ? expandedUrls.length : "Batch"} Downloads`}
           </button>

@@ -140,8 +140,8 @@
     var defs = s("defs", {}, svg);
     var id = "g" + (++gid);
     var lg = s("linearGradient", { id: id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    s("stop", { offset: "0%", "stop-color": o.color, "stop-opacity": ".32" }, lg);
-    s("stop", { offset: "100%", "stop-color": o.color, "stop-opacity": "0" }, lg);
+    s("stop", { offset: "0%", "stop-color": o.color, "stop-opacity": ".14" }, lg);
+    s("stop", { offset: "100%", "stop-color": o.color, "stop-opacity": ".14" }, lg);
 
     var steps = 4, i;
     for (i = 0; i <= steps; i++) {
@@ -209,8 +209,8 @@
     var svg = s("svg", { viewBox: "0 0 " + W + " " + H, class: "spark", preserveAspectRatio: "none", "aria-hidden": "true" });
     var id = "s" + (++gid);
     var defs = s("defs", {}, svg), lg = s("linearGradient", { id: id, x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
-    s("stop", { offset: "0%", "stop-color": color, "stop-opacity": ".35" }, lg);
-    s("stop", { offset: "100%", "stop-color": color, "stop-opacity": "0" }, lg);
+    s("stop", { offset: "0%", "stop-color": color, "stop-opacity": ".14" }, lg);
+    s("stop", { offset: "100%", "stop-color": color, "stop-opacity": ".14" }, lg);
     var pts = values.map(function (v, i) { return [(i * W) / Math.max(1, n - 1), H - 6 - (v / max) * (H - 18)]; });
     var d = smooth(pts);
     s("path", { d: d + " L" + W + " " + H + " L0 " + H + " Z", fill: "url(#" + id + ")" }, svg);

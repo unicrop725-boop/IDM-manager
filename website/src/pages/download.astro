@@ -1,7 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
-import { SITE, buyHref } from "../config";
-import { getPosts, formatDate, readingMinutes } from "../lib/blog";
+import { SITE } from "../config";
 
 const site = Astro.site!.href.replace(/\/$/, "");
 const jsonLd = [
@@ -10,74 +9,180 @@ const jsonLd = [
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
-      { "@type": "ListItem", position: 2, name: 'Download', item: site + '/download/' },
+      { "@type": "ListItem", position: 2, name: "Download", item: site + "/download/" },
     ],
   },
 ];
+
+const s = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const winPath = "M2 2h9.4v9.4H2zM12.6 2H22v9.4h-9.4zM2 12.6h9.4V22H2zM12.6 12.6H22V22h-9.4z";
+const chrome = `<path d="M12 12 1.6 6A12 12 0 0 1 22.4 6z" fill="#EA4335"/><path d="M12 12l10.4-6A12 12 0 0 1 12 24z" fill="#FBBC04"/><path d="M12 12v12A12 12 0 0 1 1.6 6z" fill="#34A853"/><circle cx="12" cy="12" r="5.6" fill="#fff"/><circle cx="12" cy="12" r="4.2" fill="#4285F4"/>`;
+const edge = `<path d="M21.3 12.4c0-5-3.7-8.7-8.9-8.7-4.9 0-8.7 3.8-8.7 8.5 0 4.7 3.6 8.1 8.1 8.1 3 0 5.2-1.2 6.7-3.1-1.5.9-3 1.4-4.5 1.4-3 0-5.2-1.9-5.4-4.7h12.7z" fill="#1590D9"/><path d="M8 13.6c.2 2.6 2.2 4.4 5 4.4 1.5 0 3-.5 4.5-1.4-1.5 1.9-3.7 3.1-6.7 3.1-4.5 0-8.1-3.4-8.1-8.1 0-1 .2-2 .6-2.900C3.700 11 5.600 13.600 8 13.600z" fill="#3CC47C"/><path d="M8.600 10.400c.5-2.300 2.100-3.700 4.200-3.700 2.200 0 3.800 1.400 4 3.700z" fill="#fff"/>`;
+const brave = `<path d="M12 2.5 5.200 5 4 8.400l1.200 8.600 6.800 4.500 6.800-4.500L20 8.400 18.800 5z" fill="#FB542B"/><path d="M12 7.800 9.200 9.200l.9 3.200 1.900 1.300 1.900-1.300.9-3.200z" fill="#fff"/>`;
+const steps = [
+  { t: "Run the installer", d: "Open the downloaded file and follow the prompts. It takes about a minute.", i: `<path d="M12 4v11" ${s}/><path d="m7 11 5 5 5-5" ${s}/><path d="M5 20h14" ${s}/>` },
+  { t: "Activate your license", d: "Open FlowGet, choose Help > Activate License and paste your key. It activates offline.", i: `<circle cx="8" cy="15" r="4" ${s}/><path d="m11 12 8-8M16 7l3 3" ${s}/>` },
+  { t: "Connect the browser", d: "That first start also connects FlowGet to the browser extension on your PC.", i: `<path d="M9 7 5 11l4 4M15 7l4 4-4 4" ${s}/><path d="m13 5-2 14" ${s}/>` },
+  { t: "Download something", d: "Add the extension, click any download link in Chrome, Edge or Brave, and FlowGet takes over.", i: `<path d="M13 2 3 14h9l-1 8 10-12h-9z" ${s}/>` },
+];
+const reqs = [
+  { t: "Windows 10 or 11", d: "64-bit editions of Windows 10 and Windows 11.", i: `<rect x="3" y="4" width="18" height="12" rx="0" ${s}/><path d="M8 20h8M12 16v4" ${s}/>` },
+  { t: "WebView2 runtime", d: "Microsoft Edge WebView2, already part of current Windows 10 and 11.", i: `<circle cx="12" cy="12" r="9" ${s}/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" ${s}/>` },
+  { t: "Internet to download", d: "You need a connection to fetch files. FlowGet itself also works offline.", i: `<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0" ${s}/><circle cx="12" cy="19" r="1" ${s}/>` },
+];
 ---
 <Base
-  title='Download FlowGet for Windows 10 and 11'
-  description='Download the FlowGet installer for Windows 10 and 11, with installation steps, system requirements and the browser extension.'
-  current='download'
+  title="Download FlowGet for Windows 10 and 11"
+  description="Download the FlowGet installer for Windows 10 and 11, with installation steps, system requirements and the browser extension."
+  current="download"
   jsonLd={jsonLd}
 >
+  <link slot="head" rel="stylesheet" href={"/css/home.css?v=" + Date.now()} />
+  <link slot="head" rel="stylesheet" href={"/css/download.css?v=" + Date.now()} />
 
-  <div class="wrap">
-    <div class="page-head">
-      <h1>Download <span class="grad-text">FlowGet</span></h1>
-      <p>FlowGet needs a license key to use. Don't have one yet? <a href="/#pricing" style="color:var(--sky)">Get FlowGet Pro</a> for a one-time $19.99.</p>
-    </div>
+  <!-- ======================= Hero ======================= -->
+  <section class="hero dl-hero">
+    <div class="wrap">
+      <span class="eyebrow"><i></i>Windows 10 &amp; 11 · 64-bit</span>
+      <h1>Download FlowGet for Windows</h1>
+      <p class="lead">One small installer. Activate your license key and FlowGet starts splitting, resuming and checking every download.</p>
 
-    <div class="dl-box">
-      <article class="card">
-        <h3>FlowGet for Windows</h3>
-        <p style="margin:6px 0 22px">Version {SITE.version} · Windows 10 and 11 (64-bit)</p>
-        <a class="btn btn-primary" href={SITE.downloadUrl}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg>
-          Download the installer
-        </a>
-        <div class="kv" style="margin-top:26px">
-          <div><span>Version</span><span>{SITE.version}</span></div>
-          {SITE.fileSize && <div><span>File size</span><span>{SITE.fileSize}</span></div>}
-          <div><span>SHA-256</span><span class="code" style="text-align:right">{SITE.sha256 || "Published with each release"}</span></div>
+      <div class="dlcard">
+        <div class="dl-l">
+          <video class="dl-video" autoplay muted loop playsinline preload="metadata" poster="/video/laser-poster.webp" aria-hidden="true" tabindex="-1"><source src="/video/laser.mp4" type="video/mp4" /></video>
+          <div class="logos">
+            <div class="winlogo" aria-hidden="true"><svg viewBox="0 0 24 24"><path d={winPath} /></svg></div>
+          </div>
+          <small>Version {SITE.version}</small>
+          <h2>FlowGet for Windows</h2>
+          <p>Windows 10 and 11 (64-bit){SITE.fileSize ? ` · ${SITE.fileSize}` : ""}</p>
+          <a class="btn btn-win btn-lg" href={SITE.downloadUrl}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M12 4v11" ${s}/><path d="m7 11 5 5 5-5" ${s}/><path d="M5 20h14" ${s}/>`}></svg>
+            Download for Windows
+          </a>
+          <span class="need">Need a license key? <a href="/#pricing">Get FlowGet Pro · ${SITE.priceUsd}</a></span>
+
+          <div class="platforms" aria-label="Other platforms">
+            <div class="plat mac" aria-disabled="true">
+              <span class="pi"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<rect x="4" y="5" width="16" height="11" ${s}/><path d="M2 19h20" ${s}/>`}></svg></span>
+              <span class="pt"><b>macOS</b><em>Coming soon</em></span>
+            </div>
+            <div class="plat linux" aria-disabled="true">
+              <span class="pi"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="m5 8 5 4-5 4" ${s}/><path d="M12 17h7" ${s}/>`}></svg></span>
+              <span class="pt"><b>Linux</b><em>Coming soon</em></span>
+            </div>
+          </div>
         </div>
-      </article>
 
-      <article class="card">
-        <h3>Browser extension</h3>
-        <p style="margin:6px 0 20px">Lets FlowGet take over downloads in Chrome, Edge and Brave, and adds a Download button to videos.</p>
-        <a class="btn btn-ghost" href={SITE.extensionUrl || "/download/#extension"} target="_blank" rel="noopener">Get the extension</a>
-        <p class="fine">The extension talks only to FlowGet on your own PC. Install FlowGet first, then add the extension.</p>
-      </article>
-    </div>
-
-    <div class="prose" style="margin-top:56px">
-      <h2>Install in four steps</h2>
-      <ul>
-        <li>Run the installer and follow the prompts.</li>
-        <li>Open FlowGet, choose <b>Help &gt; Activate License</b> and paste your license key.</li>
-        <li>That first start also connects FlowGet to the browser extension.</li>
-        <li>Add the browser extension and download something.</li>
-      </ul>
-
-      <h2>System requirements</h2>
-      <ul>
-        <li>Windows 10 or Windows 11, 64-bit</li>
-        <li>Microsoft Edge WebView2 runtime (already part of current Windows 10 and 11)</li>
-        <li>An internet connection to download files. FlowGet itself works offline.</li>
-      </ul>
-
-      <h2>Verify your download</h2>
-      <p>Compare the SHA-256 above with your file. In PowerShell: <code>Get-FileHash .\FlowGet-setup.exe</code></p>
-
-      <h2>If Windows shows "Windows protected your PC"</h2>
-      <div class="note">
-        New apps are not yet widely seen by Windows SmartScreen, which can show this message even for safe software. Check the SHA-256 above, then choose <b>More info</b> and <b>Run anyway</b>.
+        <div class="dl-r">
+          <h3>Release details</h3>
+          <dl class="specs">
+            <div><dt><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M20 12 12 20 4 12V4h8z" ${s}/><circle cx="8.5" cy="8.5" r="1" ${s}/>`}></svg>Version</dt><dd>{SITE.version}</dd></div>
+            {SITE.fileSize && <div><dt><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z" ${s}/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7" ${s}/>`}></svg>File size</dt><dd>{SITE.fileSize}</dd></div>}
+            <div><dt><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<rect x="3" y="4" width="18" height="12" ${s}/><path d="M8 20h8M12 16v4" ${s}/>`}></svg>Platform</dt><dd>Windows 10 / 11, 64-bit</dd></div>
+            <div><dt><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<circle cx="8" cy="15" r="4" ${s}/><path d="m11 12 8-8M16 7l3 3" ${s}/>`}></svg>License</dt><dd>Key needed, activates offline</dd></div>
+            <div><dt><svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z" ${s}/><path d="m9 12 2 2 4-4" ${s}/>`}></svg>SHA-256</dt><dd class="hash">{SITE.sha256 || "Published with each release"}</dd></div>
+          </dl>
+        </div>
       </div>
-
-      <h2>Need help?</h2>
-      <p>Write to <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a> and tell us your Windows version and what you saw.</p>
     </div>
-  </div>
+  </section>
 
+  <!-- ======================= Browser extension ======================= -->
+  <section id="extension" class="dl-sec">
+    <div class="wrap">
+      <div class="extband">
+        <div class="chromebar" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="ext-main">
+          <svg class="ext-logo" viewBox="0 0 24 24" aria-hidden="true" set:html={chrome}></svg>
+          <div class="ext-copy">
+            <div class="eyebrow">Browser extension</div>
+            <h2>Take over downloads right from your browser</h2>
+            <p>The extension sends downloads in Chrome, Edge and Brave to FlowGet and adds a Download button to videos. It talks only to FlowGet on your own PC, so install FlowGet first.</p>
+            <div class="browsers">
+              <span><svg viewBox="0 0 24 24" aria-hidden="true" set:html={chrome}></svg>Chrome</span>
+              <span><svg viewBox="0 0 24 24" aria-hidden="true" set:html={edge}></svg>Edge</span>
+              <span><svg viewBox="0 0 24 24" aria-hidden="true" set:html={brave}></svg>Brave</span>
+            </div>
+          </div>
+        </div>
+        <a class="btn btn-chrome btn-lg" href={SITE.extensionUrl || "/download/#extension"} target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M10 4h4v3a2 2 0 1 0 4 0V4h2v6h-3a2 2 0 1 0 0 4h3v6H4v-6h3a2 2 0 1 0 0-4H4V4z" ${s}/>`}></svg>
+          Get the extension
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Install steps ======================= -->
+  <section class="dl-sec">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Get started</div>
+        <h2>Install in four steps</h2>
+        <p>From download to your first accelerated file in a few minutes.</p>
+      </div>
+      <div class="steps4">
+        {steps.map((st, n) => (
+          <article class="tile white dlstep">
+            <span class="stepno">{n + 1}</span>
+            <div class="ico"><svg viewBox="0 0 24 24" set:html={st.i}></svg></div>
+            <h3>{st.t}</h3>
+            <p>{st.d}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Requirements ======================= -->
+  <section class="dl-sec">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Before you install</div>
+        <h2>System requirements</h2>
+      </div>
+      <div class="reqs">
+        {reqs.map((r) => (
+          <article class="tile">
+            <div class="ico"><svg viewBox="0 0 24 24" set:html={r.i}></svg></div>
+            <h3>{r.t}</h3>
+            <p>{r.d}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Verify + SmartScreen ======================= -->
+  <section class="dl-sec">
+    <div class="wrap">
+      <div class="verify">
+        <article class="tile dark">
+          <div class="ico"><svg viewBox="0 0 24 24" set:html={`<path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z" ${s}/><path d="m9 12 2 2 4-4" ${s}/>`}></svg></div>
+          <h3>Verify your download</h3>
+          <p>Compare the SHA-256 above with your file. In PowerShell run:</p>
+          <pre class="cmd"><code>Get-FileHash .\FlowGet-setup.exe</code></pre>
+        </article>
+        <article class="tile">
+          <div class="ico"><svg viewBox="0 0 24 24" set:html={`<path d="M12 3 2.5 20h19z" ${s}/><path d="M12 10v4M12 17.5v.01" ${s}/>`}></svg></div>
+          <h3>"Windows protected your PC"?</h3>
+          <p>New apps are not yet widely seen by Windows SmartScreen, which can show this message even for safe software. Check the SHA-256 above, then choose <b>More info</b> and <b>Run anyway</b>.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Help ======================= -->
+  <section class="dl-sec" style="padding-bottom:96px">
+    <div class="wrap">
+      <div class="helpband">
+        <div>
+          <h2>Need help installing?</h2>
+          <p>Tell us your Windows version and what you saw, and we will get you going.</p>
+        </div>
+        <a class="btn btn-primary btn-lg" href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a>
+      </div>
+    </div>
+  </section>
 </Base>

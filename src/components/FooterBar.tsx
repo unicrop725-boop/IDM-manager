@@ -75,11 +75,7 @@ export const FooterBar: React.FC<FooterBarProps> = ({
         >
           <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
             <defs>
-              <linearGradient id="footerGaugeGrad" x1="3" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#FED24F" />
-                <stop offset="55%" stopColor="#B2D959" />
-                <stop offset="100%" stopColor="#7EC151" />
-              </linearGradient>
+              <linearGradient id="footerGaugeGrad"><stop offset="0%" stopColor="#B2D959" /><stop offset="100%" stopColor="#B2D959" /></linearGradient>
             </defs>
             <path
               d="M 5.5 22 A 12 12 0 1 1 24.5 22"

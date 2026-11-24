@@ -419,7 +419,7 @@ export const SpeedTestModal: React.FC<SpeedTestModalProps> = ({ onClose, theme: 
                       <div
                         style={{
                           background:
-                            "conic-gradient(from 90deg,rgba(108, 84, 26, 1) 0deg,rgba(2, 126, 43, 1) 43.8398deg,rgba(97, 213, 43, 1) 136.398deg,rgba(250, 196, 21, 1) 245.769deg,rgba(250, 127, 21, 1) 276.374deg,rgba(254, 26, 4, 1) 299.674deg,rgba(108, 84, 26, 1) 360deg)",
+                            "#B2D959",
                           height: "100%",
                           width: "100%",
                         }}

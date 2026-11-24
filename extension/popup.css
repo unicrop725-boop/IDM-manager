@@ -20,7 +20,7 @@
   --teal: #7EC151;
   --ok: #34d399;
   --bad: #f87171;
-  --gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
+  --gradient: #B2D959;
   --field: #202027;
   --shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
@@ -40,7 +40,7 @@
     --teal: #4F9A2E;
     --ok: #7EC151;
     --bad: #dc2626;
-    --gradient: linear-gradient(135deg, #FED24F 0%, #B2D959 55%, #7EC151 100%);
+    --gradient: #B2D959;
     --field: #eef0f3;
     --shadow: 0 6px 20px rgba(24, 24, 27, 0.1);
     color-scheme: light;

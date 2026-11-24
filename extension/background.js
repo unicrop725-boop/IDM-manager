@@ -195,10 +195,18 @@ const handedBack = new Set();
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   (async () => {
     try {
+      // Visible in chrome://extensions > FlowGet > "service worker" > Console: proves the extension saw this download.
+      console.log("[FlowGet] browser download seen:", (downloadItem.url || "").slice(0, 160), "| name:", downloadItem.filename, "| type:", downloadItem.mime, "| size:", downloadItem.fileSize);
       if (handedBack.delete(downloadItem.url)) return;
 
       const settings = await getSettings();
       if (!settings.enabled) return;
+
+      // Only normal web addresses can be fetched by FlowGet; blob:, data: and file: downloads stay with the browser.
+      if (!/^(https?|ftp):/i.test(downloadItem.url || "")) {
+        console.log("[FlowGet] left to the browser: not a normal web address (blob:/data:/file:)");
+        return;
+      }
 
       // 1. Skip if user held Alt key while clicking
       const isAltHeld = downloadItem.tabId ? altKeyHeldPerTab.get(downloadItem.tabId) : false;
@@ -216,11 +224,13 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
       const extMatch = fileName.match(/\.([a-zA-Z0-9]+)$/);
       const ext = extMatch ? extMatch[1].toLowerCase() : "";
 
-      const shouldIntercept = settings.fileTypes.includes(ext) || downloadItem.mime?.includes("octet-stream");
+      const shouldIntercept =
+        settings.captureAll !== false || settings.fileTypes.includes(ext) || downloadItem.mime?.includes("octet-stream");
       if (!shouldIntercept) {
         return;
       }
 
+      console.log("[FlowGet] taking over this download");
       // Cancel the browser's download
       chrome.downloads.cancel(downloadItem.id).catch(() => {});
 

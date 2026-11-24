@@ -190,6 +190,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("videobtn-toggle").checked = settings.videoButtonEnabled !== false;
   $("autolaunch-toggle").checked = settings.autoLaunch;
   $("notify-toggle").checked = settings.notifyOnStart;
+  $("captureall-toggle").checked = settings.captureAll !== false;
   $("min-size").value = settings.minSizeBytes ? Math.round(settings.minSizeBytes / 1024) : "";
 
   $("intercept-toggle").addEventListener("change", (e) => chrome.storage.local.set({ enabled: e.target.checked }));
@@ -199,6 +200,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("videobtn-toggle").addEventListener("change", (e) => chrome.storage.local.set({ videoButtonEnabled: e.target.checked }));
   $("autolaunch-toggle").addEventListener("change", (e) => chrome.storage.local.set({ autoLaunch: e.target.checked }));
   $("notify-toggle").addEventListener("change", (e) => chrome.storage.local.set({ notifyOnStart: e.target.checked }));
+  $("captureall-toggle").addEventListener("change", (e) => chrome.storage.local.set({ captureAll: e.target.checked }));
   $("min-size").addEventListener("change", (e) => {
     const kb = Math.max(0, parseInt(e.target.value, 10) || 0);
     e.target.value = kb || "";

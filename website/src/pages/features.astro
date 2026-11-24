@@ -14,6 +14,20 @@ const jsonLd = [
     ],
   },
 ];
+const st = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const icons: Record<string, string> = {
+  engine: `<path d="M13 2 3 14h9l-1 8 10-12h-9z" ${st}/>`,
+  adding: `<circle cx="12" cy="12" r="9" ${st}/><path d="M12 8v8M8 12h8" ${st}/>`,
+  extension: `<path d="M10 4h4v3a2 2 0 1 0 4 0V4h2v6h-3a2 2 0 1 0 0 4h3v6H4v-6h3a2 2 0 1 0 0-4H4V4z" ${st}/>`,
+  video: `<rect x="3" y="5" width="18" height="14" ${st}/><path d="m10 9 5 3-5 3z" ${st}/>`,
+  bandwidth: `<path d="M4 6h16M4 12h16M4 18h16" ${st}/><circle cx="9" cy="6" r="2" ${st}/><circle cx="15" cy="12" r="2" ${st}/><circle cx="8" cy="18" r="2" ${st}/>`,
+  safety: `<path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z" ${st}/><path d="m9 12 2 2 4-4" ${st}/>`,
+  organise: `<path d="M3 6h7l2 2h9v11H3z" ${st}/>`,
+  trusted: `<path d="m12 3 2.7 5.5 6 .9-4.4 4.2 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.4l6-.9z" ${st}/>`,
+  import: `<path d="M12 4v11" ${st}/><path d="m7 10 5-5 5 5" ${st}/><path d="M5 20h14" ${st}/>`,
+  protocols: `<circle cx="12" cy="12" r="9" ${st}/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" ${st}/>`,
+  limits: `<circle cx="12" cy="12" r="9" ${st}/><path d="M12 11v5M12 8v.01" ${st}/>`,
+};
 ---
 <Base
   title='Features: every FlowGet feature in detail'
@@ -21,32 +35,43 @@ const jsonLd = [
   current='features'
   jsonLd={jsonLd}
 >
+  <link slot="head" rel="stylesheet" href={"/css/home.css?v=" + Date.now()} />
+  <link slot="head" rel="stylesheet" href={"/css/features.css?v=" + Date.now()} />
+
+  <section class="hero feat-hero">
+    <div class="wrap">
+      <span class="eyebrow"><i></i>The full tour</span>
+      <h1>Every feature, <span class="grad-text">in detail</span></h1>
+      <p class="lead">What FlowGet does, how it does it, and where its limits are. Everything on this page is in the app today.</p>
+      <div class="stats">
+        <div class="stat dark"><b>A download manager built for the moments a connection fails.</b><span>Windows 10 &amp; 11</span></div>
+        <div class="stat"><strong>32</strong><span>Connections per file</span></div>
+        <div class="stat"><strong>3</strong><span>Browsers: Chrome, Edge, Brave</span></div>
+        <div class="stat"><strong>0</strong><span>Ads, no tracking</span></div>
+      </div>
+    </div>
+  </section>
 
   <div class="wrap">
-    <div class="page-head">
-      <h1>Every feature, <span class="grad-text">in detail</span></h1>
-      <p>What FlowGet does, how it does it, and where its limits are. Everything on this page is in the app today.</p>
-    </div>
-
     <div class="feat-layout">
       <nav class="toc" aria-label="On this page">
-        <a href="/#engine">Speed &amp; reliability</a>
-        <a href="/#adding">Adding downloads</a>
-        <a href="/#extension">Browser extension</a>
-        <a href="/#video">Video &amp; streams</a>
-        <a href="/#bandwidth">Bandwidth control</a>
-        <a href="/#safety">Safety &amp; privacy</a>
-        <a href="/#organise">Organise &amp; manage</a>
-        <a href="/#trusted">Trusted Sites</a>
-        <a href="/#import">Import &amp; backup</a>
-        <a href="/#protocols">Other protocols</a>
-        <a href="/#limits">Good to know</a>
+        <a href="#engine">Speed &amp; reliability</a>
+        <a href="#adding">Adding downloads</a>
+        <a href="#extension">Browser extension</a>
+        <a href="#video">Video &amp; streams</a>
+        <a href="#bandwidth">Bandwidth control</a>
+        <a href="#safety">Safety &amp; privacy</a>
+        <a href="#organise">Organise &amp; manage</a>
+        <a href="#trusted">Trusted Sites</a>
+        <a href="#import">Import &amp; backup</a>
+        <a href="#protocols">Other protocols</a>
+        <a href="#limits">Good to know</a>
       </nav>
 
       <div class="feat-body">
 
         <section class="fsec" id="engine">
-          <h2>Speed &amp; reliability</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["engine"]}></svg></span><span>Speed &amp; reliability</span></h2>
           <p class="fsec-intro">The download engine is written in Rust. It is built for connections that are slow, flaky or interrupted.</p>
           <div class="fitems">
             <div class="fitem"><h3>Parallel connections</h3><p>Each file is split into parts fetched at the same time, up to 32 connections (8 by default). Small files use fewer. FlowGet starts with 4 connections and adds one at a time while the speed keeps improving. If a server starts refusing connections (error 429 or 503), it backs off. The best count for each website is remembered.</p></div>
@@ -66,7 +91,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="adding">
-          <h2>Adding downloads</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["adding"]}></svg></span><span>Adding downloads</span></h2>
           <p class="fsec-intro">Use whichever way is handiest.</p>
           <div class="fitems">
             <div class="fitem"><h3>Paste a link</h3><p>Type or paste a link in the box at the top and press Enter. With the box empty, the button opens the full dialog.</p></div>
@@ -81,11 +106,11 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="extension">
-          <h2>Browser extension</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["extension"]}></svg></span><span>Browser extension</span></h2>
           <p class="fsec-intro">For Chrome, Edge and Brave. It talks only to FlowGet on your own PC.</p>
           <div class="fitems">
             <div class="fitem"><h3>Takes over downloads</h3><p>When you click a download, FlowGet takes it from the browser and passes along your login session (cookies and referer), so files behind a sign-in work. Hold Alt while clicking to let the browser download normally.</p></div>
-            <div class="fitem"><h3>You choose what it captures</h3><p>A dropdown of predefined groups (archives, programs, video, audio, documents, other) with presets and your own extra types. Only the types you tick are captured.</p></div>
+            <div class="fitem"><h3>You choose what it captures</h3><p>"Capture every download" is on by default and takes over any file type, like a full download manager. Turn it off to pick only what you want from predefined groups (archives, programs, video, audio, documents, images and design, other), with presets and your own extra types.</p></div>
             <div class="fitem"><h3>Download button on videos</h3><p>A small round button sits inside the video and opens a quality list, like the one in IDM, with the file size of each option and a recommended choice (the best up to 1080p). It stays out of the way of the site's own buttons, and stays clickable on pages that try to block it. There is also an audio-only (MP3) choice.</p></div>
             <div class="fitem"><h3>Works on sites that hide the video</h3><p>Many players hide the real video behind a streaming playlist. The extension notices those playlists and lists the qualities from them, so downloads still work.</p></div>
             <div class="fitem"><h3>Right-click menu</h3><p>"Download with FlowGet" on any link, and "Download all links on this page" for pages full of files.</p></div>
@@ -96,7 +121,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="video">
-          <h2>Video &amp; streams</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["video"]}></svg></span><span>Video &amp; streams</span></h2>
           <p class="fsec-intro">Included with your FlowGet license.</p>
           <div class="fitems">
             <div class="fitem"><h3>Quality picker</h3><p>Choose a resolution and frame rate, or audio only. Convert to MP4, MP3 or M4A when you want a different format.</p></div>
@@ -107,7 +132,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="bandwidth">
-          <h2>Bandwidth control</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["bandwidth"]}></svg></span><span>Bandwidth control</span></h2>
           <p class="fsec-intro">Fast when you are away, polite when you are working.</p>
           <div class="fitems">
             <div class="fitem"><h3>Speed limits</h3><p>Set a limit for all downloads, or for a single one, and change it while it runs.</p></div>
@@ -119,7 +144,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="safety">
-          <h2>Safety &amp; privacy</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["safety"]}></svg></span><span>Safety &amp; privacy</span></h2>
           <p class="fsec-intro">Clear warnings before you get hurt, and nothing sent anywhere without you turning it on.</p>
           <div class="fitems">
             <div class="fitem"><h3>Warnings about risky files</h3><p>Programs and scripts (.exe, .msi, .bat, .scr and others) get a warning. Disguises such as <em>invoice.pdf.exe</em>, extra spaces before the real ending, and hidden text-direction characters get a stronger one. A small shield appears next to the file, and FlowGet asks before opening it.</p></div>
@@ -133,7 +158,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="organise">
-          <h2>Organise &amp; manage</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["organise"]}></svg></span><span>Organise &amp; manage</span></h2>
           <div class="fitems">
             <div class="fitem"><h3>Categories, filters and search</h3><p>The sidebar groups downloads by type, plus Unfinished and Finished, each with a count. Search matches several words at once across name, link and category, and stays quick with thousands of entries.</p></div>
             <div class="fitem"><h3>Queues and scheduling</h3><p>Create queues with a limit on how many run at once, and a schedule with start time, stop time and days. Choose what happens when a queue finishes: nothing, sleep, shut down, hibernate, quit FlowGet, or run a program. Run only on Wi-Fi, or only at night.</p></div>
@@ -145,14 +170,14 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="trusted">
-          <h2>Trusted Sites</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["trusted"]}></svg></span><span>Trusted Sites</span></h2>
           <div class="fitems">
             <div class="fitem"><h3>A curated list inside the app</h3><p>A page of websites we recommend for safe downloads, with search and category filters and three views: icons, cards and a wide list. A click opens the site in your browser, and FlowGet takes over the download. Downloads from a listed site get a green "Trusted site" mark in the Add dialog.</p></div>
           </div>
         </section>
 
         <section class="fsec" id="import">
-          <h2>Import &amp; backup</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["import"]}></svg></span><span>Import &amp; backup</span></h2>
           <div class="fitems">
             <div class="fitem"><h3>Bring your downloads from elsewhere</h3><p>Import from an IDM export (with its saved cookies and referrers), JDownloader link lists, Free Download Manager link lists, any file that contains links, or the download history of Chrome, Edge and Brave. You see what was found, tick what you want, and choose whether to start right away.</p></div>
             <div class="fitem"><h3>One-file backup and restore</h3><p>Save your settings, categories, queues and download history in a single file, and restore it on this or another PC. Passwords, cookies and your license key are never included. Restoring never deletes anything.</p></div>
@@ -160,7 +185,7 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="protocols">
-          <h2>Other protocols</h2>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["protocols"]}></svg></span><span>Other protocols</span></h2>
           <div class="fitems">
             <div class="fitem"><h3>Torrents and magnet links</h3><p>A built-in torrent engine handles .torrent files and magnet links in the same window.</p></div>
             <div class="fitem"><h3>FTP, FTPS and SFTP</h3><p>Download from FTP servers, including secure ones. SFTP remembers each server's key and refuses a later change.</p></div>
@@ -169,15 +194,13 @@ const jsonLd = [
         </section>
 
         <section class="fsec" id="limits">
-          <h2>Good to know</h2>
-          <div class="note">
-            <ul style="margin:0;padding-left:20px;display:grid;gap:8px">
-              <li>FlowGet is for Windows 10 and 11 for now.</li>
-              <li>Speed limits, schedules and slow mode apply to normal file downloads. Videos fetched with yt-dlp are not throttled or paused by them.</li>
-              <li>Turbo Mode needs two working networks. SFTP needs Python with the paramiko package installed.</li>
-                            <li>The VirusTotal check needs your own free API key, and the free plan allows 4 lookups a minute.</li>
-              <li>Videos protected by DRM cannot be downloaded.</li>
-            </ul>
+          <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["limits"]}></svg></span><span>Good to know</span></h2>
+          <div class="knows">
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>FlowGet is for Windows 10 and 11 for now.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Speed limits, schedules and slow mode apply to normal file downloads. Videos fetched with yt-dlp are not throttled or paused by them.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Turbo Mode needs two working networks. SFTP needs Python with the paramiko package installed.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>The VirusTotal check needs your own free API key, and the free plan allows 4 lookups a minute.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Videos protected by DRM cannot be downloaded.</p></div>
           </div>
         </section>
 

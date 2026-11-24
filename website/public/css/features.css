@@ -1,0 +1,59 @@
+/* Features page only. Loaded after global.css and home.css. */
+
+.feat-hero { padding-bottom: 8px; }
+.feat-hero h1 { font-size: clamp(38px, 6.4vw, 76px); max-width: 16ch; }
+.feat-hero .stats { margin-top: 48px; text-align: center; }
+.feat-layout { margin-top: 40px; }
+
+/* ---------- side menu: numbered, sticky ---------- */
+.toc { counter-reset: toc; gap: 0; padding: 0; }
+.toc a { counter-increment: toc; display: flex; align-items: center; gap: 12px; padding: 10px 14px; font-size: 15px; border-left: 2px solid var(--line); }
+.toc a::before { content: counter(toc, decimal-leading-zero); font-size: 11.5px; font-weight: 600; letter-spacing: .06em; color: var(--faint); font-variant-numeric: tabular-nums; }
+.toc a:hover { background: var(--bg-soft); }
+.toc a:hover::before { color: #4B7E31; }
+html { scroll-behavior: smooth; }
+.fsec { scroll-margin-top: 90px; }
+
+/* ---------- section heads: icon tile + big faint number ---------- */
+.feat-body { counter-reset: fsec; }
+.fsec { counter-increment: fsec; position: relative; padding-bottom: 72px; }
+.fsec h2 { display: flex; align-items: center; gap: 16px; position: relative; }
+.fsec h2::after { content: counter(fsec, decimal-leading-zero); margin-left: auto; font-size: clamp(34px, 5vw, 56px); font-weight: 800; letter-spacing: -.05em; line-height: 1; color: #E6EDCF; }
+.fico { display: grid; place-items: center; flex: none; width: 46px; height: 46px; background: var(--lime); color: #15200a; }
+.fico svg { width: 24px; height: 24px; }
+.fsec-intro { margin: 10px 0 24px; padding-left: 62px; max-width: 760px; }
+
+/* ---------- feature cards: two columns, first one is the highlight ---------- */
+.fitems { grid-template-columns: 1fr 1fr; gap: 12px; }
+.fitem { position: relative; padding: 24px 26px 26px; border: 1px solid transparent; transition: border-color .15s, transform .15s, box-shadow .2s; }
+.fitem:hover { border-color: var(--lime); transform: translateY(-2px); box-shadow: 0 14px 30px rgba(24, 24, 27, .06); }
+.fitem h3 { display: flex; align-items: center; gap: 10px; }
+.fitem h3::before { content: ""; flex: none; width: 8px; height: 8px; background: var(--lime); }
+.fitem:first-child { grid-column: 1 / -1; background: var(--ink); color: #fff; padding: 30px 32px 32px; }
+.fitem:first-child:hover { border-color: var(--lime); }
+.fitem:first-child h3 { font-size: 22px; letter-spacing: -.02em; }
+.fitem:first-child p { color: #b9b9b3; font-size: 16.5px; max-width: 78ch; }
+.fitem:first-child code { background: rgba(255, 255, 255, .1); color: #fff; }
+.fitem:first-child a { color: var(--lime); }
+/* a section with a single card does not need the dark spotlight twice */
+.fsec .fitems > .fitem:only-child { grid-column: 1 / -1; }
+
+/* "Good to know": plain cards, no coloured bar */
+.knows { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+.know { display: flex; align-items: flex-start; gap: 14px; padding: 22px 24px; background: #fff; border: 1px solid var(--line-strong); }
+.know:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.kico { display: grid; place-items: center; flex: none; width: 34px; height: 34px; background: var(--bg-soft); color: #4B7E31; }
+.kico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.know p { margin: 0; color: var(--text); font-size: 15.5px; line-height: 1.55; }
+
+@media (max-width: 900px) {
+  .toc a { border-left: 1px solid var(--line-strong); }
+  .toc a::before { display: none; }
+  .fsec-intro { padding-left: 0; }
+}
+@media (max-width: 700px) {
+  .fitems { grid-template-columns: 1fr; }
+  .fsec h2::after { display: none; }
+  .fitem:first-child { padding: 24px 22px 26px; }
+  .knows { grid-template-columns: 1fr; }
+}

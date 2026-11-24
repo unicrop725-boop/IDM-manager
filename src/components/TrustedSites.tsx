@@ -33,7 +33,7 @@ function SiteIcon({ site, size }: { site: TrustedSite; size: number }) {
     return (
       <div
         style={{ ...box, fontSize: size * 0.42 }}
-        className="flex flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/30 to-purple-500/30 font-semibold text-[var(--text-primary)]"
+        className="flex flex-shrink-0 items-center justify-center rounded-xl bg-teal-500/25 font-semibold text-[var(--text-primary)]"
       >
         {site.name.trim().charAt(0).toUpperCase()}
       </div>

@@ -204,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           count={counts.trusted}
           accent={{
             icon: "text-sky-400",
-            active: "bg-gradient-to-r from-sky-500/25 to-teal-500/15 text-sky-200 ring-1 ring-sky-400/50",
+            active: "bg-sky-500/20 text-sky-200 ring-1 ring-sky-400/50",
           }}
           active={currentFilter.type === "trusted"}
           onClick={() => onSelectFilter({ type: "trusted" })}
@@ -237,11 +237,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="relative mx-auto w-[150px] h-[84px]">
           <svg width="150" height="84" viewBox="0 0 150 84" className="overflow-visible">
             <defs>
-              <linearGradient id="diskGaugeGrad" gradientUnits="userSpaceOnUse" x1="15" y1="0" x2="135" y2="0">
-                <stop offset="0%" stopColor="#FED24F" />
-                <stop offset="50%" stopColor="#B2D959" />
-                <stop offset="100%" stopColor="#F59E0B" />
-              </linearGradient>
+              <linearGradient id="diskGaugeGrad"><stop offset="0%" stopColor="#B2D959" /><stop offset="100%" stopColor="#B2D959" /></linearGradient>
             </defs>
             <path
               d="M 15 75 A 60 60 0 0 1 135 75"
@@ -280,7 +276,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Gradient Disk Cleaner Button */}
         <button
           onClick={onOpenDiskCleaner}
-          className="w-full h-10 rounded-xl bg-gradient-to-r from-teal-500 to-purple-500 hover:opacity-95 active:scale-[0.98] transition-all text-white font-medium text-[13px] flex items-center justify-center cursor-pointer shadow-sm"
+          className="w-full h-10 rounded-xl gradient-accent hover:opacity-95 active:scale-[0.98] transition-all text-white font-medium text-[13px] flex items-center justify-center cursor-pointer shadow-sm"
         >
           Disk Cleaner
         </button>

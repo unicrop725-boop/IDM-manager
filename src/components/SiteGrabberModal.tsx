@@ -191,7 +191,7 @@ export default function SiteGrabberModal({
               type="button"
               onClick={handleScan}
               disabled={loading || !url.trim()}
-              className="flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-medium bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:opacity-95 disabled:opacity-50 transition-all shadow-md shadow-teal-500/20"
+              className="flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-medium gradient-accent text-white hover:opacity-95 disabled:opacity-50 transition-all shadow-md shadow-teal-500/20"
             >
               <Search className="w-3.5 h-3.5" />
               {loading ? "Scanning Site..." : "Start Grabber"}
@@ -288,7 +288,7 @@ export default function SiteGrabberModal({
             type="button"
             onClick={handleDownloadSelected}
             disabled={downloading || selectedCount === 0}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:opacity-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 transition-all"
+            className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold text-white gradient-accent hover:opacity-95 shadow-lg shadow-teal-500/20 disabled:opacity-50 transition-all"
           >
             <Download className="w-4 h-4" />
             {downloading ? "Adding to Queue..." : `Download Selected (${selectedCount})`}

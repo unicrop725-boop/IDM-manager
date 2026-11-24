@@ -36,9 +36,18 @@ const year = new Date().getFullYear();
         </ul>
       </div>
     </div>
-    <div class="foot-bottom">
-      <span>© {year} {SITE.name}. Version {SITE.version}</span>
-      <span>Windows 10 &amp; 11 · No ads · No tracking</span>
+  </div>
+
+  <div class="foot-bar">
+    <div class="wrap foot-bar-in">
+      <span class="foot-copy">© {year} {SITE.name}. All rights reserved.</span>
+      <nav class="foot-legal" aria-label="Legal and contact">
+        <a href="/privacy/">Privacy</a>
+        <a href={`mailto:${SITE.supportEmail}`}>Contact</a>
+        <a href="/rss.xml">RSS</a>
+        <span class="foot-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.500"/></svg>No ads · No tracking</span>
+        <span class="foot-ver">Version {SITE.version}</span>
+      </nav>
     </div>
   </div>
 </footer>

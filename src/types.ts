@@ -253,6 +253,8 @@ export interface TrialAndLicenseStatus {
   licenseKey?: string | null;
   licenseEmail?: string | null;
   licenseTier?: string | null;
+  /** Set when the license was turned off by the license server (refunded, or its slot went to another PC). */
+  licenseNotice?: string | null;
 }
 
 export interface DriveEntry {

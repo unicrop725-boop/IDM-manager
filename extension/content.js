@@ -95,7 +95,10 @@
 
     // A link that says "download" (like the Download buttons on Behance) is taken whatever its file type, when "capture every download" is on.
     const isDownloadLink = captureSettings.captureAll && link.hasAttribute("download") && /^https?:/i.test(url);
-    if ((ext && captureSettings.fileTypes.has(ext)) || isDownloadLink) {
+    // Only addresses FlowGet can fetch itself. A blob: or data: link (a file the page just generated, such as an exported
+    // report) exists only inside the page, so it is left to the browser instead of being swallowed.
+    const fetchable = /^(https?|ftp):/i.test(url);
+    if (fetchable && ((ext && captureSettings.fileTypes.has(ext)) || isDownloadLink)) {
       e.preventDefault();
       e.stopPropagation();
 
@@ -150,6 +153,10 @@
     if (!isMediaSite) {
       for (const vid of document.querySelectorAll("video")) {
         const r = vid.getBoundingClientRect();
+        // A video with an ordinary file address is listed on its own below; counting the page as well would show
+        // "2 videos" for one video and make "Download all" fetch it twice.
+        const ownSrc = vid.currentSrc || vid.src;
+        if (ownSrc && !ownSrc.startsWith("blob:")) continue;
         if (r.width >= 120 && r.height >= 80) {
           addResource({ title: document.title || "Video on this page", url: loc, type: "video", ext: "stream", size: "Video on this page" });
           break;

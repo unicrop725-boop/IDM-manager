@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import {
   Link2,
   CloudDownload,
@@ -402,17 +403,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Action Buttons: large icon on top, small label below */}
       <div className="tool-group flex items-center gap-3 flex-shrink-0">
-        <ToolButton icon={Play} label="Resume" color="text-emerald-400" onClick={onResume} disabled={!canResume} />
-        <ToolButton icon={Square} label="Stop" color="text-amber-400" onClick={onPause} disabled={!canPause} />
-        <ToolButton icon={TimerOff} label="Stop All" color="text-rose-400" onClick={onStopAll} />
+        <ToolButton icon={Play} label={t("resume", "Resume")} color="text-emerald-400" onClick={onResume} disabled={!canResume} />
+        <ToolButton icon={Square} label={t("stop", "Stop")} color="text-amber-400" onClick={onPause} disabled={!canPause} />
+        <ToolButton icon={TimerOff} label={t("stop_all", "Stop All")} color="text-rose-400" onClick={onStopAll} />
 
         <div className="h-9 w-[1px] bg-[var(--border-subtle)] mx-2" />
 
-        <ToolButton icon={Trash2} label="Delete" color="text-red-400" onClick={onDelete} disabled={!hasSelection} />
-        <ToolButton icon={Settings} label="Options" color="text-sky-400" onClick={onOpenOptions} />
-        <ToolButton icon={Copy} label="Queues" color="text-purple-400" onClick={onOpenQueues} />
-        <ToolButton icon={CalendarClock} label="Schedule" color="text-teal-400" onClick={onOpenSchedule} />
-        <ToolButton icon={Forward} label="Share" color="text-blue-400" onClick={onShare} disabled={!hasSelection} />
+        <ToolButton icon={Trash2} label={t("delete", "Delete")} color="text-red-400" onClick={onDelete} disabled={!hasSelection} />
+        <ToolButton icon={Settings} label={t("options", "Options")} color="text-sky-400" onClick={onOpenOptions} />
+        <ToolButton icon={Copy} label={t("queues", "Queues")} color="text-purple-400" onClick={onOpenQueues} />
+        <ToolButton icon={CalendarClock} label={t("schedule", "Schedule")} color="text-teal-400" onClick={onOpenSchedule} />
+        <ToolButton icon={Forward} label={t("share", "Share")} color="text-blue-400" onClick={onShare} disabled={!hasSelection} />
       </div>
     </div>
     </div>

@@ -156,8 +156,8 @@
     --bg-hover: #E9ECEF;
     --border-subtle: #E2E8F0;
     --text-primary: #18181B;
-    --text-secondary: #71717A;
-    --text-disabled: #A1A1AA;
+    --text-secondary: #5B5B64;
+    --text-disabled: #7C7C86;
     --accent-purple: #B58A2C;
     --accent-teal: #4F9A2E;
     --accent-gradient: #B2D959;
@@ -1119,4 +1119,11 @@ button:disabled.bg-sky-500 {
 }
 :root.light .bg-layer {
   opacity: 0.5;
+}
+
+/* Dialogs never outgrow the window: at the smallest window size (or with large text) the card scrolls instead of its buttons going off-screen. */
+.notch-card[role="dialog"] {
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
 }

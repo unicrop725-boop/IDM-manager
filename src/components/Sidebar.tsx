@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { t } from "../i18n";
 import { api } from "../api";
 import { formatBytes } from "../format";
 import {
@@ -65,7 +66,17 @@ interface GroupHeaderProps {
 const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, expanded, count, accent, onClick, onToggle }) => (
   <div
     onClick={onClick}
-    className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+    role="button"
+    tabIndex={0}
+    aria-pressed={active}
+    onKeyDown={(e) => {
+      if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }
+    }}
+    className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-purple)] flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
       active
         ? accent?.active ?? "bg-[var(--bg-card)] text-[var(--text-primary)]"
         : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
@@ -139,14 +150,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 
   return (
-    <aside className="w-60 h-full flex flex-col justify-between grad-side select-none text-[13px] text-[var(--text-secondary)]">
+    <aside className="w-60 max-[720px]:hidden h-full flex flex-col justify-between grad-side select-none text-[13px] text-[var(--text-secondary)]">
       {/* Top Section: Navigation Trees */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {/* ALL DOWNLOADS */}
         <div>
           <GroupHeader
             icon={Folder}
-            label="All Downloads"
+            label={t("all_downloads", "All Downloads")}
             active={currentFilter.type === "all"}
             expanded={allExpanded}
             count={counts.all}
@@ -163,7 +174,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     key={cat.name}
                     onClick={() => onSelectFilter({ type: "category", name: cat.name })}
-                    className={`flex items-center gap-3.5 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-[15px] ${
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSelectFilter({ type: "category", name: cat.name });
+                      }
+                    }}
+                    className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-purple)] flex items-center gap-3.5 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-[15px] ${
                       isSelected
                         ? "bg-[var(--bg-card)] text-[var(--text-primary)]"
                         : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
@@ -182,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* UNFINISHED */}
         <GroupHeader
           icon={FolderDown}
-          label="Unfinished"
+          label={t("unfinished", "Unfinished")}
           count={counts.unfinished}
           active={currentFilter.type === "status" && currentFilter.status === "unfinished"}
           onClick={() => onSelectFilter({ type: "status", status: "unfinished" })}
@@ -191,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* FINISHED */}
         <GroupHeader
           icon={FolderCheck}
-          label="Finished"
+          label={t("finished", "Finished")}
           count={counts.finished}
           active={currentFilter.type === "status" && currentFilter.status === "finished"}
           onClick={() => onSelectFilter({ type: "status", status: "finished" })}
@@ -229,7 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5 text-[var(--text-primary)]">
             <Rows2 className="w-[18px] h-[18px]" strokeWidth={1.6} />
-            <span className="text-[13px]">Disk Space</span>
+            <span className="text-[13px]">{t("disk_space", "Disk Space")}</span>
           </div>
         </div>
 

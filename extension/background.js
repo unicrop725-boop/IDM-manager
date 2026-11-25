@@ -287,6 +287,24 @@ function showResult(ok) {
   }
 }
 
+/** A link to a file (it ends in an extension), as opposed to a web page that needs yt-dlp to find the video. */
+function isDirectFileUrl(url) {
+  try {
+    const u = new URL(url);
+    return /^(https?|ftp):$/.test(u.protocol) && /\.[a-z0-9]{2,5}$/i.test(u.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** Lets the browser download `url` itself (FlowGet's capture is skipped once for it). False when it cannot. */
+function handBackToBrowser(url) {
+  if (!/^(https?|ftp):/i.test(url || "")) return false;
+  handedBack.add(url);
+  chrome.downloads.download({ url }).catch(() => handedBack.delete(url));
+  return true;
+}
+
 async function handleDirectDownload({ url, fileName, referer, tabId, quality }) {
   const cookies = await getCookiesForUrl(url);
   const payload = {
@@ -314,11 +332,18 @@ async function handleDirectDownload({ url, fileName, referer, tabId, quality }) 
   }
   showResult(false);
   if (result && result.rejected) {
-    notifyProblem("FlowGet could not start this download", result.error || "The app refused the link. Check it and try again.");
+    // The click was already taken from the browser, so give the download back: a refused link must not be lost.
+    handBackToBrowser(url);
+    notifyProblem("FlowGet could not start this download", (result.error || "The app refused the link.") + " The browser is downloading it instead.");
     return false;
   }
-  // The app cannot be reached (closed, still starting, or restarting): keep the download and send it as soon as
-  // FlowGet answers again, instead of losing it.
+  // The app cannot be reached (it is closed and could not be started, or is not installed). A plain file link is given
+  // back to the browser so the user still gets the file; waiting for an app that may never open would swallow every
+  // click. Video-page links (resolved by the app with yt-dlp) have no browser fallback, so those wait for FlowGet.
+  if (!quality && isDirectFileUrl(url) && handBackToBrowser(url)) {
+    notifyProblem("FlowGet is not running", `${nameFromPayload(payload)} is downloading in the browser instead. Open FlowGet to use it next time.`);
+    return "browser";
+  }
   const waiting = await queuePayload(payload);
   notifyProblem(
     "FlowGet is not running",

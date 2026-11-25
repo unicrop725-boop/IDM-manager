@@ -79,6 +79,13 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
             </div>
           )}
 
+          {status.licenseNotice && !status.isLicensed && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 flex items-start gap-2" role="alert">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <span>{status.licenseNotice}</span>
+            </div>
+          )}
+
           {successMsg && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-300 flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
@@ -99,7 +106,7 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
                 </span>
               </div>
               <div className="text-[11px] text-zinc-300">
-                Registered to: <strong className="text-white font-mono">{status.licenseEmail || "Verified Buyer"}</strong>
+                Registered to: <strong className="text-[var(--text-primary)] font-mono">{status.licenseEmail || "Verified Buyer"}</strong>
               </div>
               <div className="pt-2 border-t border-emerald-500/20 flex justify-end">
                 <button

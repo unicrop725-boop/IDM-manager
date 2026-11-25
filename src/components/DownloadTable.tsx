@@ -1,4 +1,5 @@
 import React, { useRef } from "react";
+import { t } from "../i18n";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ArrowUpDown,
@@ -33,7 +34,7 @@ export type SortOrder = "asc" | "desc";
 interface DownloadTableProps {
   downloads: DownloadInfo[];
   selectedIds: Set<string>;
-  onToggleSelect: (id: string, shiftKey: boolean) => void;
+  onToggleSelect: (id: string, shiftKey: boolean, toggle?: boolean) => void;
   onDoubleClick: (d: DownloadInfo) => void;
   onContextMenu: (pos: ContextMenuPosition) => void;
   sortField: SortField;
@@ -192,7 +193,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
 
     switch (d.state) {
       case "completed":
-        return <span className="text-[13px] text-[var(--text-primary)]">Complete</span>;
+        return <span className="text-[13px] text-[var(--text-primary)]">{t("complete", "Complete")}</span>;
       case "probing":
         // Not a vague "0%": say what is happening, and what went wrong while retrying.
         return (
@@ -220,27 +221,27 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
             <span className="w-4 h-4 rounded-[4px] border border-[var(--text-secondary)] flex items-center justify-center">
               <Pause className="w-2.5 h-2.5" />
             </span>
-            <span>Paused</span>
+            <span>{t("paused", "Paused")}</span>
           </div>
         );
       case "queued":
         return (
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30">
-            Queued
+            {t("queued", "Queued")}
           </span>
         );
       case "waitingForNetwork":
         return (
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 w-max">
             <WifiOff className="w-3 h-3" />
-            Waiting for network
+            {t("waiting_network", "Waiting for network")}
           </span>
         );
       case "linkExpired":
         return (
           <span className="px-2 py-0.5 rounded-full text-[10px] bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1 w-max">
             <AlertTriangle className="w-3 h-3" />
-            Link expired
+            {t("link_expired", "Link expired")}
           </span>
         );
       case "failed":
@@ -272,35 +273,35 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
           onClick={() => onSort("name")}
           className="flex-1 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors pl-12 dt-col-name-h"
         >
-          <span>Name</span>
+          <span>{t("name", "Name")}</span>
           {renderSortIcon("name")}
         </div>
         <div
           onClick={() => onSort("size")}
           className="dt-col-size w-28 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
-          <span>Size</span>
+          <span>{t("size", "Size")}</span>
           {renderSortIcon("size")}
         </div>
         <div
           onClick={() => onSort("status")}
           className="dt-col-status w-44 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
-          <span>Status</span>
+          <span>{t("status", "Status")}</span>
           {renderSortIcon("status")}
         </div>
         <div
           onClick={() => onSort("eta")}
           className="dt-col-eta w-36 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
-          <span>Time Left</span>
+          <span>{t("time_left", "Time Left")}</span>
           {renderSortIcon("eta")}
         </div>
         <div
           onClick={() => onSort("date")}
           className="dt-col-date w-40 flex items-center gap-2 cursor-pointer hover:text-[var(--text-primary)] transition-colors"
         >
-          <span>Last Modification</span>
+          <span>{t("last_modification", "Last Modification")}</span>
           {renderSortIcon("date")}
         </div>
         <div className="dt-col-action w-12 flex-shrink-0" aria-hidden="true" />
@@ -344,8 +345,23 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                     e.preventDefault();
                     onContextMenu({ x: e.clientX, y: e.clientY, download: d });
                   }}
-                  onClick={(e) => onToggleSelect(d.id, e.shiftKey)}
-                  className={`flex items-center px-4 text-[13px] cursor-default transition-colors ${
+                  onClick={(e) => onToggleSelect(d.id, e.shiftKey, e.ctrlKey || e.metaKey)}
+                  // Keyboard: Tab reaches each row, Enter opens it, Space selects it.
+                  tabIndex={0}
+                  aria-selected={isSelected}
+                  aria-label={`${displayName(d)}, ${d.state}`}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      onDoubleClick(d);
+                    } else if (e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onToggleSelect(d.id, e.shiftKey, true);
+                    }
+                  }}
+                  className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-purple)] flex items-center px-4 text-[13px] cursor-default transition-colors ${
                     isSelected
                       ? "bg-[var(--bg-hover)] text-[var(--text-primary)]"
                       : "hover:bg-[var(--bg-card)] text-[var(--text-primary)]"
@@ -358,7 +374,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
                   >
                     <Checkbox
                       checked={isSelected}
-                      onChange={(e) => onToggleSelect(d.id, (e.nativeEvent as MouseEvent).shiftKey)}
+                      onChange={(e) => onToggleSelect(d.id, (e.nativeEvent as MouseEvent).shiftKey, true)}
                     />
                   </div>
 

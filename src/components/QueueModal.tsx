@@ -58,6 +58,22 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
       setError("Please provide a name for the queue.");
       return;
     }
+    if (scheduleEnabled) {
+      // HH:MM or HH:MM:SS on a 24-hour clock.
+      const clock = /^([01]?d|2[0-3]):([0-5]d)(?::([0-5]d))?$/;
+      if (!startTime.trim() || !clock.test(startTime.trim())) {
+        setError("Start time must look like 22:30 or 22:30:00 (24-hour clock).");
+        return;
+      }
+      if (stopTime.trim() && !clock.test(stopTime.trim())) {
+        setError("Stop time must look like 06:00 or 06:00:00 (24-hour clock), or be left empty.");
+        return;
+      }
+      if (stopTime.trim() && stopTime.trim().replace(/^(d):/, "0$1:").slice(0, 5) === startTime.trim().replace(/^(d):/, "0$1:").slice(0, 5)) {
+        setError("Start and stop time are the same, so the queue would never run.");
+        return;
+      }
+    }
 
     setSaving(true);
     setError(null);

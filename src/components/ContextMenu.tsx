@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import {
 
   FileText,
@@ -99,10 +99,18 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   const isArchive = d.fileName.match(/\.(zip|rar|7z|tar|gz|bz2|xz)$/i) !== null;
 
   // Clamping within viewport
+  // The menu's real height is measured (it changes with the item's state), so it never runs off the bottom of the window.
   const menuWidth = 250;
-  const menuHeight = 440;
-  const left = Math.min(position.x, window.innerWidth - menuWidth - 10);
-  const top = Math.min(position.y, window.innerHeight - menuHeight - 10);
+  const [menuHeight, setMenuHeight] = useState(440);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (menuRef.current) setMenuHeight(menuRef.current.offsetHeight);
+  });
+  const left = Math.max(10, Math.min(position.x, window.innerWidth - menuWidth - 10));
+  const top = Math.max(10, Math.min(position.y, window.innerHeight - menuHeight - 10));
+  const tooTall = menuHeight > window.innerHeight - 20;
+  // Near the right edge the queue submenu opens to the left instead of leaving the window.
+  const subOnLeft = left + menuWidth + 200 > window.innerWidth;
 
   const run = (fn: (d: DownloadInfo) => void) => () => {
     fn(d);
@@ -119,7 +127,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       }}
     >
       <div
-        style={{ left: `${left}px`, top: `${top}px` }}
+        ref={menuRef}
+        style={{ left: `${left}px`, top: `${top}px`, ...(tooTall ? { maxHeight: window.innerHeight - 20, overflowY: "auto" as const } : {}) }}
         onClick={(e) => e.stopPropagation()}
         className="dd-anim absolute w-60 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2.5 z-50 animate-in fade-in zoom-in-95 duration-150"
       >
@@ -161,7 +170,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             trailing={<ChevronRight className="w-3.5 h-3.5 text-[var(--text-secondary)]" />}
           />
           {showQueueSubmenu && (
-            <div className="absolute left-full top-0 ml-1 w-48 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2 z-50">
+            <div className={`absolute ${subOnLeft ? "right-full mr-1" : "left-full ml-1"} top-0 w-48 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-2 z-50`}>
               {queues.length === 0 ? (
                 <div className="px-4 py-1.5 text-[11px] text-[var(--text-disabled)]">No queues created</div>
               ) : (

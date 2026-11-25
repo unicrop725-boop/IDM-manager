@@ -1,4 +1,5 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "./i18n";
 import { listen, type UnlistenFn } from "./events";
 import { IS_DEMO } from "./demo/flag";
 import { api, errorText } from "./api";
@@ -59,6 +60,7 @@ export default function App() {
   const [downloads, setDownloads] = useState<Record<string, DownloadInfo>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [queues, setQueues] = useState<QueueInfo[]>([]);
+  useLanguage(); // re-render the whole window when the language changes
   const [settings, setSettings] = useState<Settings | null>(null);
   const [_adapters, setAdapters] = useState<AdapterInfo[]>([]);
 
@@ -120,8 +122,27 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    // Remembered as the Theme setting too, so Options > General shows what is really in use.
+    api.setSetting("theme", next).catch(() => {});
   };
+
+  // The Theme option in Options > General (Dark, Light, System Default) is applied when it is saved or loaded.
+  useEffect(() => {
+    const pref = settings?.theme;
+    if (pref === "light" || pref === "dark") {
+      setTheme(pref);
+      return;
+    }
+    if (pref === "system" && typeof window.matchMedia === "function") {
+      const mq = window.matchMedia("(prefers-color-scheme: light)");
+      const apply = () => setTheme(mq.matches ? "light" : "dark");
+      apply();
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+  }, [settings?.theme]);
 
   // Request notification permissions
   useEffect(() => {
@@ -225,6 +246,10 @@ export default function App() {
     const un = [
       listen<SafetyReport>("safety-updated", ({ payload }) => setSafety((cur) => ({ ...cur, [payload.id]: payload }))),
       listen<BandwidthEffective>("bandwidth-state", ({ payload }) => setBandwidth(payload)),
+      // The license server turned this license off (refunded, or its slot went to another PC): show the new state.
+      listen<null>("license-changed", () => {
+        api.getLicenseStatus().then(setLicenseStatus).catch(() => {});
+      }),
       // yt-dlp / ffmpeg are installed on first use: say so, with progress, instead of looking stuck.
       listen<ToolsProgress>("tools-progress", ({ payload: p }) => {
         if (p.stage === "downloading") {
@@ -470,6 +495,12 @@ export default function App() {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // A dialog is open: the list behind it must not react (Delete would remove every selected download unseen).
+      const modalOpen = !!document.querySelector('[role="dialog"][aria-modal="true"]');
+      // Space and Enter on a focused button, link or menu item belong to that control, not to the download list.
+      const onControl = !!(e.target as HTMLElement | null)?.closest?.('button, a[href], select, [role="menuitem"], [role="button"], [role="combobox"]');
+      if (modalOpen) return;
+
       // Ctrl+N -> Add URL
       if ((e.ctrlKey || e.metaKey) && (e.key === "n" || e.key === "N")) {
         e.preventDefault();
@@ -511,7 +542,7 @@ export default function App() {
       }
 
       // Space -> Pause / Resume selected
-      if (e.key === " ") {
+      if (e.key === " " && !onControl) {
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag !== "input" && activeTag !== "textarea" && selectedIds.size > 0) {
           e.preventDefault();
@@ -585,7 +616,8 @@ export default function App() {
           cmp = (a.etaSecs || 9999999) - (b.etaSecs || 9999999);
           break;
         case "date":
-          cmp = (a.createdAt || 0) - (b.createdAt || 0);
+          // The column shows the completion time (or the start time while unfinished), so that is what it sorts by.
+          cmp = (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0);
           break;
       }
       return sortOrder === "asc" ? cmp : -cmp;
@@ -616,18 +648,25 @@ export default function App() {
   }, [downloads]);
 
   // Selection logic
-  const handleToggleSelect = (id: string, shiftKey: boolean) => {
+  // Standard list selection: a plain click selects only that row, Ctrl/Cmd (or the checkbox) toggles it, and Shift
+  // selects the range from the last clicked row.
+  const selectionAnchor = useRef<string | null>(null);
+  const handleToggleSelect = (id: string, shiftKey: boolean, toggle = false) => {
+    const order = filteredAndSortedDownloads.map((d) => d.id);
+    const anchor = selectionAnchor.current;
+    if (shiftKey && anchor && order.includes(anchor) && order.includes(id)) {
+      const a = order.indexOf(anchor);
+      const b = order.indexOf(id);
+      const range = order.slice(Math.min(a, b), Math.max(a, b) + 1);
+      setSelectedIds((prev) => (toggle ? new Set([...prev, ...range]) : new Set(range)));
+      return;
+    }
+    selectionAnchor.current = id;
     setSelectedIds((prev) => {
+      if (!toggle) return new Set([id]);
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        if (!shiftKey && next.size === 0) {
-          next.add(id);
-        } else {
-          next.add(id);
-        }
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -712,6 +751,12 @@ export default function App() {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
+    const n = selectedIds.size;
+    const first = downloads[Array.from(selectedIds)[0]];
+    const what = n === 1 && first ? `"${first.fileName}"` : `${n} downloads`;
+    if (!window.confirm(`Remove ${what} from the list?
+
+Files already saved on disk are kept.`)) return;
     for (const id of Array.from(selectedIds)) {
       await api.remove(id, false).catch(() => {});
     }
@@ -789,6 +834,7 @@ export default function App() {
   };
 
   const handleRedownload = async (d: DownloadInfo) => {
+    if (d.state === "completed" && !window.confirm(`"${d.fileName}" is already downloaded. Download it again from the start?`)) return;
     await api.restart(d.id).catch(() => {});
   };
 

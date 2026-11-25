@@ -106,10 +106,16 @@ const reqs = [
             </div>
           </div>
         </div>
-        <a class="btn btn-chrome btn-lg" href={SITE.extensionUrl || "/download/#extension"} target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M10 4h4v3a2 2 0 1 0 4 0V4h2v6h-3a2 2 0 1 0 0 4h3v6H4v-6h3a2 2 0 1 0 0-4H4V4z" ${s}/>`}></svg>
-          Get the extension
-        </a>
+        {SITE.extensionUrl ? (
+          <a class="btn btn-chrome btn-lg" href={SITE.extensionUrl} target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M10 4h4v3a2 2 0 1 0 4 0V4h2v6h-3a2 2 0 1 0 0 4h3v6H4v-6h3a2 2 0 1 0 0-4H4V4z" ${s}/>`}></svg>
+            Get the extension
+          </a>
+        ) : (
+          <span class="btn btn-chrome btn-lg" role="note" aria-disabled="true" style="opacity:.65;cursor:default">
+            Coming soon to the Chrome Web Store
+          </span>
+        )}
       </div>
     </div>
   </section>

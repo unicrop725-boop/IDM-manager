@@ -285,9 +285,19 @@ export const api = {
 
   // Settings
   getSettings: () =>
-    isTauri ? invoke<Settings>("get_settings") : Promise.resolve(mockSettings),
+    isTauri ? invoke<Settings>("get_settings") : Promise.resolve({ ...mockSettings }),
   setSetting: (key: string, value: string) =>
-    isTauri ? invoke<void>("set_setting", { key, value }) : Promise.resolve(),
+    isTauri
+      ? invoke<void>("set_setting", { key, value })
+      : (() => {
+          // The browser demo keeps what was saved for this visit, so changing a setting visibly does something.
+          const camel = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+          if (camel in mockSettings) {
+            const current = (mockSettings as any)[camel];
+            (mockSettings as any)[camel] = typeof current === "boolean" ? value === "1" || value === "true" : typeof current === "number" ? Number(value) : value;
+          }
+          return Promise.resolve();
+        })(),
   getSetting: (key: string) =>
     isTauri ? invoke<string | null>("get_setting", { key }) : Promise.resolve(null),
   setDefaultConnections: (connections: number) =>

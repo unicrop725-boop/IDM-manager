@@ -1191,6 +1191,20 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
         } else {
             vec![segments::single(total)]
         };
+        // A file that cannot fit is refused now, with the numbers, rather than failing later with a
+        // generic disk error. (The size is recorded so the list still shows how big the file is.)
+        if let Some(needed) = total {
+            if let Some(free) = path.parent().and_then(crate::diskspace::free_space) {
+                if needed > free {
+                    entry.with(|r| r.total_size = Some(needed));
+                    return Err(EngineError::NotEnoughSpace {
+                        needed,
+                        free,
+                        drive: crate::diskspace::drive_label(&path),
+                    });
+                }
+            }
+        }
         // Pre-allocate the full file now (when the size is known): fails early if the disk is full.
         let file = OffsetFile::create(&path, total)?;
         entry.with(|r| {

@@ -27,6 +27,9 @@ import ImportExportModal from "./components/ImportExportModal";
 import TrustedSites from "./components/TrustedSites";
 import { TRUSTED_SITES } from "./data/trustedSites";
 import { SafetyConfirmModal, needsConfirmation } from "./components/SafetyConfirmModal";
+import { ConfirmModal, type ConfirmRequest } from "./components/ConfirmModal";
+import { SpaceAlerts, type SpaceAlertItem } from "./components/SpaceAlerts";
+import { driveOf } from "./utils/drives";
 import SiteGrabberModal from "./components/SiteGrabberModal";
 import QueueModal from "./components/QueueModal";
 import CategoryModal from "./components/CategoryModal";
@@ -77,6 +80,7 @@ export default function App() {
 
   // Modals & Popups
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [quickAddUrl, setQuickAddUrl] = useState("");
   const [capturedMeta, setCapturedMeta] = useState<{
     fileName?: string;
@@ -90,6 +94,10 @@ export default function App() {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isSiteGrabberOpen, setIsSiteGrabberOpen] = useState(false);
   const [isDiskCleanerOpen, setIsDiskCleanerOpen] = useState(false);
+  // Drive the Disk Cleaner should open on when it was reached from an out-of-space alert.
+  const [cleanerDrive, setCleanerDrive] = useState("");
+  const [dismissedSpace, setDismissedSpace] = useState<Set<string>>(new Set());
+  const spaceSeeded = useRef(false);
   const [isSpeedTestOpen, setIsSpeedTestOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   // Safety check results per download, what the bandwidth rules decide now, and a file waiting for "open anyway".
@@ -176,6 +184,43 @@ export default function App() {
   useEffect(() => {
     refreshAll();
   }, [refreshAll]);
+
+  // ---- Out-of-space alerts -----------------------------------------------------------------
+  // A download that failed because its drive is (or would be) full gets a side alert that offers
+  // Disk Cleaner on that drive. Failures that were already there when the app started stay quiet.
+  const isSpaceFailure = (d: DownloadInfo) =>
+    d.state === "failed" && (d.error?.code === "not_enough_space" || d.error?.code === "disk_full");
+
+  useEffect(() => {
+    if (!settings || spaceSeeded.current) return; // wait until the first full load has finished
+    spaceSeeded.current = true;
+    const old = Object.values(downloads).filter(isSpaceFailure).map((d) => d.id);
+    if (old.length) setDismissedSpace(new Set(old));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
+
+  // Pressing Resume (or Restart) and failing again should alert again: forget dismissals once a download is no longer failed.
+  useEffect(() => {
+    setDismissedSpace((cur) => {
+      if (cur.size === 0) return cur;
+      const keep = new Set([...cur].filter((id) => downloads[id] && isSpaceFailure(downloads[id])));
+      return keep.size === cur.size ? cur : keep;
+    });
+  }, [downloads]);
+
+  const spaceAlerts: SpaceAlertItem[] = useMemo(
+    () =>
+      Object.values(downloads)
+        .filter((d) => isSpaceFailure(d) && !dismissedSpace.has(d.id))
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((d) => ({
+          id: d.id,
+          fileName: d.fileName,
+          drive: driveOf(d.filePath || d.saveDir) ?? "",
+          message: d.error?.message ?? "There is not enough free space on the disk.",
+        })),
+    [downloads, dismissedSpace]
+  );
 
   // URL View parameter handler for documentation screenshots & testing
   useEffect(() => {
@@ -531,8 +576,8 @@ export default function App() {
         }
       }
 
-      // Delete -> Remove selected
-      if (e.key === "Delete" || e.key === "Backspace") {
+      // Delete -> Remove selected (Backspace is deliberately not a shortcut: a stray press must not start a removal)
+      if (e.key === "Delete") {
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag !== "input" && activeTag !== "textarea" && selectedIds.size > 0) {
           e.preventDefault();
@@ -749,18 +794,24 @@ export default function App() {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
-    const n = selectedIds.size;
-    const first = downloads[Array.from(selectedIds)[0]];
-    const what = n === 1 && first ? `"${first.fileName}"` : `${n} downloads`;
-    if (!window.confirm(`Remove ${what} from the list?
-
-Files already saved on disk are kept.`)) return;
-    for (const id of Array.from(selectedIds)) {
-      await api.remove(id, false).catch(() => {});
-    }
-    setSelectedIds(new Set());
+    const ids = Array.from(selectedIds);
+    const n = ids.length;
+    const first = downloads[ids[0]];
+    setConfirmRequest({
+      title: n === 1 ? "Remove this download?" : `Remove ${n} downloads?`,
+      subject: n === 1 && first ? first.fileName : undefined,
+      message: "It will be removed from the list. Files already saved on disk are kept.",
+      confirmLabel: "Remove",
+      danger: true,
+      onConfirm: async () => {
+        for (const id of ids) {
+          await api.remove(id, false).catch(() => {});
+        }
+        setSelectedIds(new Set());
+      },
+    });
   };
 
   const handleShareSelected = () => {
@@ -834,7 +885,18 @@ Files already saved on disk are kept.`)) return;
   };
 
   const handleRedownload = async (d: DownloadInfo) => {
-    if (d.state === "completed" && !window.confirm(`"${d.fileName}" is already downloaded. Download it again from the start?`)) return;
+    if (d.state === "completed") {
+      setConfirmRequest({
+        title: "Download again?",
+        subject: d.fileName,
+        message: "This file is already downloaded. Downloading it again starts from the beginning.",
+        confirmLabel: "Download again",
+        onConfirm: () => {
+          api.restart(d.id).catch(() => {});
+        },
+      });
+      return;
+    }
     await api.restart(d.id).catch(() => {});
   };
 
@@ -1069,6 +1131,18 @@ Files already saved on disk are kept.`)) return;
       {/* Batch Download Modal */}
       {isImportOpen && <ImportExportModal onClose={() => setIsImportOpen(false)} onChanged={refreshAll} />}
 
+      {confirmRequest && <ConfirmModal {...confirmRequest} onClose={() => setConfirmRequest(null)} />}
+
+      <SpaceAlerts
+        items={spaceAlerts}
+        onDismiss={(id) => setDismissedSpace((cur) => new Set(cur).add(id))}
+        onClean={(item) => {
+          setCleanerDrive(item.drive);
+          setIsDiskCleanerOpen(true);
+          setDismissedSpace((cur) => new Set(cur).add(item.id));
+        }}
+      />
+
       {pendingOpen && safety[pendingOpen.id] && (
         <SafetyConfirmModal
           fileName={pendingOpen.fileName}
@@ -1143,8 +1217,12 @@ Files already saved on disk are kept.`)) return;
       {isDiskCleanerOpen && (
         <DiskCleanerModal
           downloads={Object.values(downloads)}
-          onClose={() => setIsDiskCleanerOpen(false)}
+          onClose={() => {
+            setIsDiskCleanerOpen(false);
+            setCleanerDrive("");
+          }}
           onClean={handleDiskClean}
+          initialDrive={cleanerDrive}
           defaultDrive={settings?.defaultDrive ?? ""}
           downloadDir={settings?.downloadDir ?? ""}
           onDefaultChanged={refreshAll}

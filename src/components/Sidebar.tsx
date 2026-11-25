@@ -124,28 +124,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Disk space simulation / estimation
   // Real disk usage of the drive that holds the download folder (refreshed every 30s)
   const [disk, setDisk] = useState<{ drive: string; totalBytes: number; freeBytes: number } | null>(null);
+  // Re-check sooner while downloads are in progress (they are what fills the disk) and whenever one finishes.
+  const busy = (counts.unfinished ?? 0) > 0;
+  const finishedCount = counts.finished ?? 0;
+
+  // A different drive was chosen: forget the old reading until the new drive has been read.
+  useEffect(() => {
+    setDisk(null);
+  }, [saveDir]);
+
   useEffect(() => {
     let cancelled = false;
-    const load = () =>
+    let running = false;
+    const load = () => {
+      if (running) return; // never pile up PowerShell checks
+      running = true;
       api
         .getDiskSpace(saveDir)
-        .then((d) => !cancelled && setDisk(d))
-        .catch(() => !cancelled && setDisk(null));
+        .then((d) => {
+          if (!cancelled) setDisk(d);
+        })
+        // One failed check must not hide a warning that is still true: keep the last reading.
+        .catch(() => {})
+        .finally(() => {
+          running = false;
+        });
+    };
     load();
-    const t = setInterval(load, 30000);
+    const t = setInterval(load, busy ? 10000 : 30000);
+    // Coming back to the window after filling the disk elsewhere: look again straight away.
+    const onWake = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
     return () => {
       cancelled = true;
       clearInterval(t);
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
     };
-  }, [saveDir]);
+  }, [saveDir, busy, finishedCount]);
   const diskUsagePercent = disk ? Math.round(((disk.totalBytes - disk.freeBytes) / disk.totalBytes) * 100) : 0;
   // The Disk Space card only slides in when the drive is nearly full
   const showDiskCard = disk !== null && diskUsagePercent >= DISK_WARN_PERCENT;
-  const getFaceEmoji = (pct: number) => {
-    if (pct < 70) return "😊";
-    if (pct <= 85) return "😐";
-    return "😟";
+  // The face and the gauge colour always change together, from the same thresholds.
+  const diskLevel = (pct: number) => {
+    if (pct < 70) return { emoji: "😊", color: "#B2D959" }; // plenty of room: green
+    if (pct <= 85) return { emoji: "😐", color: "#F5B942" }; // getting full: amber
+    return { emoji: "😟", color: "#F25C5C" }; // nearly full: red
   };
+  const level = diskLevel(diskUsagePercent);
 
 
 
@@ -257,9 +286,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Semicircle Gauge */}
         <div className="relative mx-auto w-[150px] h-[84px]">
           <svg width="150" height="84" viewBox="0 0 150 84" className="overflow-visible">
-            <defs>
-              <linearGradient id="diskGaugeGrad"><stop offset="0%" stopColor="#B2D959" /><stop offset="100%" stopColor="#B2D959" /></linearGradient>
-            </defs>
             <path
               d="M 15 75 A 60 60 0 0 1 135 75"
               fill="none"
@@ -270,17 +296,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <path
               d="M 15 75 A 60 60 0 0 1 135 75"
               fill="none"
-              stroke="url(#diskGaugeGrad)"
+              stroke={level.color}
               strokeWidth="11"
               strokeLinecap="round"
               pathLength={100}
               strokeDasharray={100}
               strokeDashoffset={100 - diskUsagePercent}
               className="transition-all duration-700 ease-out"
+              data-testid="disk-gauge-arc"
             />
           </svg>
           <div className="absolute left-1/2 top-[34px] -translate-x-1/2 text-[26px] leading-none">
-            {disk ? getFaceEmoji(diskUsagePercent) : "—"}
+            {disk ? level.emoji : "—"}
           </div>
           <span className="absolute left-0 -bottom-1 -translate-x-1/2 text-[11px] text-[var(--text-secondary)]">0%</span>
           <span className="absolute right-0 -bottom-1 translate-x-1/2 text-[11px] text-[var(--text-secondary)]">100%</span>

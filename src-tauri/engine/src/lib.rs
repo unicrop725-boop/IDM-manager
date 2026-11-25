@@ -20,6 +20,7 @@
 pub mod adapters;
 pub mod auth;
 pub mod checksum;
+pub mod diskspace;
 pub mod error;
 pub mod dns;
 pub mod events;

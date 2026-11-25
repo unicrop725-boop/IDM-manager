@@ -56,6 +56,9 @@ pub enum EngineError {
     Disk(String),
     #[error("disk full")]
     DiskFull,
+    /// Known before any byte is written: the file is bigger than the free space of the target drive.
+    #[error("not enough disk space: {needed} bytes needed, {free} free on {drive}")]
+    NotEnoughSpace { needed: u64, free: u64, drive: String },
     #[error("size mismatch: expected {expected}, got {actual}")]
     SizeMismatch { expected: u64, actual: u64 },
     #[error("checksum mismatch ({algo}): expected {expected}, got {actual}")]
@@ -128,6 +131,7 @@ impl EngineError {
             EngineError::RangeIgnored => "resume_unsupported",
             EngineError::Disk(_) => "disk",
             EngineError::DiskFull => "disk_full",
+            EngineError::NotEnoughSpace { .. } => "not_enough_space",
             EngineError::SizeMismatch { .. } => "size_mismatch",
             EngineError::ChecksumMismatch { .. } => "checksum_mismatch",
             EngineError::NotFound(_) => "not_found",
@@ -199,6 +203,11 @@ impl EngineError {
             EngineError::DiskFull => {
                 "There is not enough free space on the disk. Free some space, then press Resume.".into()
             }
+            EngineError::NotEnoughSpace { needed, free, drive } => format!(
+                "This file needs {} but drive {drive} has only {} free. Free some space (Disk Cleaner can help), then press Resume.",
+                crate::diskspace::human_bytes(*needed),
+                crate::diskspace::human_bytes(*free)
+            ),
             EngineError::SizeMismatch { expected, actual } => format!(
                 "The downloaded file is the wrong size ({actual} bytes instead of {expected}). Use Restart to download it again."
             ),

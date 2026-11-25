@@ -173,6 +173,10 @@ pub fn run() {
             let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
             let engine = Engine::new(EngineConfig::new(default_dir.clone()), tx);
 
+            // What the license allows goes in FIRST, before any saved setting or saved download is applied, so a
+            // tampered database (turbo_mode=1, default_connections=32, a record with 32 connections) gets nothing.
+            tauri::async_runtime::block_on(licensing::enforce_on_engine(&db, &engine));
+
             // Saved settings
             let (limit, conns, turbo, records, domains, resume_on_start) = tauri::async_runtime::block_on(async {
                 let limit = db.get_setting("global_speed_limit").await;
@@ -224,6 +228,28 @@ pub fn run() {
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_secs(45)).await;
                     tools::auto_update(&db).await;
+                });
+            }
+
+            // Refunded, or its slot given to another PC? Ask the license server shortly after start and then every day.
+            // Being offline never removes a license; only the server's clear "no" does.
+            {
+                let db = db.clone();
+                let handle = app.handle().clone();
+                let eng = engine.clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(20)).await;
+                    loop {
+                        let changed = licensing::recheck_license(&db).await;
+                        // Always re-apply what the license allows: a refund, a key the server does not know, or the
+                        // grace period running out ends Pro limits now, also for downloads already running.
+                        licensing::enforce_on_engine(&db, &eng).await;
+                        if changed {
+                            let _ = handle.emit("license-changed", ());
+                        }
+                        // Often enough that a license which ran out of grace comes back soon after the PC is online.
+                        tokio::time::sleep(std::time::Duration::from_secs(6 * 60 * 60)).await;
+                    }
                 });
             }
 

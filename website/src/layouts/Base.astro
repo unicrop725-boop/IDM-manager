@@ -83,7 +83,8 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
 
-    {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+    {/* "<" and friends as \uXXXX: JSON.stringify alone leaves "</script>" in a title, which would close this tag early. Parsers read the escapes as the same text. */}
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029")} />)}
   </head>
   <body class={bodyClass || undefined}>
     <a class="skip" href="#main">Skip to content</a>

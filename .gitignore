@@ -20,3 +20,6 @@ server/accounts_db.json.tmp
 
 server/.env
 server/licenses_dev.json
+
+# Licence signing key: NEVER commit
+server/license_private_key.txt

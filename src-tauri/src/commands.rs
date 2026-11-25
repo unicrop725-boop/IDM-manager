@@ -1108,6 +1108,9 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
 
 #[tauri::command]
 pub async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> CmdResult<()> {
+    if crate::licensing::is_protected_setting(&key) {
+        return Err("This setting can't be changed here.".to_string());
+    }
     state.db.set_setting(&key, &value).await.map_err(|e| e.to_string())
 }
 
@@ -1382,12 +1385,16 @@ pub async fn get_license_status(state: State<'_, AppState>) -> CmdResult<crate::
 
 #[tauri::command]
 pub async fn activate_license_key(state: State<'_, AppState>, key: String) -> CmdResult<crate::licensing::TrialAndLicenseStatus> {
-    crate::licensing::activate_license(&state.db, &key).await.map_err(|e| e.to_string())
+    let st = crate::licensing::activate_license(&state.db, &key).await.map_err(|e| e.to_string())?;
+    state.engine.set_limits(st.max_connections, st.turbo_mode_allowed);
+    Ok(st)
 }
 
 #[tauri::command]
 pub async fn deactivate_license_key(state: State<'_, AppState>) -> CmdResult<crate::licensing::TrialAndLicenseStatus> {
-    crate::licensing::deactivate_license(&state.db).await.map_err(|e| e.to_string())
+    let st = crate::licensing::deactivate_license(&state.db).await.map_err(|e| e.to_string())?;
+    state.engine.set_limits(st.max_connections, st.turbo_mode_allowed);
+    Ok(st)
 }
 
 

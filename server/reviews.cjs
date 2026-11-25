@@ -45,7 +45,9 @@ function createHandler(ctx) {
       });
       req.on("end", () => {
         try {
-          resolve(raw ? JSON.parse(raw) : {});
+          const v = raw ? JSON.parse(raw) : {};
+          if (v === null || typeof v !== "object" || Array.isArray(v)) return reject(new Problem(400, "Expected a JSON object."));
+          resolve(v);
         } catch {
           reject(new Problem(400, "Invalid request."));
         }

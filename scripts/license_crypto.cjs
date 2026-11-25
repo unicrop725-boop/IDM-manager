@@ -1,12 +1,37 @@
 // scripts/license_crypto.cjs
+// Ed25519 licence keys: signed here (server only), verified offline by the app with the public key below.
+//
+// The PRIVATE key must never be in the repository or in anything shipped to users. It is read from, in order:
+//   1. the LICENSE_PRIVATE_KEY_HEX environment variable (64 hex characters), or
+//   2. the file named by LICENSE_PRIVATE_KEY_FILE, or server/license_private_key.txt (git-ignored).
+// Verifying a key needs only the public key, so tests and the app never need the private one.
+// Generate a new pair with: node scripts/rotate-license-key.cjs
 const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 
 const PUBLIC_KEY_HEX = "ded7e146d3187012e95c8a8913f5be710c6cafd0a741511f6185cf4879a9f796";
-const PRIVATE_KEY_HEX = "459b22b20cd0c7524eb156f7183351aac0a51fbe370f136f2e726a22c1f51d65";
+
+function loadPrivateKeyHex() {
+  const fromEnv = (process.env.LICENSE_PRIVATE_KEY_HEX || "").trim();
+  if (fromEnv) return fromEnv;
+  const file = process.env.LICENSE_PRIVATE_KEY_FILE || path.join(__dirname, "..", "server", "license_private_key.txt");
+  try {
+    return fs.readFileSync(file, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
 
 function getPrivateKey() {
+  const hex = loadPrivateKeyHex();
+  if (!/^[0-9a-fA-F]{64}$/.test(hex)) {
+    throw new Error(
+      "The licence signing key is not configured. Set LICENSE_PRIVATE_KEY_HEX, or put the 64-hex-character key in server/license_private_key.txt (never commit it).",
+    );
+  }
   const pkcs8Prefix = Buffer.from("302e020100300506032b657004220420", "hex");
-  const privDer = Buffer.concat([pkcs8Prefix, Buffer.from(PRIVATE_KEY_HEX, "hex")]);
+  const privDer = Buffer.concat([pkcs8Prefix, Buffer.from(hex, "hex")]);
   return crypto.createPrivateKey({ key: privDer, format: "der", type: "pkcs8" });
 }
 
@@ -48,7 +73,6 @@ function verifyLicense(licenseKey) {
 
 module.exports = {
   PUBLIC_KEY_HEX,
-  PRIVATE_KEY_HEX,
   generateLicense,
   verifyLicense,
 };

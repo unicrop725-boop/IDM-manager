@@ -86,7 +86,7 @@ async function runAllTests() {
 
   assert(contentCode.includes("setupVideoGrabber"), "Implements floating video grabber for HTML5 video elements");
   assert(contentCode.includes("flowget-video-grabber-btn"), "Creates floating 'Download this video' badge on video players");
-  assert(contentCode.includes("showQualityPicker"), "Provides resolution and quality picker modal (1080p, 720p, 480p, audio only)");
+  assert(contentCode.includes("flowget-quality-menu"), "Provides resolution and quality picker modal (1080p, 720p, 480p, audio only)");
   assert(contentCode.includes("TRIGGER_BATCH_SCRAPER"), "Listens for batch link scraper trigger to extract all links on page");
   assert(contentCode.includes("DOWNLOAD_EXTENSIONS"), "Intercepts direct clicks on links matching download extensions");
 

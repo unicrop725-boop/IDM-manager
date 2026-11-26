@@ -5,6 +5,9 @@
   var box = document.getElementById("reviews");
   if (!panel || !box) return;
   var API = (panel.getAttribute("data-api") || "").replace(/\/$/, "");
+  if (API && (API.indexOf("localhost") >= 0 || API.indexOf("127.0.0.1") >= 0)) {
+    API = API.replace(/localhost|127\.0\.0\.1/, window.location.hostname);
+  }
   if (!API) return;
   var NS = "http://www.w3.org/2000/svg";
   var track = document.getElementById("rv-track");

@@ -21,7 +21,7 @@ interface Props {
   /** Structured data objects (schema.org), written as JSON-LD. */
   jsonLd?: Record<string, unknown>[];
   /** Mark the current section in the menu. */
-  current?: "features" | "blog" | "download" | "home" | "";
+  current?: "features" | "pricing" | "blog" | "download" | "home" | "";
   /** No site header, footer or menu script (sign-in and account pages). */
   bare?: boolean;
   bodyClass?: string;
@@ -60,8 +60,10 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
     {noindex ? <meta name="robots" content="noindex, follow" /> : <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />}
     <meta name="theme-color" content="#f4f4f2" />
 
-    <link rel="icon" type="image/png" href="/img/favicon-32.png" />
-    <link rel="apple-touch-icon" href="/img/icon-256.png" />
+    <link rel="icon" type="image/x-icon" href={"/favicon.ico?v=" + Date.now()} />
+    <link rel="shortcut icon" href={"/favicon.ico?v=" + Date.now()} />
+    <link rel="icon" type="image/png" sizes="32x32" href={"/img/favicon-32.png?v=" + Date.now()} />
+    <link rel="apple-touch-icon" sizes="180x180" href={"/img/icon-256.png?v=" + Date.now()} />
     <link rel="alternate" type="application/rss+xml" title={`${SITE.name} blog`} href="/rss.xml" />
     <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href={cssHref} />
@@ -92,6 +94,6 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
       <slot />
     </main>
     {!bare && <Footer />}
-    {!bare && <script is:inline src="/js/menu.js"></script>}
+    {!bare && <script is:inline src={"/js/menu.js?v=" + Date.now()}></script>}
   </body>
 </html>

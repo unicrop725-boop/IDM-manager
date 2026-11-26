@@ -4,22 +4,61 @@ interface Props {
   current?: string;
 }
 const { current = "" } = Astro.props;
-const link = (href: string, label: string, key: string) => ({ href, label, active: current === key });
+const link = (href: string, label: string, key: string) => ({ href, label, key, active: current === key });
 const items = [
   link("/features/", "Features", "features"),
-  link("/#pricing", "Pricing", ""),
+  link("/pricing/", "Pricing", "pricing"),
   link("/blog/", "Blog", "blog"),
   link("/download/", "Download", "download"),
   link("/signin/", "Sign in", "signin"),
 ];
 ---
-<header class="nav">
+<header class="nav" id="main-nav" data-api={SITE.apiUrl}>
   <div class="nav-in">
-    <a class="brand" href="/"><img src="/img/icon-128.png" alt="" width="26" height="26" />{SITE.name}</a>
+    <a class="brand" href="/" title={SITE.name}>
+      <span class="brand-logo-wrap">
+        <img src="/img/icon-128.png" alt={SITE.name} width="40" height="40" />
+      </span>
+      <span>{SITE.name}</span>
+    </a>
     <nav class="nav-links" id="nav-links" aria-label="Main">
-      {items.map((i) => <a href={i.href} aria-current={i.active ? "page" : undefined}>{i.label}</a>)}
+      {items.map((i) => (
+        i.key === "signin" ? (
+          <a href={i.href} id="nav-signin" aria-current={i.active ? "page" : undefined}>{i.label}</a>
+        ) : (
+          <a href={i.href} aria-current={i.active ? "page" : undefined}>{i.label}</a>
+        )
+      ))}
+
+      <!-- User profile icon & popup menu (shown when signed in) -->
+      <div class="nav-user-wrap" id="nav-user-wrap" hidden>
+        <button type="button" class="nav-user-btn" id="nav-user-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu" title="Account">
+          <svg class="nav-user-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="9.5" r="3.2"/>
+            <path d="M6.2 19.3a6.5 6.5 0 0 1 11.6 0"/>
+          </svg>
+        </button>
+
+        <div class="nav-user-menu" id="nav-user-menu" hidden>
+          <div class="nav-user-head">
+            <strong id="nav-user-fullname">User</strong>
+            <span id="nav-user-email">email@example.com</span>
+          </div>
+          <div class="nav-user-divider"></div>
+          <a href="/account/" class="nav-user-item">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+            Account details
+          </a>
+          <div class="nav-user-divider"></div>
+          <button type="button" class="nav-user-item nav-user-logout" id="nav-user-logout">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign out
+          </button>
+        </div>
+      </div>
     </nav>
-    <a class="btn btn-primary btn-sm nav-cta" href="/#pricing">Get FlowGet</a>
+    <a class="btn btn-primary btn-sm nav-cta" href="/pricing/">Get {SITE.name}</a>
     <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="nav-links">Menu</button>
   </div>
 </header>

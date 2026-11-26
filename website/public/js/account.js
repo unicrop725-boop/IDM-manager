@@ -4,6 +4,9 @@
   var root = document.getElementById("acct");
   if (!root) return;
   var API = (root.getAttribute("data-api") || "").replace(/\/$/, "");
+  if (API && (API.indexOf("localhost") >= 0 || API.indexOf("127.0.0.1") >= 0)) {
+    API = API.replace(/localhost|127\.0\.0\.1/, window.location.hostname);
+  }
   var $ = function (id) { return document.getElementById(id); };
   if (!API) { window.location.replace("/signin/"); return; }
 
@@ -35,7 +38,6 @@
         li.appendChild(t); li.appendChild(code); li.appendChild(b); list.appendChild(li);
       });
     }
-    if (d.isAdmin) $("a-admin").hidden = false;
     $("a-loading").hidden = true;
     $("a-main").hidden = false;
   }).catch(function (e) {

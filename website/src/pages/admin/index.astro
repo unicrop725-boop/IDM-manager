@@ -1,6 +1,6 @@
 ---
-import Base from "../layouts/Base.astro";
-import { SITE } from "../config";
+import Base from "../../layouts/Base.astro";
+import { SITE } from "../../config";
 ---
 <Base title="Admin" description="FlowGet admin." noindex bare bodyClass="adm">
   <link slot="head" rel="stylesheet" href="/css/vendor/toastui-editor.css" />
@@ -195,5 +195,5 @@ import { SITE } from "../config";
   </div>
 
   <script is:inline src="/js/vendor/toastui-editor.js" defer></script>
-  <script is:inline src="/js/admin.js" defer></script>
+  <script is:inline src={"/js/admin.js?v=" + Date.now()} defer></script>
 </Base>

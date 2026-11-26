@@ -2,7 +2,7 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 
 // The address the site is published at. Change it here once (or set SITE_URL when building).
-const site = process.env.SITE_URL || "https://flowget.net";
+const site = process.env.SITE_URL || "https://boltgrab.online";
 
 export default defineConfig({
   site,

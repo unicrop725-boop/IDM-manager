@@ -1,0 +1,118 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE, buyHref } from "../config";
+
+const faqs = [
+  {
+    q: "Is this a monthly subscription or a one-time payment?",
+    a: `It is a single one-time payment of $${SITE.priceUsd}. There are no recurring monthly or yearly fees, and no automatic renewals.`,
+  },
+  {
+    q: "How many computers can I activate with one license?",
+    a: "Each license key activates up to 2 Windows PCs (for example, your desktop and your laptop). You can deactivate a PC anytime to free up a slot.",
+  },
+  {
+    q: "How do I receive and activate my license key?",
+    a: `Right after checkout completes, your license key is shown on screen and saved to your ${SITE.name} account. Open ${SITE.name}, click Help → Activate License, and paste the key. It verifies offline.`,
+  },
+  {
+    q: "What features are included?",
+    a: "Everything: dynamic multi-connection splitting, Turbo Mode, smart resume after interruptions, browser extensions (Chrome, Edge, Brave), video/audio grabbing, and speed scheduling.",
+  },
+];
+---
+<Base
+  title="Pricing"
+  description={`Simple, one-time pricing for ${SITE.name} Pro. Pay $${SITE.priceUsd} once for a lifetime license on up to 2 Windows PCs.`}
+  current="pricing"
+>
+  <link slot="head" rel="stylesheet" href={"/css/home.css?v=" + Date.now()} />
+
+  <!-- ======================= Hero ======================= -->
+  <section class="hero" style="padding-bottom: 12px;">
+    <div class="wrap">
+      <span class="eyebrow"><i></i>Pricing · Lifetime License</span>
+      <h1>Pay once. Own {SITE.name} Pro.</h1>
+      <p class="lead">One payment of ${SITE.priceUsd} unlocks every feature for up to 2 Windows PCs — no subscriptions, no ads, and offline activation.</p>
+    </div>
+  </section>
+
+  <!-- ======================= Main Pricing Card ======================= -->
+  <section style="padding-top: 28px;">
+    <div class="wrap">
+      <div class="pricecard">
+        <div class="l">
+          <small>{SITE.name} Pro · Lifetime</small>
+          <div class="amt">${SITE.priceUsd}</div>
+          <p>One-time payment · up to 2 PCs · no renewals.</p>
+        </div>
+        <div class="r">
+          <h3>Everything included</h3>
+          <ul class="ticks" style="margin:0 0 24px;">
+            <li>Dynamic multi-connection engine &amp; Turbo Mode</li>
+            <li>Browser extension for Chrome, Edge, Brave &amp; more</li>
+            <li>Video &amp; audio downloads with quality selector</li>
+            <li>Smart resume after Wi-Fi drops, sleep, or restarts</li>
+            <li>Offline Ed25519 license key — works without internet</li>
+            <li>All version 1.x updates included at no extra cost</li>
+          </ul>
+          <a class="btn btn-primary" href={buyHref()}>Buy {SITE.name} Pro · ${SITE.priceUsd}</a>
+          <p class="fine" style="margin-top:14px;">Already have a key? <a href="/download/" style="text-decoration:underline;text-underline-offset:3px;">Download {SITE.name} for Windows</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Highlights ======================= -->
+  <section style="padding-top: 12px;">
+    <div class="wrap">
+      <div class="grid g3">
+        <article class="card">
+          <div class="ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>
+            </svg>
+          </div>
+          <h3>2 PCs per license</h3>
+          <p>Use your key on both your main desktop and laptop. Transfer slots anytime if you switch machines.</p>
+        </article>
+        <article class="card">
+          <div class="ico t">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="8" cy="15" r="4"/><path d="m11 12 8-8M16 7l3 3"/>
+            </svg>
+          </div>
+          <h3>Activates offline</h3>
+          <p>Your cryptographic Ed25519 key validates directly on your PC — no always-online DRM or tracking.</p>
+        </article>
+        <article class="card">
+          <div class="ico s">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3 4 6v6c0 4.5 3.2 7.8 8 9 4.8-1.2 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <h3>Instant key delivery</h3>
+          <p>Checkout is powered by Dodo Payments. Your license key appears immediately after payment and stays in your account.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= Pricing FAQ ======================= -->
+  <section id="faq" style="padding-top: 20px;">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="eyebrow">Questions</div>
+        <h2>Pricing &amp; licensing FAQ</h2>
+      </div>
+      <div class="faq">
+        {faqs.map((f, i) => (
+          <details open={i === 0}>
+            <summary>{f.q}</summary>
+            <p>{f.a}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

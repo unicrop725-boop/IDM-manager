@@ -13,7 +13,24 @@
 .dl-l::before { content: ""; position: absolute; inset: 0; z-index: -1; background: rgba(8, 9, 14, .5); }
 @media (prefers-reduced-motion: reduce) { .dl-video { display: none; } }
 .logos { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
-.winlogo { display: grid; place-items: center; width: 64px; height: 64px; background: #fff; color: #0078D4; }
+.brand-logo-tile {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  background: #FFFFFF;
+  border-radius: 14px;
+  padding: 3px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.brand-logo-tile img {
+  width: 100%;
+  height: 100%;
+  border-radius: 11px;
+  object-fit: cover;
+  display: block;
+}
+.winlogo { display: grid; place-items: center; width: 64px; height: 64px; background: #fff; color: #0078D4; border-radius: 14px; }
 .winlogo svg { width: 32px; height: 32px; fill: currentColor; }
 .dl-l small { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; font-weight: 500; color: rgba(255, 255, 255, .78); }
 .dl-l h2 { font-size: clamp(30px, 3.6vw, 42px); font-weight: 700; letter-spacing: -.035em; line-height: 1.05; margin: 8px 0 10px; color: #fff; }
@@ -34,15 +51,15 @@
 .plat.linux .pt em { color: #F8C46A; }
 .dl-l .need a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 
-.dl-r { padding: 40px 40px; display: flex; flex-direction: column; justify-content: center; }
-.dl-r h3 { font-size: 20px; font-weight: 600; letter-spacing: -.02em; margin: 0 0 14px; }
+.dl-r { padding: 44px 42px; display: flex; flex-direction: column; justify-content: center; }
+.dl-r h3 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 16px; color: var(--text); }
 .specs { margin: 0; }
-.specs > div { display: grid; grid-template-columns: 150px 1fr; align-items: start; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+.specs > div { display: grid; grid-template-columns: 155px 1fr; align-items: center; gap: 14px; padding: 15px 0; border-top: 1px solid var(--line); }
 .specs > div:first-child { border-top: 0; }
-.specs dt { display: flex; align-items: center; gap: 10px; font-size: 14.5px; color: var(--muted); }
-.specs dt svg { width: 18px; height: 18px; flex: none; fill: none; stroke: #5b8a2a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.specs dd { margin: 0; font-size: 15px; font-weight: 500; color: var(--text); }
-.specs dd.hash { font: 500 12.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; word-break: break-all; color: #3A6A25; }
+.specs dt { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 500; color: var(--muted); }
+.specs dt svg { width: 19px; height: 19px; flex: none; fill: none; stroke: #4D7C0F; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.specs dd { margin: 0; font-size: 15.5px; font-weight: 600; color: var(--text); }
+.specs dd.hash { font: 500 13px/1.45 ui-monospace, "Cascadia Mono", Consolas, monospace; word-break: break-all; color: #2E5C14; }
 
 /* ---------- extension band (Chrome colours) ---------- */
 .extband { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 32px; padding: 46px 44px 40px; background: #fff; border: 1px solid var(--line-strong); box-shadow: var(--shadow); }
@@ -59,9 +76,10 @@
 .extband .btn { flex: none; }
 .btn-chrome { background: #1A73E8; color: #fff; border-color: #1A73E8; }
 .btn-chrome:hover { background: #1765CC; border-color: #1765CC; transform: translateY(-1px); box-shadow: 0 10px 26px rgba(26, 115, 232, .35); }
-.browsers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.browsers span { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 10px; font-size: 14px; font-weight: 500; color: var(--text); background: #fff; border: 1px solid var(--line-strong); }
-.browsers svg { width: 20px; height: 20px; flex: none; }
+.browsers { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; align-items: center; }
+.browsers span { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px 7px 10px; font-size: 14px; font-weight: 500; color: var(--text); background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; }
+.browsers img, .browsers svg { width: 20px; height: 20px; flex: none; object-fit: contain; }
+.browsers .more-browsers { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 600; padding: 7px 14px; }
 
 /* ---------- steps / requirements / verify ---------- */
 .steps4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }

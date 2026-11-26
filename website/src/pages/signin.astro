@@ -8,5 +8,5 @@ import AuthForms from "../components/AuthForms.astro";
   <AuthShell hint="Don't have an account?" linkText="Sign up" linkHref="/signup/">
     <AuthForms mode="signin" />
   </AuthShell>
-  <script is:inline src="/js/auth.js" defer></script>
+  <script is:inline src={"/js/auth.js?v=" + Date.now()} defer></script>
 </Base>

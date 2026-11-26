@@ -4,6 +4,9 @@
   var root = document.getElementById("buy");
   if (!root) return;
   var API = (root.getAttribute("data-api") || "").replace(/\/$/, "");
+  if (API && (API.indexOf("localhost") >= 0 || API.indexOf("127.0.0.1") >= 0)) {
+    API = API.replace(/localhost|127\.0\.0\.1/, window.location.hostname);
+  }
   var $ = function (id) { return document.getElementById(id); };
   var err = function (msg) { $("err-buy").textContent = msg || ""; };
 

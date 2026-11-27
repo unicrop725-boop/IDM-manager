@@ -1,6 +1,6 @@
 ---
 title: "How to limit download speed by time of day on Windows"
-description: "Keep video calls and browsing smooth while big downloads run. Ways to cap download speed on Windows, schedule full speed at night and pause on metered connections."
+description: "Keep video calls and browsing smooth while big downloads run. Cap download speed on Windows, schedule full speed at night and pause on metered connections."
 pubDate: 2026-11-23T07:30:00Z
 tags: ["bandwidth", "windows", "speed"]
 cover: "/img/blog/limit-download-speed-by-time-of-day-windows.jpg"

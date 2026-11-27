@@ -20,11 +20,33 @@ const faqs = [
     a: "Everything: dynamic multi-connection splitting, Turbo Mode, smart resume after interruptions, browser extensions (Chrome, Edge, Brave), video/audio grabbing, and speed scheduling.",
   },
 ];
+
+const site = String(Astro.site).replace(/\/$/, "");
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: `${SITE.name} Pro`,
+    description: `${SITE.name} Pro is a download manager for Windows. One payment unlocks every feature on up to 2 PCs, with no subscription.`,
+    image: site + SITE.ogImage,
+    brand: { "@type": "Brand", name: SITE.name },
+    url: site + "/pricing/",
+    offers: {
+      "@type": "Offer",
+      price: SITE.priceUsd,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: site + "/pricing/",
+    },
+  },
+];
 ---
 <Base
-  title="Pricing"
-  description={`Simple, one-time pricing for ${SITE.name} Pro. Pay $${SITE.priceUsd} once for a lifetime license on up to 2 Windows PCs.`}
+  fullTitle
+  title={`${SITE.name} Pricing: One-Time $${SITE.priceUsd} Windows Download Manager`}
+  description={`Simple, one-time pricing for ${SITE.name} Pro. Pay $${SITE.priceUsd} once for a lifetime license on up to 2 Windows PCs. No subscription.`}
   current="pricing"
+  jsonLd={jsonLd}
 >
   <link slot="head" rel="stylesheet" href={"/css/home.css?v=" + Date.now()} />
 

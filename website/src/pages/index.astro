@@ -32,7 +32,7 @@ const jsonLd = [
     description: SITE.description,
     image: site + SITE.ogImage,
     url: site + "/",
-    offers: { "@type": "Offer", price: SITE.priceUsd, priceCurrency: "USD", availability: "https://schema.org/InStock", url: site + "/#pricing" },
+    offers: { "@type": "Offer", price: SITE.priceUsd, priceCurrency: "USD", availability: "https://schema.org/InStock", url: site + "/pricing/" },
   },
   {
     "@context": "https://schema.org",
@@ -46,7 +46,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
 <Base
   fullTitle
   title="BoltGrab – Fast, reliable download manager for Windows"
-  description="BoltGrab is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave. One-time purchase."
+  description="BoltGrab is a fast Windows download manager. It splits files across many connections, resumes after any break and takes over from Chrome, Edge and Brave."
   current="home"
   jsonLd={jsonLd}
 >

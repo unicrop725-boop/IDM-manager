@@ -1,6 +1,6 @@
 ---
-title: "How to check that a downloaded file is safe (hashes, VirusTotal, double extensions)"
-description: "Five quick checks before you run anything you downloaded: the source, the file name, the checksum, a VirusTotal lookup and Windows SmartScreen. With the commands to use."
+title: "How to check if a downloaded file is safe: 5 quick checks"
+description: "Five quick checks before you run a download: the source, the file name, the checksum, a VirusTotal lookup and Windows SmartScreen, with the commands to use."
 pubDate: 2026-11-23T06:00:00Z
 tags: ["safety", "windows", "security"]
 cover: "/img/blog/how-to-check-a-downloaded-file-is-safe.jpg"

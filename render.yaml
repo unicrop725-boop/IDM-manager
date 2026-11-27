@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: boltgrab-api
+    runtime: node
+    plan: starter            # always on (the free plan sleeps after 15 minutes)
+    rootDir: .
+    buildCommand: echo "no build step: zero-dependency server"
+    startCommand: node server/license-server.cjs
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: security-hardening
+    disk:
+      name: boltgrab-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ACCOUNTS_DB
+        value: /var/data/accounts_db.json
+      - key: LICENSES_DB
+        value: /var/data/licenses_db.json
+      - key: SITE_URL
+        value: https://boltgrab.online
+      - key: ALLOWED_ORIGINS
+        value: https://boltgrab.online,https://www.boltgrab.online
+      # Secrets: enter these in the Render dashboard, never in this file.
+      - key: LICENSE_PRIVATE_KEY_HEX
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: DODO_API_KEY
+        sync: false
+      - key: DODO_PRODUCT_ID
+        sync: false
+      - key: DODO_WEBHOOK_SECRET
+        sync: false

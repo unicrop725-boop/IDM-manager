@@ -147,7 +147,7 @@ need a login are kept in the Windows Credential Manager, not in the database fil
   mobile data) and on Wi-Fi names you list as hotspots. They continue by themselves on a normal network. The
   bottom bar shows why downloads are held and has a *Download anyway* button.
 
-The rules apply to normal file downloads. Videos downloaded through yt-dlp are not throttled or paused by them.
+The rules apply to normal file downloads. Videos from video sites are not throttled or paused by them.
 
 ### Safety checks
 
@@ -223,11 +223,11 @@ Only browser extensions can reach the local port, not web pages, and every reque
 
 ## 9. Video and streams
 
-* **HLS (`.m3u8`) and DASH (`.mpd`)** links are fetched and merged with `ffmpeg`; other video pages go
-  through `yt-dlp`. **FlowGet installs both by itself** the first time a video needs them (Options > Video
-  Tools shows what is installed and lets you update or reinstall). They are saved in
-  `%APPDATA%\com.flowget.app\tools`, checked against the checksum the publisher lists, and used before anything
-  on your PATH. yt-dlp is refreshed about once a week in the background (switch that off in Video Tools).
+* **HLS (`.m3u8`) and DASH (`.mpd`)** links are fetched and merged into one file; other video pages are
+  read by FlowGet's video engine. **FlowGet sets up its video engine and media converter by itself** the first
+  time a video needs them (Options > Video Tools shows their status and lets you update or reinstall). They are
+  verified on download and kept in FlowGet's own folder. The video engine is refreshed about once a week in the
+  background (switch that off in Video Tools).
 * In the Add dialog you can pick a quality and convert to MP4, MP3 or M4A.
 * Streams protected by DRM are refused with "This video is protected and cannot be downloaded."
 * Media links must be plain `http://` or `https://`.

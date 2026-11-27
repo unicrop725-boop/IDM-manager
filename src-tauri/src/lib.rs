@@ -345,6 +345,7 @@ pub fn run() {
             commands::resolve_video_media,
             commands::download_stream_media,
             commands::update_ytdlp,
+            commands::take_pending_captures,
             commands::get_tools_status,
             commands::install_tool,
             commands::get_bandwidth_policy,

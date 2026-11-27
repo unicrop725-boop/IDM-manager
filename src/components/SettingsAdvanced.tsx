@@ -16,6 +16,9 @@ const primaryBtn =
 const ghostBtn =
   "flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition disabled:opacity-50";
 
+/** What the user sees instead of the helper programs' real names. */
+const TOOL_LABELS: Record<string, string> = { "yt-dlp": "Video engine", ffmpeg: "Media converter" };
+
 const errText = (e: unknown) => (typeof e === "string" ? e : (e as Error)?.message || "Something went wrong.");
 
 // ------------------------------------------------------------------------------------------------ Tools
@@ -61,8 +64,8 @@ export function ToolsPanel() {
         <div>
           <h4 className="font-semibold text-[var(--text-primary)]">Video tools, installed for you</h4>
           <p className="text-[11px] text-[var(--text-secondary)]">
-            yt-dlp (video sites) and ffmpeg (joining and converting) are downloaded by FlowGet the first time a video
-            needs them. No PATH settings. Each download is checked against the checksum the publisher lists.
+            The video engine (for video sites) and the media converter (for joining and converting) are set up by
+            FlowGet the first time a video needs them. Nothing to configure. Each download is verified for safety.
           </p>
         </div>
       </div>
@@ -75,7 +78,7 @@ export function ToolsPanel() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                    {t.name}
+                    {TOOL_LABELS[t.name] ?? "Component"}
                     {t.installed ? (
                       <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
                         Installed · {t.source}
@@ -86,7 +89,7 @@ export function ToolsPanel() {
                       </span>
                     ) : null}
                   </div>
-                  <div className="truncate text-[11px] text-[var(--text-secondary)]" title={t.path || ""}>
+                  <div className="truncate text-[11px] text-[var(--text-secondary)]">
                     {t.installed ? `Version ${t.version ?? "unknown"}` : "Will be installed automatically when needed"}
                   </div>
                 </div>
@@ -126,9 +129,9 @@ export function ToolsPanel() {
           className="mt-0.5 rounded border-[var(--text-disabled)] text-purple-500"
         />
         <div>
-          <div>Keep yt-dlp up to date automatically</div>
+          <div>Keep the video engine up to date automatically</div>
           <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-            Video sites change often, so FlowGet checks for a newer yt-dlp about once a week and installs it quietly.
+            Video sites change often, so FlowGet checks for an update about once a week and installs it quietly.
           </p>
         </div>
       </label>
@@ -204,7 +207,7 @@ export function BandwidthPanel() {
           <h4 className="font-semibold text-[var(--text-primary)]">Smarter bandwidth control</h4>
           <p className="text-[11px] text-[var(--text-secondary)]">
             Limits build on the speed limit in the Connection tab: the stricter one wins, unless a schedule says "No
-            limit". They apply to normal file downloads; videos fetched with yt-dlp are not throttled.
+            limit". They apply to normal file downloads; videos from video sites are not throttled.
           </p>
         </div>
       </div>

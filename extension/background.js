@@ -46,6 +46,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }).then((r) => r.json());
     lookup()
       .catch(async () => {
+        // A quiet look-ahead (the button just appeared) never starts the app; only a real click does.
+        if (message.prefetch) throw new Error("offline");
         // The app is closed: open it (if the user allows that), then ask again.
         if (await ensureAppRunning()) return lookup();
         throw new Error("offline");
@@ -600,8 +602,9 @@ async function ensureAppRunning({ force = false } = {}) {
   if (!launching) {
     launching = (async () => {
       await openFlowGetLink();
-      for (let i = 0; i < 40; i++) {
-        await sleep(500);
+      // Check often: the app answers a moment after it starts, and each wasted half second is felt.
+      for (let i = 0; i < 80; i++) {
+        await sleep(250);
         if (await isAppUp()) return true;
       }
       return false;
@@ -617,7 +620,7 @@ async function ensureAppRunning({ force = false } = {}) {
  * refused the request (retrying cannot help), or `null` when it could not be reached. Short outages (the app is just
  * restarting) are retried a few times with growing pauses.
  */
-async function postToApp(payload, attempts = 3) {
+async function postToApp(payload, attempts = 2) {
   for (let i = 0; i < attempts; i++) {
     try {
       const resp = await fetch(LOCAL_IPC_URL, {
@@ -639,7 +642,7 @@ async function postToApp(payload, attempts = 3) {
     } catch {
       /* not reachable */
     }
-    if (i < attempts - 1) await sleep(400 * 2 ** i);
+    if (i < attempts - 1) await sleep(200 * 2 ** i);
   }
   return null;
 }

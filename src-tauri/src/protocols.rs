@@ -46,7 +46,8 @@ pub async fn download_ftp(
             &url_str,
         ]);
 
-        let status = cmd.status().map_err(|e| format!("Failed to run curl: {e}"))?;
+        crate::tools::hide_window(&mut cmd);
+        let status = cmd.status().map_err(|e| format!("Failed to run the FTP transfer: {e}"))?;
         if !status.success() {
             return Err(format!("FTP download failed with exit code: {:?}", status.code()));
         }
@@ -161,7 +162,7 @@ pub async fn download_sftp(
     let known_hosts = known_hosts_path().to_string_lossy().to_string();
 
     tokio::task::spawn_blocking(move || {
-        let status = Command::new("python")
+        let status = crate::tools::hide_window(&mut Command::new("python"))
             .arg("-c")
             .arg(SFTP_SCRIPT)
             .arg(&p.host)

@@ -2,6 +2,8 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+use crate::tools::hide_window;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -78,8 +80,40 @@ pub fn check_drm(content: &str) -> bool {
         || lower.contains("this video is drm protected")
 }
 
+type Resolved = Result<MediaResolveResult, String>;
+const RESOLVE_CACHE_TTL: Duration = Duration::from_secs(10 * 60);
+const RESOLVE_CACHE_MAX: usize = 64;
+
+type ResolveCache = std::collections::HashMap<String, (std::time::Instant, Arc<tokio::sync::OnceCell<Resolved>>)>;
+
+fn resolve_cache() -> &'static std::sync::Mutex<ResolveCache> {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<ResolveCache>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(Default::default)
+}
+
+/// Resolve video metadata and available qualities. Reading a video page is the slow part of a capture (a full
+/// yt-dlp run), so answers are remembered for a few minutes and a lookup that is already running is shared: the
+/// browser pre-reads a video when the button appears, and the click then gets the answer straight away.
+pub async fn resolve_media(url: &str) -> Resolved {
+    let key = url.trim().to_string();
+    let cell = {
+        let mut map = resolve_cache().lock().unwrap_or_else(|e| e.into_inner());
+        map.retain(|_, (at, _)| at.elapsed() < RESOLVE_CACHE_TTL);
+        if map.len() >= RESOLVE_CACHE_MAX {
+            map.clear();
+        }
+        map.entry(key.clone()).or_insert_with(|| (std::time::Instant::now(), Arc::new(tokio::sync::OnceCell::new()))).1.clone()
+    };
+    let result = cell.get_or_init(|| resolve_media_uncached(&key)).await.clone();
+    if result.is_err() {
+        // a failure is not remembered: the next try asks again
+        resolve_cache().lock().unwrap_or_else(|e| e.into_inner()).remove(&key);
+    }
+    result
+}
+
 /// Resolve video metadata and available qualities using bundled yt-dlp or direct manifest inspection.
-pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
+async fn resolve_media_uncached(url: &str) -> Resolved {
     validate_remote_url(url)?;
     let trimmed = url.trim();
     let lower = trimmed.to_lowercase();
@@ -152,14 +186,22 @@ pub async fn resolve_media(url: &str) -> Result<MediaResolveResult, String> {
 /// Ask yt-dlp for the qualities of a video page or stream manifest.
 async fn resolve_via_ytdlp(trimmed: &str) -> Result<MediaResolveResult, String> {
     crate::tools::ensure("yt-dlp").await?;
-    let output = Command::new("yt-dlp")
-        .args(["--dump-single-json", "--no-warnings", "--no-playlist", "--", trimmed])
-        .output();
+    let target = trimmed.to_string();
+    // A blocking program run: keep it off the async threads so the app's other work (the browser link) stays responsive.
+    let output = tokio::task::spawn_blocking(move || {
+        hide_window(&mut Command::new("yt-dlp"))
+            // fail fast on a page that cannot be read instead of retrying for a long time
+            .args(["--dump-single-json", "--no-warnings", "--no-playlist", "--socket-timeout", "15", "--extractor-retries", "1", "--", &target])
+            .stdin(std::process::Stdio::null())
+            .output()
+    })
+    .await
+    .map_err(|e| format!("The video service stopped unexpectedly: {e}"))?;
 
     let output = match output {
         Ok(out) => out,
         Err(e) => {
-            return Err(format!("yt-dlp is not available: {e}"));
+            return Err(format!("The video service is not available: {e}"));
         }
     };
 
@@ -179,11 +221,11 @@ async fn resolve_via_ytdlp(trimmed: &str) -> Result<MediaResolveResult, String> 
     }
 
     if !output.status.success() {
-        return Err(format!("Could not resolve video page: {stderr}"));
+        return Err(format!("Could not read this video page: {}", crate::tools::scrub(&stderr)));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let json: serde_json::Value = serde_json::from_str(&stdout).map_err(|e| format!("Invalid JSON from yt-dlp: {e}"))?;
+    let json: serde_json::Value = serde_json::from_str(&stdout).map_err(|e| format!("The video service returned an unreadable answer: {e}"))?;
 
     let title = json.get("title").and_then(|v| v.as_str()).map(String::from);
     let thumbnail = json.get("thumbnail").and_then(|v| v.as_str()).map(String::from);
@@ -367,7 +409,7 @@ pub async fn download_hls(
     };
 
     // Run ffmpeg concat without re-encoding
-    let status = Command::new("ffmpeg")
+    let status = hide_window(&mut Command::new("ffmpeg"))
         .args([
             "-y",
             "-f",
@@ -381,17 +423,17 @@ pub async fn download_hls(
             &target_mp4.to_string_lossy(),
         ])
         .status()
-        .map_err(|e| format!("Failed to run ffmpeg: {e}"))?;
+        .map_err(|e| format!("Could not join the video parts: {e}"))?;
 
     if !status.success() {
-        return Err("ffmpeg concat failed".to_string());
+        return Err("Joining the video parts failed".to_string());
     }
 
     // Convert to MP3 or M4A if requested
     if let Some(format) = convert_to {
         let format_lower = format.to_lowercase();
         let convert_status = match format_lower.as_str() {
-            "mp3" => Command::new("ffmpeg")
+            "mp3" => hide_window(&mut Command::new("ffmpeg"))
                 .args([
                     "-y",
                     "-i",
@@ -402,7 +444,7 @@ pub async fn download_hls(
                     &output_file.to_string_lossy(),
                 ])
                 .status(),
-            "m4a" => Command::new("ffmpeg")
+            "m4a" => hide_window(&mut Command::new("ffmpeg"))
                 .args([
                     "-y",
                     "-i",
@@ -415,7 +457,7 @@ pub async fn download_hls(
                     &output_file.to_string_lossy(),
                 ])
                 .status(),
-            _ => Command::new("ffmpeg")
+            _ => hide_window(&mut Command::new("ffmpeg"))
                 .args([
                     "-y",
                     "-i",
@@ -429,7 +471,7 @@ pub async fn download_hls(
 
         if let Ok(st) = convert_status {
             if !st.success() {
-                return Err(format!("ffmpeg conversion to {format} failed"));
+                return Err(format!("Conversion to {format} failed"));
             }
         }
     }
@@ -460,7 +502,7 @@ pub async fn download_dash(
     let temp_dir = tempfile::tempdir().map_err(|e| format!("Temp dir error: {e}"))?;
     let temp_mp4 = temp_dir.path().join("dash_merged.mp4");
 
-    let status = Command::new("ffmpeg")
+    let status = hide_window(&mut Command::new("ffmpeg"))
         .args([
             "-y",
             // A manifest may reference other inputs; only allow network protocols, never file:.
@@ -473,16 +515,16 @@ pub async fn download_dash(
             &temp_mp4.to_string_lossy(),
         ])
         .status()
-        .map_err(|e| format!("ffmpeg execution error: {e}"))?;
+        .map_err(|e| format!("Could not download the stream: {e}"))?;
 
     if !status.success() {
-        return Err("ffmpeg DASH stream download failed".to_string());
+        return Err("The stream download failed".to_string());
     }
 
     if let Some(format) = convert_to {
         let format_lower = format.to_lowercase();
         if format_lower == "mp3" {
-            let conv = Command::new("ffmpeg")
+            let conv = hide_window(&mut Command::new("ffmpeg"))
                 .args([
                     "-y",
                     "-i",
@@ -495,7 +537,7 @@ pub async fn download_dash(
                 .status();
             if let Ok(st) = conv {
                 if !st.success() {
-                    return Err("ffmpeg MP3 conversion failed".to_string());
+                    return Err("MP3 conversion failed".to_string());
                 }
             }
             return Ok(());
@@ -659,7 +701,7 @@ pub fn download_ytdlp_blocking(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("yt-dlp is not installed or not on PATH ({e}). Install it with: pip install yt-dlp"))?;
+        .map_err(|e| format!("The video engine could not be started ({e}). Open Settings > Advanced and choose Install now."))?;
 
     {
         use std::sync::atomic::Ordering::SeqCst;
@@ -695,7 +737,7 @@ pub fn download_ytdlp_blocking(
         }
     }
 
-    let status = child.wait().map_err(|e| format!("yt-dlp failed: {e}"))?;
+    let status = child.wait().map_err(|e| format!("The video download failed: {e}"))?;
     let stderr_text = err_thread.join().unwrap_or_default();
 
     ctl.pid.store(0, std::sync::atomic::Ordering::SeqCst);
@@ -707,7 +749,7 @@ pub fn download_ytdlp_blocking(
                 return Ok(path);
             }
         }
-        return Err("yt-dlp finished but no output file was found.".to_string());
+        return Err("The download finished but no output file was found.".to_string());
     }
 
     match ctl.state.load(std::sync::atomic::Ordering::SeqCst) {
@@ -720,14 +762,14 @@ pub fn download_ytdlp_blocking(
         return Err(DRM_PROTECTED_MSG.to_string());
     }
     let last: Vec<&str> = stderr_text.lines().filter(|l| !l.trim().is_empty()).rev().take(3).collect();
-    let msg = last.into_iter().rev().collect::<Vec<_>>().join(" ");
-    Err(if msg.is_empty() { "yt-dlp could not download this video.".to_string() } else { msg })
+    let msg = crate::tools::scrub(&last.into_iter().rev().collect::<Vec<_>>().join(" "));
+    Err(if msg.is_empty() { "This video could not be downloaded.".to_string() } else { msg })
 }
 
 /// Auto-update yt-dlp in the background
 pub async fn auto_update_ytdlp() -> Result<String, String> {
     tokio::task::spawn_blocking(|| {
-        let output = Command::new("python")
+        let output = hide_window(&mut Command::new("python"))
             .args(["-m", "pip", "install", "--upgrade", "yt-dlp"])
             .output();
 
@@ -736,7 +778,7 @@ pub async fn auto_update_ytdlp() -> Result<String, String> {
                 let msg = String::from_utf8_lossy(&out.stdout).to_string();
                 Ok(msg)
             }
-            Err(e) => Err(format!("Failed to auto-update yt-dlp: {e}")),
+            Err(e) => Err(format!("Could not update the video engine: {e}")),
         }
     })
     .await
@@ -774,6 +816,23 @@ mod tests {
         }
         assert!(!r.video_options.is_empty(), "no video options");
         assert!(r.video_options.windows(2).all(|w| w[0].height >= w[1].height), "not sorted by height");
+    }
+
+    /// A repeated or simultaneous lookup of the same link must not run yt-dlp again.
+    #[tokio::test]
+    #[ignore]
+    async fn live_resolve_is_cached_and_shared() {
+        let url = "https://youtu.be/6PVKNZCpex8";
+        let t = std::time::Instant::now();
+        let (a, b) = tokio::join!(resolve_media(url), resolve_media(url)); // two at once: one run
+        let both = t.elapsed();
+        a.expect("first");
+        b.expect("second");
+        let t = std::time::Instant::now();
+        resolve_media(url).await.expect("third");
+        let again = t.elapsed();
+        println!("two simultaneous lookups: {both:?}; a later lookup of the same link: {again:?}");
+        assert!(again < Duration::from_millis(100), "repeat lookup was not served from memory");
     }
 
     /// Download at a chosen height + fps and check the real file with ffmpeg.

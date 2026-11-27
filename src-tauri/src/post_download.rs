@@ -50,7 +50,7 @@ impl PostDownloadManager {
         let name_lower = path_str.to_lowercase();
 
         // Use Windows built-in tar.exe if available (supports zip, tar, gz, 7z)
-        let status = std::process::Command::new("tar.exe")
+        let status = crate::tools::hide_window(&mut std::process::Command::new("tar.exe"))
             .arg("-xf")
             .arg(&path)
             .arg("-C")
@@ -65,7 +65,7 @@ impl PostDownloadManager {
                     // The file name is attacker-controlled (Content-Disposition) and may contain
                     // quotes or `;`, so it must never be spliced into the command text. The paths
                     // travel in environment variables and the command is a constant.
-                    let ps_status = std::process::Command::new("powershell")
+                    let ps_status = crate::tools::hide_window(&mut std::process::Command::new("powershell"))
                         .args([
                             "-NoProfile",
                             "-NonInteractive",
@@ -117,7 +117,7 @@ impl PostDownloadManager {
             return Err("Windows Defender CLI (MpCmdRun.exe) was not found on this system.".into());
         }
 
-        let output = std::process::Command::new(exe_path)
+        let output = crate::tools::hide_window(&mut std::process::Command::new(exe_path))
             .args(["-Scan", "-ScanType", "3", "-File", path_str])
             .output()
             .map_err(|e| format!("Failed to run Windows Defender: {e}"))?;

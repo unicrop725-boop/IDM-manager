@@ -30,6 +30,47 @@ const MAX_HEAD_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Downloads the browser sent before the app window was ready to receive events. When the browser starts FlowGet
+/// itself, the first request can arrive while the window is still loading; an event emitted then would be lost
+/// even though the extension was told "sent". They wait here until the window asks for them.
+struct Inbox {
+    ready: bool,
+    pending: Vec<BrowserDownloadPayload>,
+}
+static INBOX: std::sync::Mutex<Inbox> = std::sync::Mutex::new(Inbox { ready: false, pending: Vec::new() });
+const MAX_PENDING_CAPTURES: usize = 50;
+
+impl Inbox {
+    /// True when the window can take the download right now; otherwise it is kept for later.
+    fn offer(&mut self, payload: &BrowserDownloadPayload) -> bool {
+        if self.ready {
+            return true;
+        }
+        if self.pending.len() < MAX_PENDING_CAPTURES {
+            self.pending.push(payload.clone());
+        }
+        false
+    }
+
+    /// The window is listening: hand over what arrived earlier; later ones go straight through.
+    fn open(&mut self) -> Vec<BrowserDownloadPayload> {
+        self.ready = true;
+        std::mem::take(&mut self.pending)
+    }
+}
+
+/// Hand a captured download to the window now, or keep it until the window is ready.
+fn deliver_capture(handle: &AppHandle, payload: &BrowserDownloadPayload) {
+    let now = INBOX.lock().unwrap_or_else(|e| e.into_inner()).offer(payload);
+    if now {
+        let _ = handle.emit("browser-download-captured", payload);
+    }
+}
+
+pub fn take_pending_captures() -> Vec<BrowserDownloadPayload> {
+    INBOX.lock().unwrap_or_else(|e| e.into_inner()).open()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowserDownloadPayload {
@@ -124,8 +165,8 @@ async fn lookup_formats(url: &str) -> String {
     let body = match resolved {
         Err(_) => serde_json::json!({ "ok": false, "error": "Timed out while reading the video." }),
         Ok(Err(e)) => {
-            let msg = if e.contains("yt-dlp is not available") {
-                "yt-dlp is not installed. Install it with: pip install yt-dlp".to_string()
+            let msg = if e.contains("video service is not available") {
+                "The video component is not ready yet. Open FlowGet and try again.".to_string()
             } else {
                 "Could not read this video.".to_string()
             };
@@ -382,7 +423,7 @@ impl IpcServer {
             if !payload.has_quality_choice() {
                 bring_to_front(handle);
             }
-            let _ = handle.emit("browser-download-captured", payload);
+            deliver_capture(handle, payload);
         }
         write_reply(&mut socket, &reply).await;
     }
@@ -432,6 +473,20 @@ mod tests {
         let p = r.capture.expect("captured");
         assert_eq!(p.url, "https://example.com/a.zip");
         assert!(p.save_dir.is_none(), "remote-chosen save dir must be dropped");
+    }
+
+    #[test]
+    fn captures_before_the_window_is_ready_are_kept_and_handed_over_once() {
+        let body = |u: &str| format!(r#"{{"action":"add_download","url":"{u}"}}"#);
+        let mk = |u: &str| route(&req("POST", "/api/download", &[GOOD_HOST, JSON], &body(u)), PORT).capture.unwrap();
+        let mut inbox = Inbox { ready: false, pending: Vec::new() };
+        assert!(!inbox.offer(&mk("https://example.com/a.zip")), "not ready: kept, not emitted");
+        assert!(!inbox.offer(&mk("https://example.com/b.zip")));
+        let first = inbox.open();
+        assert_eq!(first.iter().map(|p| p.url.as_str()).collect::<Vec<_>>(), ["https://example.com/a.zip", "https://example.com/b.zip"]);
+        assert!(inbox.open().is_empty(), "handed over exactly once");
+        assert!(inbox.offer(&mk("https://example.com/c.zip")), "once ready, captures go straight through");
+        assert!(inbox.pending.is_empty());
     }
 
     #[test]

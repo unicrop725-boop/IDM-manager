@@ -38,6 +38,7 @@ import BandwidthModal from "./components/BandwidthModal";
 import StatisticsModal from "./components/StatisticsModal";
 import ShareModal from "./components/ShareModal";
 import LicenseModal from "./components/LicenseModal";
+import { isProLicenseError } from "./utils/license";
 import UpdateModal from "./components/UpdateModal";
 import { cleanFileName } from "./utils/smartNaming";
 import { recordCrashReport } from "./utils/crashReporter";
@@ -295,15 +296,17 @@ export default function App() {
       listen<null>("license-changed", () => {
         api.getLicenseStatus().then(setLicenseStatus).catch(() => {});
       }),
-      // yt-dlp / ffmpeg are installed on first use: say so, with progress, instead of looking stuck.
+      // The helper components are installed on first use: say so, with progress, instead of looking stuck.
+      // (Their real program names are never shown.)
       listen<ToolsProgress>("tools-progress", ({ payload: p }) => {
+        const what = p.tool === "ffmpeg" ? "the media converter" : "the video engine";
         if (p.stage === "downloading") {
           const pct = p.total > 0 ? ` ${Math.round((p.downloaded / p.total) * 100)}%` : "";
-          setNotice(`Installing ${p.tool}…${pct}`);
+          setNotice(`Setting up ${what}…${pct}`);
         } else if (p.stage === "done") {
-          setNotice(`${p.tool} is ready.`);
+          setNotice(`${what[0].toUpperCase()}${what.slice(1)} is ready.`);
         } else if (p.stage === "error") {
-          setNotice(`Could not install ${p.tool}: ${p.message}`);
+          setNotice(`Could not set up ${what}: ${p.message}`);
         } else if (p.message) {
           setNotice(p.message);
         }
@@ -311,6 +314,71 @@ export default function App() {
     ];
     return () => {
       un.forEach((p) => p.then((fn) => fn()));
+    };
+  }, []);
+
+  // A download sent from the browser extension. Kept in a ref so the listener below subscribes only once: the big
+  // event effect re-subscribes whenever settings change, and a capture arriving in that gap would be lost.
+  const handleBrowserCapture = (payload: any) => {
+    // quality already chosen in the browser's video menu: start straight away
+    if (
+      payload.url &&
+      (getVideoSite(payload.url) || /\.(m3u8|mpd)(\?|#|$)/i.test(payload.url)) &&
+      (payload.mediaHeight || payload.mediaFps || payload.mediaAudioOnly || payload.convertTo)
+    ) {
+      api
+        .addDownload({
+          url: payload.url,
+          fileName: payload.fileName || undefined,
+          referer: payload.referer || undefined,
+          userAgent: payload.userAgent || undefined,
+          cookies: payload.cookies || undefined,
+          mediaHeight: payload.mediaHeight || undefined,
+          mediaFps: payload.mediaFps || undefined,
+          mediaAudioOnly: payload.mediaAudioOnly || undefined,
+          convertTo: payload.convertTo || undefined,
+        })
+        .then(() => refreshAll())
+        .catch((e) => {
+          const msg = typeof e === "string" ? e : e?.message || "Could not start the video download.";
+          if (isProLicenseError(msg)) {
+            // video downloads need Pro: ask for the key now instead of failing quietly in the background
+            setNotice("Video downloading needs a FlowGet Pro license. Enter your key to continue.");
+            setIsLicenseModalOpen(true);
+          } else {
+            setNotice(msg);
+          }
+        });
+      return;
+    }
+    // a video page sent from the browser menu: open the quality picker instead of the file dialog
+    if (payload.url && getVideoSite(payload.url)) {
+      window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
+      return;
+    }
+    setQuickAddUrl(payload.url || "");
+    setCapturedMeta({
+      fileName: payload.fileName || "",
+      cookies: payload.cookies || "",
+      referer: payload.referer || "",
+      userAgent: payload.userAgent || "",
+    });
+    setIsAddModalOpen(true);
+  };
+  const captureHandler = useRef(handleBrowserCapture);
+  captureHandler.current = handleBrowserCapture;
+
+  useEffect(() => {
+    const un = listen<any>("browser-download-captured", ({ payload }) => captureHandler.current(payload));
+    // Downloads the browser sent while this window was still loading (e.g. the browser started FlowGet).
+    un.then(() =>
+      api
+        .takePendingCaptures()
+        .then((list) => list.forEach((p) => captureHandler.current(p)))
+        .catch(() => {}),
+    );
+    return () => {
+      un.then((f) => f());
     };
   }, []);
 
@@ -371,43 +439,6 @@ export default function App() {
       }),
       listen<QueueInfo>("queue-updated", ({ payload: q }) => {
         setQueues((cur) => cur.map((item) => (item.id === q.id ? q : item)));
-      }),
-      listen<any>("browser-download-captured", ({ payload }) => {
-        // quality already chosen in the browser's video menu: start straight away
-        if (
-          payload.url &&
-          (getVideoSite(payload.url) || /\.(m3u8|mpd)(\?|#|$)/i.test(payload.url)) &&
-          (payload.mediaHeight || payload.mediaFps || payload.mediaAudioOnly || payload.convertTo)
-        ) {
-          api
-            .addDownload({
-              url: payload.url,
-              fileName: payload.fileName || undefined,
-              referer: payload.referer || undefined,
-              userAgent: payload.userAgent || undefined,
-              cookies: payload.cookies || undefined,
-              mediaHeight: payload.mediaHeight || undefined,
-              mediaFps: payload.mediaFps || undefined,
-              mediaAudioOnly: payload.mediaAudioOnly || undefined,
-              convertTo: payload.convertTo || undefined,
-            })
-            .then(() => refreshAll())
-            .catch((e) => setNotice(typeof e === "string" ? e : e?.message || "Could not start the video download."));
-          return;
-        }
-        // a video page sent from the browser menu: open the quality picker instead of the file dialog
-        if (payload.url && getVideoSite(payload.url)) {
-          window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
-          return;
-        }
-        setQuickAddUrl(payload.url || "");
-        setCapturedMeta({
-          fileName: payload.fileName || "",
-          cookies: payload.cookies || "",
-          referer: payload.referer || "",
-          userAgent: payload.userAgent || "",
-        });
-        setIsAddModalOpen(true);
       }),
     ];
 
@@ -1019,6 +1050,8 @@ export default function App() {
           <Toolbar
             onQuickAddUrl={handleQuickAdd}
             onDownloadVideo={handleDownloadVideo}
+            onNeedLicense={() => setIsLicenseModalOpen(true)}
+            isLicensed={Boolean(licenseStatus?.isLicensed)}
             onOpenAddModal={() => {
               setQuickAddUrl("");
               setIsAddModalOpen(true);
@@ -1117,6 +1150,8 @@ export default function App() {
             setCapturedMeta({});
           }}
           onAdded={refreshAll}
+          onNeedLicense={() => setIsLicenseModalOpen(true)}
+          isLicensed={Boolean(licenseStatus?.isLicensed)}
           categories={categories}
           queues={queues}
           defaultDownloadDir={settings?.downloadDir || "C:\\Downloads"}

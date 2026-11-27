@@ -148,7 +148,7 @@ export const DownloadTable: React.FC<DownloadTableProps> = ({
 
   // HTTP(S) downloads (engine) and yt-dlp videos can be paused/resumed; streams, FTP and torrents
   // are managed elsewhere.
-  const canToggle = (d: DownloadInfo) => !d.protocol || d.protocol.startsWith("HTTP") || d.protocol === "yt-dlp";
+  const canToggle = (d: DownloadInfo) => !d.protocol || d.protocol.startsWith("HTTP") || d.protocol === "Video";
 
   const rowAction = (d: DownloadInfo, kind: "pause" | "resume") => {
     const handler = kind === "pause" ? onPause : onResume;

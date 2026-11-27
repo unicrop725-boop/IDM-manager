@@ -2,15 +2,19 @@ import { findTrustedSite } from "../data/trustedSites";
 import { Select } from "./Select";
 import { ModalCorner } from "./NotchCorner";
 import { useState, useEffect } from "react";
-import { BadgeCheck, ChevronDown, ChevronUp, Download, Link2, Folder, FolderOpen, ListOrdered, Wand2 } from "lucide-react";
+import { BadgeCheck, ChevronDown, ChevronUp, Download, Key, Link2, Folder, FolderOpen, ListOrdered, Wand2 } from "lucide-react";
 import { api } from "../api";
 import { cleanFileName } from "../utils/smartNaming";
 import type { AddRequest, Category, DuplicateCheckResult, QueueInfo, SafetyWarning } from "../types";
 import DuplicateModal from "./DuplicateModal";
+import { isProLicenseError } from "../utils/license";
 
 interface Props {
   onClose: () => void;
   onAdded: () => void;
+  /** Opens the license-key popup. Called when a download needs Pro, so the key can be entered right away. */
+  onNeedLicense?: () => void;
+  isLicensed?: boolean;
   categories: Category[];
   queues: QueueInfo[];
   defaultDownloadDir: string;
@@ -55,6 +59,8 @@ function validateAddForm(url: string, checksum: string, speedLimitMb: string): s
 export default function AddDownloadModal({
   onClose,
   onAdded,
+  onNeedLicense,
+  isLicensed,
   categories,
   queues,
   defaultDownloadDir,
@@ -84,6 +90,7 @@ export default function AddDownloadModal({
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [needsLicense, setNeedsLicense] = useState(false);
   const [duplicateData, setDuplicateData] = useState<DuplicateCheckResult | null>(null);
   // Programs and disguised files (invoice.pdf.exe) are flagged before anything is downloaded.
   const [nameWarnings, setNameWarnings] = useState<SafetyWarning[]>([]);
@@ -171,14 +178,29 @@ export default function AddDownloadModal({
       };
 
       await api.addDownload(req);
+      setNeedsLicense(false);
       onAdded();
       onClose();
     } catch (e: any) {
-      setError(typeof e === "string" ? e : e?.message || "Failed to add download");
+      const msg = typeof e === "string" ? e : e?.message || "Failed to add download";
+      setError(msg);
+      if (isProLicenseError(msg)) {
+        // ask for the key right away; the download is retried once it is verified
+        setNeedsLicense(true);
+        onNeedLicense?.();
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // The key was just verified: carry on with the download the user was trying to add.
+  useEffect(() => {
+    if (isLicensed && needsLicense) {
+      setNeedsLicense(false);
+      void executeAdd();
+    }
+  }, [isLicensed]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -257,6 +279,16 @@ export default function AddDownloadModal({
             {error && (
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
                 {error}
+                {needsLicense && onNeedLicense && (
+                  <button
+                    type="button"
+                    onClick={onNeedLicense}
+                    className="mt-2 flex items-center gap-1.5 rounded-lg gradient-accent px-3 py-1.5 font-medium text-white hover:opacity-90 transition"
+                  >
+                    <Key className="h-3.5 w-3.5" />
+                    Enter license key
+                  </button>
+                )}
               </div>
             )}
 

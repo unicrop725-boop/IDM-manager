@@ -22,6 +22,7 @@ import type { MediaResolveResult } from "../types";
 import { formatBytes } from "../format";
 import { Select } from "./Select";
 import { getVideoSite, formatDuration, heightLabel } from "../utils/videoUrl";
+import { isProLicenseError } from "../utils/license";
 
 interface ToolbarProps {
   onQuickAddUrl: (url: string) => void;
@@ -37,6 +38,9 @@ interface ToolbarProps {
     }
   ) => Promise<void>;
   onOpenAddModal: () => void;
+  /** Opens the license-key popup (video downloads need Pro). */
+  onNeedLicense?: () => void;
+  isLicensed?: boolean;
   hasSelection: boolean;
   canResume: boolean;
   canPause: boolean;
@@ -74,6 +78,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onQuickAddUrl,
   onDownloadVideo,
   onOpenAddModal,
+  onNeedLicense,
+  isLicensed,
   hasSelection,
   canResume,
   canPause,
@@ -96,6 +102,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [selHeight, setSelHeight] = useState("");
   const [selFps, setSelFps] = useState("");
   const [dismissed, setDismissed] = useState(false);
+  const [needsLicense, setNeedsLicense] = useState(false);
   const [saveDir, setSaveDir] = useState("");
   const [container, setContainer] = useState<"mp4" | "mkv" | "mp3" | "m4a">("mp4");
   const [starting, setStarting] = useState(false);
@@ -143,8 +150,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         if (mine !== token.current) return;
         const msg = typeof e === "string" ? e : (e as Error)?.message || "";
         setMediaError(
-          msg.includes("yt-dlp is not")
-            ? "yt-dlp is not installed. Install it with: pip install yt-dlp"
+          msg.includes("is not available") || msg.includes("could not be installed")
+            ? "The video component is not ready yet. Check your internet connection and try again."
             : "Could not read this video link."
         );
         setMediaState("error");
@@ -206,6 +213,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const startVideo = async () => {
     setStarting(true);
+    setNeedsLicense(false);
     try {
       await onDownloadVideo(
         urlInput.trim(),
@@ -215,8 +223,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       );
       setUrlInput("");
     } catch (e) {
-      setMediaError(typeof e === "string" ? e : (e as Error)?.message || "Could not start the download.");
-      setMediaState("error");
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "Could not start the download.";
+      if (isProLicenseError(msg)) {
+        // keep the quality picker open, ask for the key, and let the user press Download again
+        setNeedsLicense(true);
+        onNeedLicense?.();
+      } else {
+        setMediaError(msg);
+        setMediaState("error");
+      }
     } finally {
       setStarting(false);
     }
@@ -279,6 +294,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             )}
 
             {mediaState === "error" && <div className="text-rose-400 py-1">{mediaError}</div>}
+
+            {needsLicense && !isLicensed && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-rose-300">
+                <span>Video downloading needs a FlowGet Pro license. Enter your key to continue.</span>
+                <button
+                  type="button"
+                  onClick={onNeedLicense}
+                  className="flex-shrink-0 rounded-lg gradient-accent px-3 py-1 font-medium text-white hover:opacity-90"
+                >
+                  Enter license key
+                </button>
+              </div>
+            )}
 
             {mediaState === "ready" && mediaInfo && (
               <div className="space-y-3">

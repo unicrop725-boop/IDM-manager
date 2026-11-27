@@ -343,7 +343,11 @@ export const api = {
       ? invoke<string>("download_stream_media", req)
       : Promise.resolve(""),
   updateYtdlp: () =>
-    isTauri ? invoke<string>("update_ytdlp") : Promise.resolve("yt-dlp is up to date."),
+    isTauri ? invoke<string>("update_ytdlp") : Promise.resolve("The video engine is up to date."),
+
+  /** Downloads the browser extension sent before this window was ready to receive them. */
+  takePendingCaptures: () =>
+    isTauri ? invoke<any[]>("take_pending_captures") : Promise.resolve<any[]>([]),
 
   // yt-dlp / ffmpeg installed and updated by FlowGet itself
   getToolsStatus: () =>

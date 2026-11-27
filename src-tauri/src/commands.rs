@@ -107,7 +107,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
         let mut i = job.info.lock().unwrap();
         i.state = DownloadState::Downloading;
         i.error = None;
-        i.note = Some("Resolving video with yt-dlp...".to_string());
+        i.note = Some("Preparing video...".to_string());
         let _ = app.emit("download-updated", &*i);
     }
 
@@ -139,7 +139,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
                     i.total_size = total;
                     i.speed_bps = speed;
                     i.eta_secs = eta;
-                    i.note = Some("Downloading with yt-dlp...".to_string());
+                    i.note = Some("Downloading video...".to_string());
                     let _ = app_b.emit("download-updated", &*i);
                 },
             )
@@ -467,8 +467,8 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
             speed_bps: 0,
             eta_secs: None,
             segments: Vec::new(),
-            note: Some("Resolving video with yt-dlp...".to_string()),
-            protocol: Some("yt-dlp".to_string()),
+            note: Some("Preparing video...".to_string()),
+            protocol: Some("Video".to_string()),
             mirrors: Vec::new(),
             category: Some(default_sub.to_string()),
             queue_id: request.queue_id.clone(),
@@ -1004,7 +1004,7 @@ pub async fn update_download_path(
 pub fn get_start_with_windows() -> bool {
     #[cfg(target_os = "windows")]
     {
-        let out = std::process::Command::new("reg.exe")
+        let out = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
             .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "FlowGet"])
             .output();
         if let Ok(o) = out {
@@ -1021,7 +1021,7 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
         if enabled {
             let exe = std::env::current_exe().map_err(|e| e.to_string())?;
             let exe_str = format!("\"{}\"", exe.to_string_lossy());
-            let status = std::process::Command::new("reg.exe")
+            let status = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
                 .args([
                     "add",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
@@ -1040,7 +1040,7 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
             }
             Ok(true)
         } else {
-            let _status = std::process::Command::new("reg.exe")
+            let _status = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
                 .args([
                     "delete",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
@@ -1194,6 +1194,12 @@ pub async fn download_stream_media(
     }
 
     Ok(out_file.to_string_lossy().to_string())
+}
+
+/// Downloads the browser extension sent before the window was ready (see `ipc_server::take_pending_captures`).
+#[tauri::command]
+pub fn take_pending_captures() -> Vec<crate::ipc_server::BrowserDownloadPayload> {
+    crate::ipc_server::take_pending_captures()
 }
 
 #[tauri::command]

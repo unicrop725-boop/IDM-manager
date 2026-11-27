@@ -252,7 +252,7 @@ impl QueueManager {
             "shutdown" => {
                 #[cfg(target_os = "windows")]
                 {
-                    let _ = std::process::Command::new("shutdown.exe")
+                    let _ = crate::tools::hide_window(&mut std::process::Command::new("shutdown.exe"))
                         .args(["/s", "/t", "30", "/c", "FlowGet scheduled download completed."])
                         .spawn();
                 }
@@ -269,7 +269,7 @@ impl QueueManager {
             "hibernate" => {
                 #[cfg(target_os = "windows")]
                 {
-                    let _ = std::process::Command::new("shutdown.exe")
+                    let _ = crate::tools::hide_window(&mut std::process::Command::new("shutdown.exe"))
                         .args(["/h"])
                         .spawn();
                 }

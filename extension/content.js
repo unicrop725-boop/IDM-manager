@@ -145,7 +145,7 @@
         url: loc,
         type: "video",
         ext: "mp4/stream",
-        size: "HD Stream / yt-dlp",
+        size: "HD Stream",
       });
     }
 
@@ -527,7 +527,7 @@
 
   const grabber = {
     host: null, anchor: null, btn: null, label: null, hint: null, panel: null, panelTitle: null, panelSub: null, panelBody: null,
-    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, helpOpen: false, pill: null, help: null, busy: false, hintShown: false, hintTimer: 0, formats: new Map(),
+    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, helpOpen: false, pill: null, help: null, busy: false, hintShown: false, hintTimer: 0, formats: new Map(), inflight: new Map(), prefetchTimer: 0,
   };
 
   function buildGrabber() {
@@ -805,12 +805,69 @@
 
   const hasQualities = (d) => Boolean(d && d.ok && Array.isArray(d.videoOptions) && d.videoOptions.length);
 
-  async function askFormats(url) {
+  // `prefetch`: a quiet look-ahead; it must never start the app if it is closed.
+  async function askFormats(url, prefetch) {
     try {
-      return await chrome.runtime.sendMessage({ type: "GET_FORMATS", url });
+      return await chrome.runtime.sendMessage({ type: "GET_FORMATS", url, prefetch: prefetch === true });
     } catch {
       return { ok: false, error: "The extension was updated. Reload this page and try again." };
     }
+  }
+
+  /**
+   * The qualities for `url`: from the cache, from a lookup that is already running (a click right after the
+   * look-ahead shares it), or a new one. The page and the streaming playlists the player loaded are asked about at
+   * the same time (waiting for the page to fail first, then trying each playlist in turn, made the menu very slow).
+   */
+  function loadFormats(url, prefetch) {
+    const hit = grabber.formats.get(url);
+    if (hit && Date.now() - hit.at < FORMATS_CACHE_MS) return Promise.resolve(hit);
+    const running = grabber.inflight.get(url);
+    if (running) return running;
+
+    const job = (async () => {
+      const pageAsk = askFormats(url, prefetch);
+      const startStreamAsks = async () => {
+        let streams = [];
+        try {
+          streams = ((await chrome.runtime.sendMessage({ type: "GET_STREAMS" })) || {}).streams || [];
+        } catch {
+          streams = [];
+        }
+        return streams.slice(0, 2).map((candidate) => askFormats(candidate, prefetch).then((data) => ({ candidate, data })));
+      };
+
+      // Slow page answer: start on the playlists now instead of after the page has finished failing.
+      const early = await Promise.race([pageAsk, new Promise((r) => setTimeout(() => r(null), 1500))]);
+      let streamAsks = hasQualities(early) ? null : startStreamAsks();
+
+      let data = await pageAsk;
+      let streamUrl = null;
+      if (!hasQualities(data) && !(data && data.offline)) {
+        streamAsks = streamAsks || startStreamAsks();
+        for (const ask of await streamAsks) {
+          const attempt = await ask;
+          if (hasQualities(attempt.data)) {
+            data = attempt.data;
+            streamUrl = attempt.candidate;
+            break;
+          }
+        }
+      }
+      const result = { at: Date.now(), data, streamUrl, prefetch: prefetch === true };
+      if (hasQualities(data)) grabber.formats.set(url, result);
+      return result;
+    })().finally(() => grabber.inflight.delete(url));
+    grabber.inflight.set(url, job);
+    return job;
+  }
+
+  /** The button just appeared on a video: read its qualities in the background so the menu opens at once. */
+  function prefetchFormats(video) {
+    if (!video || !video.isConnected || grabber.video !== video) return;
+    const target = videoTarget(video);
+    if (target.direct) return; // a plain file link has no menu
+    loadFormats(target.url, true).catch(() => {});
   }
 
   function pageTitleName() {
@@ -831,32 +888,15 @@
     box.append(h("div", "spin"), h("span", "", "Reading the available qualities…"));
     grabber.panelBody.replaceChildren(box);
 
-    let data = await askFormats(url);
+    // A look-ahead may already be running or finished; if the page address could not be read, the player's own
+    // streaming playlist (which lists every quality) is used instead, the way IDM does.
+    let res = await loadFormats(url, false);
+    // The quiet look-ahead is not allowed to start a closed app; a real click is.
+    if (res.prefetch && res.data && res.data.offline) res = await loadFormats(url, false);
+    const { data, streamUrl } = res;
     if (!grabber.open || !grabber.target || grabber.target.url !== url) return; // closed or moved on meanwhile
 
-    let streamUrl = null;
-    if (!hasQualities(data) && !(data && data.offline)) {
-      // The page address could not be read (some sites use pin/video links the downloader does not know). The player
-      // itself loaded a streaming playlist listing every quality: use that, the way IDM does.
-      let streams = [];
-      try {
-        streams = ((await chrome.runtime.sendMessage({ type: "GET_STREAMS" })) || {}).streams || [];
-      } catch {
-        streams = [];
-      }
-      for (const candidate of streams.slice(0, 3)) {
-        const attempt = await askFormats(candidate);
-        if (!grabber.open || !grabber.target || grabber.target.url !== url) return;
-        if (hasQualities(attempt)) {
-          data = attempt;
-          streamUrl = candidate;
-          break;
-        }
-      }
-    }
-
     if (hasQualities(data)) {
-      grabber.formats.set(url, { at: Date.now(), data, streamUrl });
       if (streamUrl) grabber.target = { url: streamUrl, fileName: pageTitleName() };
       renderFormats(data);
     } else if (data && data.offline) {
@@ -1129,6 +1169,9 @@
       grabber.video = video;
       grabber.slot = null;
       recomputeSlot = true;
+      // Still on this video after a moment (not just the pointer passing by): read its qualities ahead of the click.
+      clearTimeout(grabber.prefetchTimer);
+      grabber.prefetchTimer = setTimeout(() => prefetchFormats(video), 600);
       if (!grabber.hintShown) {
         // First video on this page: point at the button for a few seconds so it is obvious what it does.
         grabber.hintShown = true;

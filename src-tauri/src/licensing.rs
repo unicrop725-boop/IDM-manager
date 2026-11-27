@@ -141,7 +141,7 @@ fn write_file_seed(ts: u64) {
 /// Read seed from Windows Registry
 #[cfg(target_os = "windows")]
 fn read_registry_seed() -> Option<u64> {
-    let output = Command::new("reg")
+    let output = crate::tools::hide_window(&mut Command::new("reg"))
         .args(["query", "HKCU\\Software\\FlowGet", "/v", "TrialSeed"])
         .output()
         .ok()?;
@@ -168,7 +168,7 @@ fn read_registry_seed() -> Option<u64> {
 /// Write seed to Windows Registry
 #[cfg(target_os = "windows")]
 fn write_registry_seed(ts: u64) {
-    let _ = Command::new("reg")
+    let _ = crate::tools::hide_window(&mut Command::new("reg"))
         .args([
             "add",
             "HKCU\\Software\\FlowGet",
@@ -409,7 +409,7 @@ fn to_hex(bytes: &[u8]) -> String {
 
 #[cfg(target_os = "windows")]
 fn windows_machine_guid() -> Option<String> {
-    let out = Command::new("reg")
+    let out = crate::tools::hide_window(&mut Command::new("reg"))
         .args(["query", "HKLM\\SOFTWARE\\Microsoft\\Cryptography", "/v", "MachineGuid"])
         .output()
         .ok()?;

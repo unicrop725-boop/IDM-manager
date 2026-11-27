@@ -21,7 +21,7 @@ const PORT = 4400; // listed in the server's default allowed origins
 const BASE = `http://localhost:${PORT}`;
 const API_PORT = 4243;
 const API = `http://localhost:${API_PORT}`;
-const ALLOWED_HOSTS = new Set([`localhost:${PORT}`, `localhost:${API_PORT}`, "accounts.google.com", "www.gstatic.com", "ssl.gstatic.com", "fonts.gstatic.com"]);
+const ALLOWED_HOSTS = new Set([`localhost:${PORT}`, `localhost:${API_PORT}`, "accounts.google.com", "www.gstatic.com", "ssl.gstatic.com", "fonts.gstatic.com", "flagcdn.com"]);
 
 if (!fs.existsSync(path.join(DIST, "_headers"))) throw new Error("website/dist/_headers is missing: build the website first");
 

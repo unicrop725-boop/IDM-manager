@@ -11,7 +11,7 @@ faq:
   - q: "Can I download any streaming video?"
     a: "No. Videos protected by DRM, such as paid streaming services, cannot be downloaded and tools should not try to bypass that protection. Only download videos you have the right to keep."
   - q: "Do I need ffmpeg?"
-    a: "Usually yes, to join the separate video and audio parts into one file. FlowGet installs yt-dlp and ffmpeg for you the first time they are needed."
+    a: "Usually yes, to join the separate video and audio parts into one file. FlowGet sets up everything it needs for you the first time."
 ---
 
 You find a video, the player works, but there is no download button, and the address of the media file is nowhere to be seen. That is because most modern video is not one file. It is a *stream*: a playlist that points to hundreds of short pieces. This guide explains what is going on and how to save a stream you are allowed to keep.
@@ -68,7 +68,7 @@ This takes the best stream by default. It is quick, but you have less control ov
 
 ## Option 3: a download manager
 
-FlowGet puts this into the video itself. A small Download button appears on the video with a list of qualities and a recommended choice (the best up to 1080p), with an audio-only option. For pages where the video is hidden behind a stream, it uses the playlist the player loaded. The first time you need yt-dlp or ffmpeg, FlowGet downloads them for you and checks them against the publisher's checksum, so there is no PATH to edit. See the [video section of the feature list](/features/#video).
+FlowGet puts this into the video itself. A small Download button appears on the video with a list of qualities and a recommended choice (the best up to 1080p), with an audio-only option. For pages where the video is hidden behind a stream, it uses the playlist the player loaded. The first time a video needs extra components, FlowGet sets them up for you and verifies them, so there is nothing to install or configure. See the [video section of the feature list](/features/#video).
 
 ## Common problems
 

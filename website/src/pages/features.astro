@@ -125,8 +125,8 @@ const icons: Record<string, string> = {
           <p class="fsec-intro">Included with your FlowGet license.</p>
           <div class="fitems">
             <div class="fitem"><h3>Quality picker</h3><p>Choose a resolution and frame rate, or audio only. Convert to MP4, MP3 or M4A when you want a different format.</p></div>
-            <div class="fitem"><h3>Streams</h3><p>HLS (.m3u8) and DASH (.mpd) streams are fetched and joined into one file without re-encoding. Playlists are read with yt-dlp, which lists every quality.</p></div>
-            <div class="fitem"><h3>Tools install themselves</h3><p>The first time a video needs yt-dlp or ffmpeg, FlowGet downloads them to its own folder and checks each against the checksum the publisher lists. No PATH settings. yt-dlp is refreshed about once a week, and you can update or reinstall from Settings.</p></div>
+            <div class="fitem"><h3>Streams</h3><p>HLS (.m3u8) and DASH (.mpd) streams are fetched and joined into one file without re-encoding. Playlists are read for you, and every quality is listed.</p></div>
+            <div class="fitem"><h3>Set up automatically</h3><p>The first time a video needs extra components, FlowGet sets them up in its own folder and verifies each download. Nothing to configure. The video component is refreshed about once a week, and you can update or reinstall it from Settings.</p></div>
             <div class="fitem"><h3>Protected content</h3><p>Videos protected by DRM (paid streaming services) are refused with a clear message. FlowGet does not bypass DRM.</p></div>
           </div>
         </section>
@@ -197,7 +197,7 @@ const icons: Record<string, string> = {
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["limits"]}></svg></span><span>Good to know</span></h2>
           <div class="knows">
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>FlowGet is for Windows 10 and 11 for now.</p></div>
-            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Speed limits, schedules and slow mode apply to normal file downloads. Videos fetched with yt-dlp are not throttled or paused by them.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Speed limits, schedules and slow mode apply to normal file downloads. Videos from video sites are not throttled or paused by them.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Turbo Mode needs two working networks. SFTP needs Python with the paramiko package installed.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>The VirusTotal check needs your own free API key, and the free plan allows 4 lookups a minute.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Videos protected by DRM cannot be downloaded.</p></div>

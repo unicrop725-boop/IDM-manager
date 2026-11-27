@@ -43,7 +43,7 @@ Setting the limit where the downloads happen is the simplest approach, and it ca
 
 A badge in the status bar always shows why downloads are limited or held, for example "Limited to 2 MB/s (Mon-Fri 09:00-17:00)".
 
-One honest limit: these controls apply to normal file downloads. Videos fetched with yt-dlp are not throttled by them.
+One honest limit: these controls apply to normal file downloads. Videos from video sites are not throttled by them.
 
 ## How much to leave free
 

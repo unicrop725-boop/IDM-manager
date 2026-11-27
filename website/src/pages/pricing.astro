@@ -39,6 +39,19 @@ const jsonLd = [
       url: site + "/pricing/",
     },
   },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
+      { "@type": "ListItem", position: 2, name: "Pricing", item: site + "/pricing/" },
+    ],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  },
 ];
 ---
 <Base

@@ -32,6 +32,17 @@ const jsonLd = [
     description: SITE.description,
     image: site + SITE.ogImage,
     url: site + "/",
+    downloadUrl: site + "/download/",
+    // The same features the pricing page lists, so the markup matches what visitors can read.
+    featureList: [
+      "Dynamic multi-connection downloads and Turbo Mode",
+      "Browser extension for Chrome, Edge and Brave",
+      "Video and audio downloads with a quality selector",
+      "Smart resume after Wi-Fi drops, sleep or restarts",
+      "Speed scheduling and bandwidth limits",
+      "Offline license activation",
+    ],
+    publisher: { "@type": "Organization", name: SITE.name, url: site + "/" },
     offers: { "@type": "Offer", price: SITE.priceUsd, priceCurrency: "USD", availability: "https://schema.org/InStock", url: site + "/pricing/" },
   },
   {

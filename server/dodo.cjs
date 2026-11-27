@@ -204,7 +204,7 @@ function createHandler(ctx) {
     // payload carries its cart, so a payload without one can never block a genuine sale.
     const cart = Array.isArray(data.product_cart) ? data.product_cart : null;
     const notOurProduct = !!(PRODUCT_ID && cart && !cart.some((i) => i && i.product_id === PRODUCT_ID));
-    if (notOurProduct && event.type === "payment.succeeded") console.warn(`[dodo] payment ${paymentId} is not for the FlowGet product: no license issued`);
+    if (notOurProduct && event.type === "payment.succeeded") console.warn(`[dodo] payment ${paymentId} is not for the BoltGrab product: no license issued`);
 
     if (event.type === "payment.succeeded" && paymentId && !notOurProduct) {
       if (!hasOwn(db.payments, paymentId)) {

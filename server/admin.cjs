@@ -423,7 +423,7 @@ function createHandler(ctx) {
     // Latest sign-ups and purchases, mixed.
     const activity = [
       ...users.map((u) => ({ type: "user", at: u.createdAt, title: u.name || u.email, sub: u.name ? u.email : "New sign-up", demo: !!u.demo })),
-      ...payments.map((p) => ({ type: "purchase", at: p.at, title: p.email || "Purchase", sub: p.revoked ? "Refunded" : "Bought FlowGet Pro", amount: p.amount || 0, currency: p.currency || "USD", demo: !!p.demo })),
+      ...payments.map((p) => ({ type: "purchase", at: p.at, title: p.email || "Purchase", sub: p.revoked ? "Refunded" : "Bought BoltGrab Pro", amount: p.amount || 0, currency: p.currency || "USD", demo: !!p.demo })),
     ]
       .sort((x, y) => y.at - x.at)
       .slice(0, 12);

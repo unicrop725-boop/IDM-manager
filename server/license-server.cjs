@@ -215,7 +215,7 @@ function handleRequest(req, res) {
   if (method === "GET" && pathname === "/api/health") {
     return sendJson(res, 200, {
       status: "healthy",
-      service: "FlowGet License Server",
+      service: "BoltGrab License Server",
       publicKey: PUBLIC_KEY_HEX,
       version: "1.0.0",
     });
@@ -242,7 +242,7 @@ function handleRequest(req, res) {
       // exposed in git history). Only keys recorded when a purchase/admin issue happened are accepted. The distinct
       // code lets the app keep the stored key and recover on its own if this server's database is ever restored.
       if (!own(db.licenses, licenseKey)) {
-        return sendJson(res, 403, { error: "This license key was not issued by FlowGet.", code: "unknown_key" });
+        return sendJson(res, 403, { error: "This license key was not issued by BoltGrab.", code: "unknown_key" });
       }
 
       if (db.licenses[licenseKey].revoked) {
@@ -282,7 +282,7 @@ function handleRequest(req, res) {
 
       return sendJson(res, 200, {
         success: true,
-        message: `FlowGet Pro successfully activated on ${machineName}`,
+        message: `BoltGrab Pro successfully activated on ${machineName}`,
         activeDevices: existingList.length,
         maxDevices: 2,
         tier: check.payload.tier,
@@ -333,7 +333,7 @@ function handleRequest(req, res) {
     }
 
     if (!own(db.licenses, licenseKey)) {
-      return sendJson(res, 200, { valid: false, error: "This license key was not issued by FlowGet." });
+      return sendJson(res, 200, { valid: false, error: "This license key was not issued by BoltGrab." });
     }
     if (db.licenses[licenseKey].revoked) {
       return sendJson(res, 200, { valid: false, error: "This license was refunded." });
@@ -368,7 +368,7 @@ if (require.main === module) {
   // would let anyone on the same Wi-Fi sign in as the admin (a forged Origin header is all it takes). HOST overrides.
   const HOST = process.env.HOST || (process.env.AUTH_DEV_GOOGLE === "1" ? "127.0.0.1" : undefined);
   server.listen(PORT, HOST, () => {
-    console.log(`FlowGet License Server running at http://${HOST || "localhost"}:${PORT}${HOST ? "" : " (all network interfaces)"}`);
+    console.log(`BoltGrab License Server running at http://${HOST || "localhost"}:${PORT}${HOST ? "" : " (all network interfaces)"}`);
   });
 }
 

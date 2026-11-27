@@ -107,7 +107,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
         let mut i = job.info.lock().unwrap();
         i.state = DownloadState::Downloading;
         i.error = None;
-        i.note = Some("Resolving video with yt-dlp...".to_string());
+        i.note = Some("Preparing video...".to_string());
         let _ = app.emit("download-updated", &*i);
     }
 
@@ -139,7 +139,7 @@ fn spawn_ytdlp(job: std::sync::Arc<YtJob>, app: tauri::AppHandle, db: crate::db:
                     i.total_size = total;
                     i.speed_bps = speed;
                     i.eta_secs = eta;
-                    i.note = Some("Downloading with yt-dlp...".to_string());
+                    i.note = Some("Downloading video...".to_string());
                     let _ = app_b.emit("download-updated", &*i);
                 },
             )
@@ -431,7 +431,7 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
         crate::media_stream::validate_remote_url(&request.url)?;
         let lic_status = crate::licensing::get_status(&state.db).await;
         if !lic_status.media_download_allowed {
-            return Err("Video downloading requires a FlowGet Pro license.".to_string());
+            return Err("Video downloading requires a BoltGrab Pro license.".to_string());
         }
 
         let id = uuid::Uuid::new_v4().to_string();
@@ -467,8 +467,8 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
             speed_bps: 0,
             eta_secs: None,
             segments: Vec::new(),
-            note: Some("Resolving video with yt-dlp...".to_string()),
-            protocol: Some("yt-dlp".to_string()),
+            note: Some("Preparing video...".to_string()),
+            protocol: Some("Video".to_string()),
             mirrors: Vec::new(),
             category: Some(default_sub.to_string()),
             queue_id: request.queue_id.clone(),
@@ -1004,8 +1004,8 @@ pub async fn update_download_path(
 pub fn get_start_with_windows() -> bool {
     #[cfg(target_os = "windows")]
     {
-        let out = std::process::Command::new("reg.exe")
-            .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "FlowGet"])
+        let out = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
+            .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "BoltGrab"])
             .output();
         if let Ok(o) = out {
             return o.status.success();
@@ -1021,12 +1021,12 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
         if enabled {
             let exe = std::env::current_exe().map_err(|e| e.to_string())?;
             let exe_str = format!("\"{}\"", exe.to_string_lossy());
-            let status = std::process::Command::new("reg.exe")
+            let status = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
                 .args([
                     "add",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "FlowGet",
+                    "BoltGrab",
                     "/t",
                     "REG_SZ",
                     "/d",
@@ -1040,12 +1040,12 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
             }
             Ok(true)
         } else {
-            let _status = std::process::Command::new("reg.exe")
+            let _status = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
                 .args([
                     "delete",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "FlowGet",
+                    "BoltGrab",
                     "/f",
                 ])
                 .status()
@@ -1108,6 +1108,9 @@ pub async fn get_settings(state: State<'_, AppState>) -> CmdResult<Settings> {
 
 #[tauri::command]
 pub async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> CmdResult<()> {
+    if crate::licensing::is_protected_setting(&key) {
+        return Err("This setting can't be changed here.".to_string());
+    }
     state.db.set_setting(&key, &value).await.map_err(|e| e.to_string())
 }
 
@@ -1139,7 +1142,7 @@ pub fn get_adapters(state: State<'_, AppState>) -> Vec<AdapterInfo> {
 pub async fn set_turbo_mode(state: State<'_, AppState>, enabled: bool) -> CmdResult<bool> {
     let lic_status = crate::licensing::get_status(&state.db).await;
     if enabled && !lic_status.turbo_mode_allowed {
-        return Err("Turbo Mode requires a FlowGet Lifetime license.".to_string());
+        return Err("Turbo Mode requires a BoltGrab Lifetime license.".to_string());
     }
     state.engine.set_turbo_mode(enabled);
     state
@@ -1176,7 +1179,7 @@ pub async fn download_stream_media(
 ) -> CmdResult<String> {
     let lic_status = crate::licensing::get_status(&state.db).await;
     if !lic_status.media_download_allowed {
-        return Err("Media stream downloading requires a FlowGet Pro license.".to_string());
+        return Err("Media stream downloading requires a BoltGrab Pro license.".to_string());
     }
 
     crate::tools::ensure("ffmpeg").await?;
@@ -1191,6 +1194,12 @@ pub async fn download_stream_media(
     }
 
     Ok(out_file.to_string_lossy().to_string())
+}
+
+/// Downloads the browser extension sent before the window was ready (see `ipc_server::take_pending_captures`).
+#[tauri::command]
+pub fn take_pending_captures() -> Vec<crate::ipc_server::BrowserDownloadPayload> {
+    crate::ipc_server::take_pending_captures()
 }
 
 #[tauri::command]
@@ -1382,12 +1391,16 @@ pub async fn get_license_status(state: State<'_, AppState>) -> CmdResult<crate::
 
 #[tauri::command]
 pub async fn activate_license_key(state: State<'_, AppState>, key: String) -> CmdResult<crate::licensing::TrialAndLicenseStatus> {
-    crate::licensing::activate_license(&state.db, &key).await.map_err(|e| e.to_string())
+    let st = crate::licensing::activate_license(&state.db, &key).await.map_err(|e| e.to_string())?;
+    state.engine.set_limits(st.max_connections, st.turbo_mode_allowed);
+    Ok(st)
 }
 
 #[tauri::command]
 pub async fn deactivate_license_key(state: State<'_, AppState>) -> CmdResult<crate::licensing::TrialAndLicenseStatus> {
-    crate::licensing::deactivate_license(&state.db).await.map_err(|e| e.to_string())
+    let st = crate::licensing::deactivate_license(&state.db).await.map_err(|e| e.to_string())?;
+    state.engine.set_limits(st.max_connections, st.turbo_mode_allowed);
+    Ok(st)
 }
 
 

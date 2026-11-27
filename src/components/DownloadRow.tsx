@@ -1,19 +1,21 @@
 import { useState } from "react";
+import { t } from "../i18n";
 import { Pause, Play, RotateCcw, Square, Trash2, FileX, WifiOff, Link as LinkIcon } from "lucide-react";
 import type { DownloadInfo, DownloadState } from "../types";
 import { formatBytes, formatEta, formatSpeed, isUnbounded } from "../format";
 
+// Getters, so the text follows the language chosen in Options.
 const STATE_LABEL: Record<DownloadState, string> = {
-  queued: "Queued",
+  get queued() { return t("queued", "Queued"); },
   probing: "Connecting",
-  downloading: "Downloading",
-  paused: "Paused",
+  get downloading() { return t("downloading", "Downloading"); },
+  get paused() { return t("paused", "Paused"); },
   verifying: "Verifying",
-  completed: "Completed",
-  failed: "Failed",
+  get completed() { return t("complete", "Completed"); },
+  get failed() { return t("failed", "Failed"); },
   cancelled: "Cancelled",
-  waitingForNetwork: "Waiting for network",
-  linkExpired: "Link expired",
+  get waitingForNetwork() { return t("waiting_network", "Waiting for network"); },
+  get linkExpired() { return t("link_expired", "Link expired"); },
 };
 
 const STATE_COLOR: Record<DownloadState, string> = {

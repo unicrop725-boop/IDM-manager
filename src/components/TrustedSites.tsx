@@ -90,7 +90,7 @@ export default function TrustedSites({ sites = TRUSTED_SITES, onNotice }: Props)
             <div>
               <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">Trusted Sites</h2>
               <p className="text-[11px] text-[var(--text-secondary)]">
-                Websites we recommend for safe downloads. They open in your browser, and FlowGet takes over the download.
+                Websites we recommend for safe downloads. They open in your browser, and BoltGrab takes over the download.
               </p>
             </div>
           </div>

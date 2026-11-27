@@ -285,9 +285,19 @@ export const api = {
 
   // Settings
   getSettings: () =>
-    isTauri ? invoke<Settings>("get_settings") : Promise.resolve(mockSettings),
+    isTauri ? invoke<Settings>("get_settings") : Promise.resolve({ ...mockSettings }),
   setSetting: (key: string, value: string) =>
-    isTauri ? invoke<void>("set_setting", { key, value }) : Promise.resolve(),
+    isTauri
+      ? invoke<void>("set_setting", { key, value })
+      : (() => {
+          // The browser demo keeps what was saved for this visit, so changing a setting visibly does something.
+          const camel = key.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
+          if (camel in mockSettings) {
+            const current = (mockSettings as any)[camel];
+            (mockSettings as any)[camel] = typeof current === "boolean" ? value === "1" || value === "true" : typeof current === "number" ? Number(value) : value;
+          }
+          return Promise.resolve();
+        })(),
   getSetting: (key: string) =>
     isTauri ? invoke<string | null>("get_setting", { key }) : Promise.resolve(null),
   setDefaultConnections: (connections: number) =>
@@ -333,14 +343,18 @@ export const api = {
       ? invoke<string>("download_stream_media", req)
       : Promise.resolve(""),
   updateYtdlp: () =>
-    isTauri ? invoke<string>("update_ytdlp") : Promise.resolve("yt-dlp is up to date."),
+    isTauri ? invoke<string>("update_ytdlp") : Promise.resolve("The video engine is up to date."),
 
-  // yt-dlp / ffmpeg installed and updated by FlowGet itself
+  /** Downloads the browser extension sent before this window was ready to receive them. */
+  takePendingCaptures: () =>
+    isTauri ? invoke<any[]>("take_pending_captures") : Promise.resolve<any[]>([]),
+
+  // yt-dlp / ffmpeg installed and updated by BoltGrab itself
   getToolsStatus: () =>
     isTauri
       ? invoke<ToolInfo[]>("get_tools_status")
       : Promise.resolve<ToolInfo[]>([
-          { name: "yt-dlp", installed: true, source: "FlowGet", version: "2026.01.01", path: null },
+          { name: "yt-dlp", installed: true, source: "BoltGrab", version: "2026.01.01", path: null },
           { name: "ffmpeg", installed: false, source: "Missing", version: null, path: null },
         ]),
   installTool: (tool: string, force = false) =>

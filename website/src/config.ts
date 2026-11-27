@@ -21,7 +21,7 @@ export const SITE = {
   // Set a full URL here to use an external page instead.
   buyUrl: "/buy/",
   supportEmail: "support@boltgrab.online",
-  // Address of the accounts API (server/license-server.cjs). Set PUBLIC_API_URL when building, e.g. https://api.flowget.net.
+  // Address of the accounts API (server/license-server.cjs). Set PUBLIC_API_URL when building, e.g. https://api.boltgrab.online.
   // While empty, the sign-in page says that sign-in is not available yet.
   apiUrl: ((import.meta.env.PUBLIC_API_URL as string | undefined) || "").replace(/\/$/, ""),
 

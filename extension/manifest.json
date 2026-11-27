@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "FlowGet Download Manager Integration",
+  "name": "BoltGrab Download Manager Integration",
   "version": "1.4.1",
-  "description": "Seamless one-click download capture, cookie passing, and media detection for FlowGet.",
+  "description": "Seamless one-click download capture, cookie passing, and media detection for BoltGrab.",
   "permissions": [
     "downloads",
     "cookies",
@@ -35,7 +35,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "FlowGet Download Integration",
+    "default_title": "BoltGrab Download Integration",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

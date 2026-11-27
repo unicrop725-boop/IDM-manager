@@ -10,7 +10,7 @@
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 36px; }
 .meta { margin-top: 22px; font-size: 14.5px; color: var(--muted); }
 
-/* ---------- embedded live app (the real FlowGet UI, built in demo mode) ---------- */
+/* ---------- embedded live app (the real BoltGrab UI, built in demo mode) ---------- */
 .demo-wrap { margin-top: 56px; text-align: left; scroll-margin-top: 90px; }
 .appframe {
   position: relative; width: 100%; overflow: hidden; border-radius: 0; background: #0f0f12 url("/img/app-main.webp") center / cover no-repeat;

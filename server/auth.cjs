@@ -28,6 +28,13 @@ const https = require("https");
 const DB_FILE = process.env.ACCOUNTS_DB || path.join(__dirname, "accounts_db.json");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
 const DEV_GOOGLE = process.env.AUTH_DEV_GOOGLE === "1";
+// The fake Google login lets anyone sign in as ANY address, including the admin (who can issue licenses for free).
+// A comment saying "remove before going live" is not a safeguard, so a production process refuses to start with it on.
+if (DEV_GOOGLE && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "AUTH_DEV_GOOGLE=1 with NODE_ENV=production: refusing to start. The fake login would let anyone sign in as the admin. Remove AUTH_DEV_GOOGLE from the environment and from server/.env.",
+  );
+}
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || "";
 const TRUST_PROXY = process.env.TRUST_PROXY === "1";
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "https://flowget.net,https://www.flowget.net,http://localhost:4321,http://127.0.0.1:4321,http://localhost:4399,http://localhost:4400")
@@ -297,7 +304,10 @@ function readJson(req) {
     });
     req.on("end", () => {
       try {
-        resolve(raw ? JSON.parse(raw) : {});
+        const v = raw ? JSON.parse(raw) : {};
+        // null, arrays, numbers and strings are valid JSON but not a request we understand (and would crash a handler).
+        if (v === null || typeof v !== "object" || Array.isArray(v)) return reject(new Problem(400, "Expected a JSON object."));
+        resolve(v);
       } catch {
         reject(new Problem(400, "Invalid request."));
       }

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { t } from "../i18n";
 import { api } from "../api";
 import { formatBytes } from "../format";
 import {
@@ -65,7 +66,17 @@ interface GroupHeaderProps {
 const GroupHeader: React.FC<GroupHeaderProps> = ({ icon: Icon, label, active, expanded, count, accent, onClick, onToggle }) => (
   <div
     onClick={onClick}
-    className={`flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
+    role="button"
+    tabIndex={0}
+    aria-pressed={active}
+    onKeyDown={(e) => {
+      if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }
+    }}
+    className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-purple)] flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${
       active
         ? accent?.active ?? "bg-[var(--bg-card)] text-[var(--text-primary)]"
         : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
@@ -113,40 +124,69 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Disk space simulation / estimation
   // Real disk usage of the drive that holds the download folder (refreshed every 30s)
   const [disk, setDisk] = useState<{ drive: string; totalBytes: number; freeBytes: number } | null>(null);
+  // Re-check sooner while downloads are in progress (they are what fills the disk) and whenever one finishes.
+  const busy = (counts.unfinished ?? 0) > 0;
+  const finishedCount = counts.finished ?? 0;
+
+  // A different drive was chosen: forget the old reading until the new drive has been read.
+  useEffect(() => {
+    setDisk(null);
+  }, [saveDir]);
+
   useEffect(() => {
     let cancelled = false;
-    const load = () =>
+    let running = false;
+    const load = () => {
+      if (running) return; // never pile up PowerShell checks
+      running = true;
       api
         .getDiskSpace(saveDir)
-        .then((d) => !cancelled && setDisk(d))
-        .catch(() => !cancelled && setDisk(null));
+        .then((d) => {
+          if (!cancelled) setDisk(d);
+        })
+        // One failed check must not hide a warning that is still true: keep the last reading.
+        .catch(() => {})
+        .finally(() => {
+          running = false;
+        });
+    };
     load();
-    const t = setInterval(load, 30000);
+    const t = setInterval(load, busy ? 10000 : 30000);
+    // Coming back to the window after filling the disk elsewhere: look again straight away.
+    const onWake = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
     return () => {
       cancelled = true;
       clearInterval(t);
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
     };
-  }, [saveDir]);
+  }, [saveDir, busy, finishedCount]);
   const diskUsagePercent = disk ? Math.round(((disk.totalBytes - disk.freeBytes) / disk.totalBytes) * 100) : 0;
   // The Disk Space card only slides in when the drive is nearly full
   const showDiskCard = disk !== null && diskUsagePercent >= DISK_WARN_PERCENT;
-  const getFaceEmoji = (pct: number) => {
-    if (pct < 70) return "😊";
-    if (pct <= 85) return "😐";
-    return "😟";
+  // The face and the gauge colour always change together, from the same thresholds.
+  const diskLevel = (pct: number) => {
+    if (pct < 70) return { emoji: "😊", color: "#B2D959" }; // plenty of room: green
+    if (pct <= 85) return { emoji: "😐", color: "#F5B942" }; // getting full: amber
+    return { emoji: "😟", color: "#F25C5C" }; // nearly full: red
   };
+  const level = diskLevel(diskUsagePercent);
 
 
 
   return (
-    <aside className="w-60 h-full flex flex-col justify-between grad-side select-none text-[13px] text-[var(--text-secondary)]">
+    <aside className="w-60 max-[720px]:hidden h-full flex flex-col justify-between grad-side select-none text-[13px] text-[var(--text-secondary)]">
       {/* Top Section: Navigation Trees */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {/* ALL DOWNLOADS */}
         <div>
           <GroupHeader
             icon={Folder}
-            label="All Downloads"
+            label={t("all_downloads", "All Downloads")}
             active={currentFilter.type === "all"}
             expanded={allExpanded}
             count={counts.all}
@@ -163,7 +203,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <div
                     key={cat.name}
                     onClick={() => onSelectFilter({ type: "category", name: cat.name })}
-                    className={`flex items-center gap-3.5 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-[15px] ${
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onSelectFilter({ type: "category", name: cat.name });
+                      }
+                    }}
+                    className={`outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-purple)] flex items-center gap-3.5 px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-[15px] ${
                       isSelected
                         ? "bg-[var(--bg-card)] text-[var(--text-primary)]"
                         : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
@@ -182,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* UNFINISHED */}
         <GroupHeader
           icon={FolderDown}
-          label="Unfinished"
+          label={t("unfinished", "Unfinished")}
           count={counts.unfinished}
           active={currentFilter.type === "status" && currentFilter.status === "unfinished"}
           onClick={() => onSelectFilter({ type: "status", status: "unfinished" })}
@@ -191,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* FINISHED */}
         <GroupHeader
           icon={FolderCheck}
-          label="Finished"
+          label={t("finished", "Finished")}
           count={counts.finished}
           active={currentFilter.type === "status" && currentFilter.status === "finished"}
           onClick={() => onSelectFilter({ type: "status", status: "finished" })}
@@ -229,16 +279,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5 text-[var(--text-primary)]">
             <Rows2 className="w-[18px] h-[18px]" strokeWidth={1.6} />
-            <span className="text-[13px]">Disk Space</span>
+            <span className="text-[13px]">{t("disk_space", "Disk Space")}</span>
           </div>
         </div>
 
         {/* Semicircle Gauge */}
         <div className="relative mx-auto w-[150px] h-[84px]">
           <svg width="150" height="84" viewBox="0 0 150 84" className="overflow-visible">
-            <defs>
-              <linearGradient id="diskGaugeGrad"><stop offset="0%" stopColor="#B2D959" /><stop offset="100%" stopColor="#B2D959" /></linearGradient>
-            </defs>
             <path
               d="M 15 75 A 60 60 0 0 1 135 75"
               fill="none"
@@ -249,17 +296,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <path
               d="M 15 75 A 60 60 0 0 1 135 75"
               fill="none"
-              stroke="url(#diskGaugeGrad)"
+              stroke={level.color}
               strokeWidth="11"
               strokeLinecap="round"
               pathLength={100}
               strokeDasharray={100}
               strokeDashoffset={100 - diskUsagePercent}
               className="transition-all duration-700 ease-out"
+              data-testid="disk-gauge-arc"
             />
           </svg>
           <div className="absolute left-1/2 top-[34px] -translate-x-1/2 text-[26px] leading-none">
-            {disk ? getFaceEmoji(diskUsagePercent) : "—"}
+            {disk ? level.emoji : "—"}
           </div>
           <span className="absolute left-0 -bottom-1 -translate-x-1/2 text-[11px] text-[var(--text-secondary)]">0%</span>
           <span className="absolute right-0 -bottom-1 translate-x-1/2 text-[11px] text-[var(--text-secondary)]">100%</span>

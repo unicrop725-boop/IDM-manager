@@ -1,4 +1,4 @@
-/* Sizes the embedded FlowGet demo to its column and mirrors its live numbers into the caption below it. */
+/* Sizes the embedded BoltGrab demo to its column and mirrors its live numbers into the caption below it. */
 (function () {
   "use strict";
   var frame = document.getElementById("appframe");

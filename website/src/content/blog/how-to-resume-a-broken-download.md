@@ -1,5 +1,5 @@
 ---
-title: "How to resume a broken download on Windows (without starting over)"
+title: "How to resume a broken download on Windows, step by step"
 description: "Why downloads stop halfway, when they can be resumed, and how to continue from where they stopped instead of downloading the whole file again."
 pubDate: 2026-11-23T09:00:00Z
 tags: ["resume", "windows", "troubleshooting"]
@@ -54,7 +54,7 @@ A dedicated download manager is built around the idea that connections fail:
 - It **waits for the internet** instead of failing: when your connection drops, it parks the download and continues automatically when you are back online.
 - It can **refresh an expired link** by reopening the original page and verifying it is the same file.
 
-FlowGet does all of this. Downloads that were running when you closed the app, restarted Windows or lost power continue by themselves the next time it starts, and downloads you paused yourself stay paused. You can read the details on the [features page](/features/#engine).
+BoltGrab does all of this. Downloads that were running when you closed the app, restarted Windows or lost power continue by themselves the next time it starts, and downloads you paused yourself stay paused. You can read the details on the [features page](/features/#engine).
 
 ## When resuming is not possible
 
@@ -62,7 +62,7 @@ Sometimes starting over is the only choice:
 
 - **The server does not support ranges.** The download restarts from zero every time. A download manager will show a "Resume not supported" notice so you know in advance.
 - **The file changed.** The site replaced the file with a new version. Resuming would mix two files, so a careful program stops and tells you.
-- **The link is dead.** Go back to the page where you found the download, get a fresh link, and download again. In FlowGet you can paste the new link into the existing download if it is the same file, and it continues from where it stopped.
+- **The link is dead.** Go back to the page where you found the download, get a fresh link, and download again. In BoltGrab you can paste the new link into the existing download if it is the same file, and it continues from where it stopped.
 
 ## A short checklist
 

@@ -180,7 +180,7 @@ export default function TopBar({
         <button
           onClick={onOpenSettings}
           className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 p-2 text-zinc-300 hover:bg-white/10 hover:text-white transition"
-          title="FlowGet Settings"
+          title="BoltGrab Settings"
         >
           <SettingsIcon size={15} />
         </button>

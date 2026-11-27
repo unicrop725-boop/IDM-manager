@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import en from "./en.json";
 import hi from "./hi.json";
 import gu from "./gu.json";
@@ -12,15 +13,38 @@ const translations: Record<LanguageCode, Record<string, string>> = {
 
 let currentLanguage: LanguageCode = "en";
 
+const listeners = new Set<() => void>();
+
 export function setLanguage(lang: LanguageCode) {
   if (translations[lang]) {
     currentLanguage = lang;
-    localStorage.setItem("flowget_language", lang);
+    try {
+      localStorage.setItem("flowget_language", lang);
+    } catch {
+      /* storage unavailable: the choice lasts for this session */
+    }
+    listeners.forEach((l) => l());
   }
 }
 
+/** Re-renders a component when the language changes (use once near the top of the tree). */
+export function useLanguage(): LanguageCode {
+  return useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    getLanguage,
+  );
+}
+
 export function getLanguage(): LanguageCode {
-  const saved = localStorage.getItem("flowget_language") as LanguageCode;
+  let saved: LanguageCode | null = null;
+  try {
+    saved = localStorage.getItem("flowget_language") as LanguageCode | null;
+  } catch {
+    /* storage unavailable */
+  }
   if (saved && translations[saved]) {
     return saved;
   }

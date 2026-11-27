@@ -24,6 +24,7 @@ const WEBHOOK_SECRET = process.env.DODO_WEBHOOK_SECRET || "";
 const DODO_BASE = process.env.DODO_API_BASE || (process.env.DODO_ENV === "live" ? "https://live.dodopayments.com" : "https://test.dodopayments.com"); // DODO_API_BASE: tests only
 const TOLERANCE_S = 5 * 60;
 const MAX_WEBHOOK_BYTES = 1024 * 1024;
+const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
 class Problem extends Error {
   constructor(status, message) {
@@ -128,7 +129,14 @@ function createHandler(ctx) {
     if (!String(req.headers["content-type"] || "").toLowerCase().startsWith("application/json")) throw new Problem(415, "Expected JSON.");
     if (limited("checkout:" + clientIp(req), 10, 15 * 60 * 1000)) throw new Problem(429, "Too many attempts. Try again in a few minutes.");
 
-    const body = JSON.parse((await readRaw(req, 8 * 1024)) || "{}");
+    let body;
+    try {
+      body = JSON.parse((await readRaw(req, 8 * 1024)) || "{}");
+    } catch (e) {
+      if (e instanceof Problem) throw e;
+      throw new Problem(400, "Invalid request.");
+    }
+    if (body === null || typeof body !== "object" || Array.isArray(body)) throw new Problem(400, "Expected a JSON object.");
     const email = cleanEmail(body.email);
     if (!email) throw new Problem(400, "Enter a valid email address. Your license key is linked to it.");
     const name = cleanName(body.name) || email.split("@")[0];
@@ -167,7 +175,7 @@ function createHandler(ctx) {
   function checkoutStatus(req, res, urlObj) {
     if (limited("status:" + clientIp(req), 90, 5 * 60 * 1000)) throw new Problem(429, "Too many requests.");
     const id = urlObj.searchParams.get("order") || "";
-    const order = /^ord_[a-f0-9]{32}$/.test(id) ? db.orders[id] : null;
+    const order = /^ord_[a-f0-9]{32}$/.test(id) && hasOwn(db.orders, id) ? db.orders[id] : null;
     if (!order) throw new Problem(404, "Order not found.");
     if (order.licenseKey && !order.revoked) return send(req, res, 200, { status: "paid", licenseKey: order.licenseKey, email: order.paymentEmail || order.email });
     if (order.revoked) return send(req, res, 200, { status: "refunded" });
@@ -192,10 +200,16 @@ function createHandler(ctx) {
     const data = event.data || {};
     const paymentId = String(data.payment_id || "");
 
-    if (event.type === "payment.succeeded" && paymentId) {
-      if (!db.payments[paymentId]) {
+    // A payment for some OTHER product on the same Dodo account must not mint a FlowGet license. Only checked when the
+    // payload carries its cart, so a payload without one can never block a genuine sale.
+    const cart = Array.isArray(data.product_cart) ? data.product_cart : null;
+    const notOurProduct = !!(PRODUCT_ID && cart && !cart.some((i) => i && i.product_id === PRODUCT_ID));
+    if (notOurProduct && event.type === "payment.succeeded") console.warn(`[dodo] payment ${paymentId} is not for the BoltGrab product: no license issued`);
+
+    if (event.type === "payment.succeeded" && paymentId && !notOurProduct) {
+      if (!hasOwn(db.payments, paymentId)) {
         const meta = data.metadata || {};
-        const order = typeof meta.order_id === "string" ? db.orders[meta.order_id] : null;
+        const order = typeof meta.order_id === "string" && hasOwn(db.orders, meta.order_id) ? db.orders[meta.order_id] : null;
         const paymentEmail = cleanEmail(data.customer && data.customer.email) || (order && order.email) || "";
         if (!paymentEmail) throw new Problem(400, "Payment has no customer email.");
         const accountEmail = (order && order.email) || cleanEmail(meta.account_email) || paymentEmail;
@@ -206,11 +220,11 @@ function createHandler(ctx) {
         if (order) Object.assign(order, { status: "paid", paymentId, paymentEmail, licenseKey, paidAt: Date.now() });
       }
     } else if ((event.type === "refund.succeeded" && data.is_partial !== true) || event.type === "dispute.lost") {
-      const p = db.payments[paymentId];
+      const p = hasOwn(db.payments, paymentId) ? db.payments[paymentId] : null;
       if (p) {
-        const lic = db.licenses[p.licenseKey];
+        const lic = hasOwn(db.licenses, p.licenseKey) ? db.licenses[p.licenseKey] : null;
         if (lic) lic.revoked = true;
-        const order = p.orderId && db.orders[p.orderId];
+        const order = p.orderId && hasOwn(db.orders, p.orderId) ? db.orders[p.orderId] : null;
         if (order) order.revoked = true;
       }
     }

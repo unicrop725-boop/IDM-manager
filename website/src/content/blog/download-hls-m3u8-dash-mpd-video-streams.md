@@ -1,6 +1,6 @@
 ---
 title: "How to download HLS (.m3u8) and DASH (.mpd) video streams"
-description: "What .m3u8 and .mpd files are, why streaming videos are not single files, and how to save a stream you are allowed to keep with yt-dlp, ffmpeg or a download manager."
+description: "What .m3u8 and .mpd files are, why streams are not single files, and how to save a stream you may keep with yt-dlp, ffmpeg or a download manager."
 pubDate: 2026-11-23T07:00:00Z
 tags: ["video", "streaming", "ffmpeg"]
 cover: "/img/blog/download-hls-m3u8-dash-mpd-video-streams.jpg"
@@ -11,12 +11,12 @@ faq:
   - q: "Can I download any streaming video?"
     a: "No. Videos protected by DRM, such as paid streaming services, cannot be downloaded and tools should not try to bypass that protection. Only download videos you have the right to keep."
   - q: "Do I need ffmpeg?"
-    a: "Usually yes, to join the separate video and audio parts into one file. FlowGet installs yt-dlp and ffmpeg for you the first time they are needed."
+    a: "Usually yes, to join the separate video and audio parts into one file. BoltGrab sets up everything it needs for you the first time."
 ---
 
 You find a video, the player works, but there is no download button, and the address of the media file is nowhere to be seen. That is because most modern video is not one file. It is a *stream*: a playlist that points to hundreds of short pieces. This guide explains what is going on and how to save a stream you are allowed to keep.
 
-> Only download videos you own, that are in the public domain or licensed for download, or that you have permission to save. Videos protected by DRM (paid streaming services) are not something to download, and FlowGet refuses them.
+> Only download videos you own, that are in the public domain or licensed for download, or that you have permission to save. Videos protected by DRM (paid streaming services) are not something to download, and BoltGrab refuses them.
 
 ## What HLS and DASH are
 
@@ -35,7 +35,7 @@ If you are comfortable with browser developer tools:
 2. Type `m3u8` or `mpd` in the filter box and start the video.
 3. The playlist request appears. Copy its address.
 
-Easier: a download manager with a browser extension notices these playlists for you. FlowGet's extension lists the streams it sees on the page and shows a quality menu on the video.
+Easier: a download manager with a browser extension notices these playlists for you. BoltGrab's extension lists the streams it sees on the page and shows a quality menu on the video.
 
 ## Option 1: yt-dlp and ffmpeg
 
@@ -68,7 +68,7 @@ This takes the best stream by default. It is quick, but you have less control ov
 
 ## Option 3: a download manager
 
-FlowGet puts this into the video itself. A small Download button appears on the video with a list of qualities and a recommended choice (the best up to 1080p), with an audio-only option. For pages where the video is hidden behind a stream, it uses the playlist the player loaded. The first time you need yt-dlp or ffmpeg, FlowGet downloads them for you and checks them against the publisher's checksum, so there is no PATH to edit. See the [video section of the feature list](/features/#video).
+BoltGrab puts this into the video itself. A small Download button appears on the video with a list of qualities and a recommended choice (the best up to 1080p), with an audio-only option. For pages where the video is hidden behind a stream, it uses the playlist the player loaded. The first time a video needs extra components, BoltGrab sets them up for you and verifies them, so there is nothing to install or configure. See the [video section of the feature list](/features/#video).
 
 ## Common problems
 

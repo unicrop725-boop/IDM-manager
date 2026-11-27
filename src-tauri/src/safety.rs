@@ -172,7 +172,7 @@ pub async fn vt_lookup(sha256: &str, key: &str) -> VtResult {
         }
         *last = Some(Instant::now());
     }
-    let client = match reqwest::Client::builder().user_agent("FlowGet").timeout(Duration::from_secs(25)).build() {
+    let client = match reqwest::Client::builder().user_agent("BoltGrab").timeout(Duration::from_secs(25)).build() {
         Ok(c) => c,
         Err(e) => return parse_vt_response(0, &e.to_string(), sha256),
     };

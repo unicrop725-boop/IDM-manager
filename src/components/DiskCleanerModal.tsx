@@ -13,6 +13,8 @@ interface DiskCleanerModalProps {
   onClean: (targetIds: string[], deleteFiles: boolean) => Promise<void>;
   /** the saved default drive ("" = the download folder's drive) */
   defaultDrive?: string;
+  /** Open on this drive instead of the default one (used when an out-of-space alert sends you here). */
+  initialDrive?: string;
   downloadDir?: string;
   /** called after the user makes the selected drive the default */
   onDefaultChanged?: () => void;
@@ -23,6 +25,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
   onClose,
   onClean,
   defaultDrive = "",
+  initialDrive = "",
   downloadDir = "",
   onDefaultChanged,
 }) => {
@@ -40,7 +43,7 @@ export const DiskCleanerModal: React.FC<DiskCleanerModalProps> = ({
         if (!alive) return;
         const list = Array.isArray(raw) ? raw : [];
         setDrives(list);
-        const wanted = driveOf(defaultDrive) || driveOf(downloadDir);
+        const wanted = driveOf(initialDrive) || driveOf(defaultDrive) || driveOf(downloadDir);
         setDrive(list.find((d) => d.name.toUpperCase() === wanted)?.name ?? list[0]?.name ?? "");
       })
       .catch(() => alive && setDrives([]));

@@ -5,7 +5,7 @@ interface Props {
   mode: "signin" | "signup";
 }
 const { mode } = Astro.props;
-const resetHref = `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("Reset my FlowGet password")}`;
+const resetHref = `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("Reset my BoltGrab password")}`;
 ---
 <div id="auth" data-api={SITE.apiUrl} data-mode={mode}>
   {mode === "signin" ? (
@@ -118,6 +118,6 @@ const resetHref = `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("Res
   <section id="view-off" class="view" hidden>
     <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5M12 16v.1"/></svg></span>
     <h1>Sign in is not available yet</h1>
-    <p class="sub">Accounts are being set up. You can still <a href="/#pricing">get FlowGet Pro</a> or <a href={`mailto:${SITE.supportEmail}`}>contact support</a>.</p>
+    <p class="sub">Accounts are being set up. You can still <a href="/#pricing">get BoltGrab Pro</a> or <a href={`mailto:${SITE.supportEmail}`}>contact support</a>.</p>
   </section>
 </div>

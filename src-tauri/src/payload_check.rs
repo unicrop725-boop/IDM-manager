@@ -12,7 +12,7 @@ pub const MAX_FIELD_LEN: usize = 64 * 1024;
 const ALLOWED_SCHEMES: [&str; 6] = ["http", "https", "ftp", "ftps", "sftp", "magnet"];
 const TEXT_FIELDS: [&str; 7] = ["fileName", "saveDir", "cookies", "referer", "userAgent", "mime", "action"];
 
-/// Check that `url` is something FlowGet is willing to download.
+/// Check that `url` is something BoltGrab is willing to download.
 pub fn validate_download_url(url: &str) -> Result<(), String> {
     if url.is_empty() || url.len() > MAX_URL_LEN {
         return Err("url has an invalid length".into());

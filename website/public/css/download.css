@@ -89,6 +89,8 @@
 .reqs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .verify { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .verify .tile { padding: 32px; }
+/* A grid item's minimum width is its content's, so the long command inside .cmd must be allowed to shrink and scroll. */
+.verify > *, .dlcard > *, .steps4 > *, .reqs > * { min-width: 0; }
 .cmd { margin: 18px 0 0; padding: 16px 18px; background: #000; border: 1px solid rgba(255, 255, 255, .12); overflow-x: auto; }
 .cmd code { font: 500 14px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--lime); background: none; border: 0; padding: 0; }
 
@@ -99,7 +101,7 @@
 .helpband .btn { flex: none; }
 
 @media (max-width: 960px) {
-  .dlcard, .verify { grid-template-columns: 1fr; }
+  .dlcard, .verify { grid-template-columns: minmax(0, 1fr); }
   .steps4 { grid-template-columns: 1fr 1fr; }
   .reqs { grid-template-columns: 1fr; }
   .extband, .helpband { flex-direction: column; align-items: flex-start; padding: 40px 26px 32px; }
@@ -112,3 +114,5 @@
   .platforms { max-width: none; }
   .ext-main { flex-direction: column; gap: 16px; }
 }
+
+@media (max-width: 480px) { .verify .tile { padding: 24px 20px; } }

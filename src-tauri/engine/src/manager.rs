@@ -290,9 +290,18 @@ struct Inner {
     h3_memory: H3Memory,
     /// Turbo Mode switch, shared with every running download's adapter set.
     turbo: Arc<AtomicBool>,
+    /// Hard ceiling on parallel connections per download. The app sets it from the verified license; nothing a
+    /// download record, a saved setting or a caller asks for can go above it. Always within MIN..=MAX_CONNECTIONS.
+    conn_cap: AtomicU32,
+    /// Whether Turbo Mode may be switched on at all (set from the verified license).
+    turbo_allowed: AtomicBool,
 }
 
 impl Inner {
+    fn conn_cap(&self) -> u32 {
+        self.conn_cap.load(Ordering::SeqCst).clamp(MIN_CONNECTIONS, MAX_CONNECTIONS)
+    }
+
     fn send(&self, ev: EngineEvent) {
         // The receiver only disappears when the app is shutting down.
         let _ = self.tx.send(ev);
@@ -344,6 +353,9 @@ impl Engine {
         Self {
             inner: Arc::new(Inner {
                 turbo,
+                // Unrestricted until the host application says otherwise (benchmarks and tests use the bare engine).
+                conn_cap: AtomicU32::new(MAX_CONNECTIONS),
+                turbo_allowed: AtomicBool::new(true),
                 cfg: Mutex::new(cfg),
                 entries: Mutex::new(HashMap::new()),
                 tx,
@@ -363,7 +375,33 @@ impl Engine {
     }
 
     pub fn set_default_connections(&self, n: u32) {
-        self.inner.cfg.lock().unwrap().default_connections = n.clamp(MIN_CONNECTIONS, MAX_CONNECTIONS);
+        let cap = self.inner.conn_cap();
+        self.inner.cfg.lock().unwrap().default_connections = n.clamp(MIN_CONNECTIONS, cap);
+    }
+
+    /// Licensing hook: the most connections one download may use, and whether Turbo Mode is allowed. Takes effect at
+    /// once, also for downloads that are already running or are restored from disk later: the per-download ceiling
+    /// is re-read from here, never trusted from a saved record. Lowering it also lowers the default connection count
+    /// and switches Turbo Mode off.
+    pub fn set_limits(&self, max_connections: u32, turbo_allowed: bool) {
+        let cap = max_connections.clamp(MIN_CONNECTIONS, MAX_CONNECTIONS);
+        self.inner.conn_cap.store(cap, Ordering::SeqCst);
+        self.inner.turbo_allowed.store(turbo_allowed, Ordering::SeqCst);
+        {
+            let mut cfg = self.inner.cfg.lock().unwrap();
+            cfg.default_connections = cfg.default_connections.clamp(MIN_CONNECTIONS, cap);
+            if !turbo_allowed {
+                cfg.turbo_mode = false;
+            }
+        }
+        if !turbo_allowed {
+            self.inner.turbo.store(false, Ordering::SeqCst);
+        }
+    }
+
+    /// The connection ceiling currently in force.
+    pub fn connection_cap(&self) -> u32 {
+        self.inner.conn_cap()
     }
 
     pub fn default_dir(&self) -> PathBuf {
@@ -392,6 +430,8 @@ impl Engine {
     /// Turbo Mode: spread connections over every active network adapter (Wi-Fi, Ethernet, USB
     /// tethering, ...). Takes effect immediately for new connections of running downloads.
     pub fn set_turbo_mode(&self, on: bool) {
+        // Without permission (no license) the switch simply stays off, whoever asks.
+        let on = on && self.inner.turbo_allowed.load(Ordering::SeqCst);
         self.inner.turbo.store(on, Ordering::SeqCst);
         self.inner.cfg.lock().unwrap().turbo_mode = on;
     }
@@ -592,7 +632,7 @@ impl Engine {
             .connections
             .or(remembered)
             .unwrap_or(cfg.default_connections)
-            .clamp(MIN_CONNECTIONS, MAX_CONNECTIONS);
+            .clamp(MIN_CONNECTIONS, self.inner.conn_cap());
         let save_dir = req
             .save_dir
             .as_deref()
@@ -1085,7 +1125,13 @@ enum PhaseEnd {
 
 /// Probe, plan, download, verify.
 async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationToken) -> Result<Outcome, EngineError> {
-    let rec = entry.snapshot();
+    let mut rec = entry.snapshot();
+    // A saved record (database, backup, older license) is never trusted for its connection count.
+    let cap = inner.conn_cap();
+    if rec.connections > cap {
+        rec.connections = cap;
+        entry.with(|r| r.connections = cap);
+    }
     let url = Url::parse(&rec.url)?;
     policy::check_url(&url)?;
     let cfg = inner.cfg.lock().unwrap().clone();
@@ -1145,6 +1191,20 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
         } else {
             vec![segments::single(total)]
         };
+        // A file that cannot fit is refused now, with the numbers, rather than failing later with a
+        // generic disk error. (The size is recorded so the list still shows how big the file is.)
+        if let Some(needed) = total {
+            if let Some(free) = path.parent().and_then(crate::diskspace::free_space) {
+                if needed > free {
+                    entry.with(|r| r.total_size = Some(needed));
+                    return Err(EngineError::NotEnoughSpace {
+                        needed,
+                        free,
+                        drive: crate::diskspace::drive_label(&path),
+                    });
+                }
+            }
+        }
         // Pre-allocate the full file now (when the size is known): fails early if the disk is full.
         let file = OffsetFile::create(&path, total)?;
         entry.with(|r| {
@@ -1178,7 +1238,7 @@ async fn execute(inner: &Arc<Inner>, entry: &Arc<Entry>, cancel: &CancellationTo
     // AIMD: the download's connection count is the ceiling. It starts lower (4, or the count that
     // worked best for this website last time) and adds one connection per `aimd_interval` while the
     // total speed keeps improving. Single-stream downloads and servers without ranges skip this.
-    let ceiling = rec.connections.clamp(MIN_CONNECTIONS, MAX_CONNECTIONS);
+    let ceiling = rec.connections.clamp(MIN_CONNECTIONS, inner.conn_cap());
     let remembered = domain_of(&probed.final_url).and_then(|d| inner.hints.lock().unwrap().get(&d).map(|h| h.connections));
     let start = match remembered {
         Some(best) => best.clamp(MIN_CONNECTIONS, ceiling),
@@ -1904,5 +1964,72 @@ mod tests {
         assert_eq!(h.connections, MAX_CONNECTIONS);
         let h = merge_hint(None, "example.com", 0, 1, false).unwrap();
         assert_eq!(h.connections, MIN_CONNECTIONS);
+    }
+
+    // ---- licensing limits are enforced inside the engine, whoever asks ------------------------------------------
+
+    fn limited_engine(cap: u32, turbo_allowed: bool) -> (Engine, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+        let engine = Engine::new(EngineConfig::new(dir.path().to_path_buf()), tx);
+        engine.set_limits(cap, turbo_allowed);
+        (engine, dir)
+    }
+
+    #[tokio::test]
+    async fn a_download_cannot_ask_for_more_connections_than_the_cap() {
+        let (engine, _d) = limited_engine(2, false);
+        for asked in [Some(32u32), Some(3), Some(u32::MAX), None] {
+            let info = engine
+                .add(AddRequest { url: "https://example.com/a.bin".into(), connections: asked, start_paused: true, ..Default::default() })
+                .await
+                .unwrap();
+            assert!(info.connections <= 2, "asked {asked:?}, got {}", info.connections);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_remembered_domain_count_cannot_exceed_the_cap() {
+        let (engine, _d) = limited_engine(2, false);
+        engine.set_domain_hints(vec![DomainHint { domain: "example.com".into(), connections: 32, speed_bps: 1 }]);
+        let info = engine
+            .add(AddRequest { url: "https://example.com/a.bin".into(), start_paused: true, ..Default::default() })
+            .await
+            .unwrap();
+        assert_eq!(info.connections, 2);
+    }
+
+    #[tokio::test]
+    async fn turbo_stays_off_without_permission_even_if_a_saved_setting_says_on() {
+        let (engine, _d) = limited_engine(2, false);
+        engine.set_turbo_mode(true); // what startup does with a tampered `turbo_mode=1` in the database
+        assert!(!engine.turbo_mode());
+        engine.set_default_connections(32);
+        assert_eq!(engine.default_connections(), 2);
+    }
+
+    #[tokio::test]
+    async fn losing_the_license_switches_turbo_off_and_lowers_defaults_at_once() {
+        let (engine, _d) = limited_engine(32, true);
+        engine.set_turbo_mode(true);
+        engine.set_default_connections(24);
+        assert!(engine.turbo_mode());
+        assert_eq!(engine.default_connections(), 24);
+        engine.set_limits(2, false); // refund / revoked
+        assert!(!engine.turbo_mode());
+        assert_eq!(engine.default_connections(), 2);
+        assert_eq!(engine.connection_cap(), 2);
+        engine.set_limits(32, true); // licensed again: allowed, but not silently re-enabled
+        assert!(!engine.turbo_mode());
+        engine.set_turbo_mode(true);
+        assert!(engine.turbo_mode());
+    }
+
+    #[tokio::test]
+    async fn limits_are_always_inside_the_valid_range() {
+        let (engine, _d) = limited_engine(0, true);
+        assert_eq!(engine.connection_cap(), MIN_CONNECTIONS);
+        engine.set_limits(u32::MAX, true);
+        assert_eq!(engine.connection_cap(), MAX_CONNECTIONS);
     }
 }

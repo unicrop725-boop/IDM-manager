@@ -16,8 +16,8 @@ const jsonLd = [
 ];
 ---
 <Base
-  title='Privacy: what FlowGet stores and sends'
-  description='What FlowGet keeps on your PC and the few optional features that contact other services. No ads and no tracking.'
+  title='Privacy: what BoltGrab stores and sends'
+  description='What BoltGrab keeps on your PC and the few optional features that contact other services. No ads and no tracking.'
   current=''
   jsonLd={jsonLd}
 >
@@ -25,7 +25,7 @@ const jsonLd = [
   <div class="wrap">
     <div class="page-head">
       <h1>Privacy</h1>
-      <p>FlowGet has no ads and no tracking. This page lists what it keeps and every optional feature that contacts another service.</p>
+      <p>BoltGrab has no ads and no tracking. This page lists what it keeps and every optional feature that contacts another service.</p>
     </div>
 
     <div class="prose">
@@ -35,23 +35,23 @@ const jsonLd = [
       <ul>
         <li>Your download list, queues, categories and settings are stored in a file on your PC.</li>
         <li>Passwords for downloads that need a login are kept in the Windows Credential Manager, not in that file.</li>
-        <li>The browser extension sends links, file names and the cookies needed for a download only to FlowGet on your own PC (the address 127.0.0.1). Cookies are not stored on disk by the extension.</li>
+        <li>The browser extension sends links, file names and the cookies needed for a download only to BoltGrab on your own PC (the address 127.0.0.1). Cookies are not stored on disk by the extension.</li>
         <li>Your license is checked on your PC against a digital signature. It does not need the internet.</li>
-        <li>FlowGet does not send usage statistics or crash reports.</li>
+        <li>BoltGrab does not send usage statistics or crash reports.</li>
       </ul>
 
-      <h2>When FlowGet contacts other services</h2>
+      <h2>When BoltGrab contacts other services</h2>
       <p>Only for the things you ask it to do, or the optional features below.</p>
       <ul>
-        <li><b>The downloads themselves.</b> FlowGet connects to the websites you download from, just like a browser would.</li>
-        <li><b>VirusTotal check (off by default).</b> If you add your own API key, FlowGet sends the SHA-256 fingerprint of a finished file to VirusTotal. The file is never uploaded.</li>
-        <li><b>Video tools.</b> The first time a video needs them, FlowGet downloads yt-dlp from GitHub and ffmpeg from gyan.dev, and checks each against the publisher's checksum. yt-dlp is refreshed about weekly unless you switch that off.</li>
+        <li><b>The downloads themselves.</b> BoltGrab connects to the websites you download from, just like a browser would.</li>
+        <li><b>VirusTotal check (off by default).</b> If you add your own API key, BoltGrab sends the SHA-256 fingerprint of a finished file to VirusTotal. The file is never uploaded.</li>
+        <li><b>Video components.</b> The first time a video needs them, BoltGrab downloads two small helper components from their publishers' official download sites (GitHub and gyan.dev) and verifies each against the publisher's checksum. The video component is refreshed about weekly unless you switch that off.</li>
         <li><b>Speed test.</b> Only when you open it: it measures against Cloudflare's speed servers.</li>
         <li><b>Trusted Sites.</b> The page shows each listed site's own icon, which your PC loads from that site when you open the page.</li>
       </ul>
 
       <h2>This website</h2>
-      <p>This website sets no cookies and loads nothing from other companies. Our hosting provider may keep standard server logs for security and reliability.</p>
+      <p>Browsing this website sets no cookies and loads nothing from other companies. Only if you create an account or sign in: we set a session cookie so you stay signed in, the sign-in and sign-up pages load Google's sign-in button, and the phone-number field shows country flag images from flagcdn.com. Our hosting provider may keep standard server logs for security and reliability.</p>
 
       <h2>Contact</h2>
       <p>Questions about privacy: <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a></p>

@@ -1,4 +1,5 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useLanguage } from "./i18n";
 import { listen, type UnlistenFn } from "./events";
 import { IS_DEMO } from "./demo/flag";
 import { api, errorText } from "./api";
@@ -26,6 +27,9 @@ import ImportExportModal from "./components/ImportExportModal";
 import TrustedSites from "./components/TrustedSites";
 import { TRUSTED_SITES } from "./data/trustedSites";
 import { SafetyConfirmModal, needsConfirmation } from "./components/SafetyConfirmModal";
+import { ConfirmModal, type ConfirmRequest } from "./components/ConfirmModal";
+import { SpaceAlerts, type SpaceAlertItem } from "./components/SpaceAlerts";
+import { driveOf } from "./utils/drives";
 import SiteGrabberModal from "./components/SiteGrabberModal";
 import QueueModal from "./components/QueueModal";
 import CategoryModal from "./components/CategoryModal";
@@ -34,6 +38,7 @@ import BandwidthModal from "./components/BandwidthModal";
 import StatisticsModal from "./components/StatisticsModal";
 import ShareModal from "./components/ShareModal";
 import LicenseModal from "./components/LicenseModal";
+import { isProLicenseError } from "./utils/license";
 import UpdateModal from "./components/UpdateModal";
 import { cleanFileName } from "./utils/smartNaming";
 import { recordCrashReport } from "./utils/crashReporter";
@@ -59,6 +64,7 @@ export default function App() {
   const [downloads, setDownloads] = useState<Record<string, DownloadInfo>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [queues, setQueues] = useState<QueueInfo[]>([]);
+  useLanguage(); // re-render the whole window when the language changes
   const [settings, setSettings] = useState<Settings | null>(null);
   const [_adapters, setAdapters] = useState<AdapterInfo[]>([]);
 
@@ -75,6 +81,7 @@ export default function App() {
 
   // Modals & Popups
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(null);
   const [quickAddUrl, setQuickAddUrl] = useState("");
   const [capturedMeta, setCapturedMeta] = useState<{
     fileName?: string;
@@ -88,6 +95,10 @@ export default function App() {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isSiteGrabberOpen, setIsSiteGrabberOpen] = useState(false);
   const [isDiskCleanerOpen, setIsDiskCleanerOpen] = useState(false);
+  // Drive the Disk Cleaner should open on when it was reached from an out-of-space alert.
+  const [cleanerDrive, setCleanerDrive] = useState("");
+  const [dismissedSpace, setDismissedSpace] = useState<Set<string>>(new Set());
+  const spaceSeeded = useRef(false);
   const [isSpeedTestOpen, setIsSpeedTestOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   // Safety check results per download, what the bandwidth rules decide now, and a file waiting for "open anyway".
@@ -120,8 +131,27 @@ export default function App() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    // Remembered as the Theme setting too, so Options > General shows what is really in use.
+    api.setSetting("theme", next).catch(() => {});
   };
+
+  // The Theme option in Options > General (Dark, Light, System Default) is applied when it is saved or loaded.
+  useEffect(() => {
+    const pref = settings?.theme;
+    if (pref === "light" || pref === "dark") {
+      setTheme(pref);
+      return;
+    }
+    if (pref === "system" && typeof window.matchMedia === "function") {
+      const mq = window.matchMedia("(prefers-color-scheme: light)");
+      const apply = () => setTheme(mq.matches ? "light" : "dark");
+      apply();
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+  }, [settings?.theme]);
 
   // Request notification permissions
   useEffect(() => {
@@ -155,6 +185,43 @@ export default function App() {
   useEffect(() => {
     refreshAll();
   }, [refreshAll]);
+
+  // ---- Out-of-space alerts -----------------------------------------------------------------
+  // A download that failed because its drive is (or would be) full gets a side alert that offers
+  // Disk Cleaner on that drive. Failures that were already there when the app started stay quiet.
+  const isSpaceFailure = (d: DownloadInfo) =>
+    d.state === "failed" && (d.error?.code === "not_enough_space" || d.error?.code === "disk_full");
+
+  useEffect(() => {
+    if (!settings || spaceSeeded.current) return; // wait until the first full load has finished
+    spaceSeeded.current = true;
+    const old = Object.values(downloads).filter(isSpaceFailure).map((d) => d.id);
+    if (old.length) setDismissedSpace(new Set(old));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings]);
+
+  // Pressing Resume (or Restart) and failing again should alert again: forget dismissals once a download is no longer failed.
+  useEffect(() => {
+    setDismissedSpace((cur) => {
+      if (cur.size === 0) return cur;
+      const keep = new Set([...cur].filter((id) => downloads[id] && isSpaceFailure(downloads[id])));
+      return keep.size === cur.size ? cur : keep;
+    });
+  }, [downloads]);
+
+  const spaceAlerts: SpaceAlertItem[] = useMemo(
+    () =>
+      Object.values(downloads)
+        .filter((d) => isSpaceFailure(d) && !dismissedSpace.has(d.id))
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((d) => ({
+          id: d.id,
+          fileName: d.fileName,
+          drive: driveOf(d.filePath || d.saveDir) ?? "",
+          message: d.error?.message ?? "There is not enough free space on the disk.",
+        })),
+    [downloads, dismissedSpace]
+  );
 
   // URL View parameter handler for documentation screenshots & testing
   useEffect(() => {
@@ -225,15 +292,21 @@ export default function App() {
     const un = [
       listen<SafetyReport>("safety-updated", ({ payload }) => setSafety((cur) => ({ ...cur, [payload.id]: payload }))),
       listen<BandwidthEffective>("bandwidth-state", ({ payload }) => setBandwidth(payload)),
-      // yt-dlp / ffmpeg are installed on first use: say so, with progress, instead of looking stuck.
+      // The license server turned this license off (refunded, or its slot went to another PC): show the new state.
+      listen<null>("license-changed", () => {
+        api.getLicenseStatus().then(setLicenseStatus).catch(() => {});
+      }),
+      // The helper components are installed on first use: say so, with progress, instead of looking stuck.
+      // (Their real program names are never shown.)
       listen<ToolsProgress>("tools-progress", ({ payload: p }) => {
+        const what = p.tool === "ffmpeg" ? "the media converter" : "the video engine";
         if (p.stage === "downloading") {
           const pct = p.total > 0 ? ` ${Math.round((p.downloaded / p.total) * 100)}%` : "";
-          setNotice(`Installing ${p.tool}…${pct}`);
+          setNotice(`Setting up ${what}…${pct}`);
         } else if (p.stage === "done") {
-          setNotice(`${p.tool} is ready.`);
+          setNotice(`${what[0].toUpperCase()}${what.slice(1)} is ready.`);
         } else if (p.stage === "error") {
-          setNotice(`Could not install ${p.tool}: ${p.message}`);
+          setNotice(`Could not set up ${what}: ${p.message}`);
         } else if (p.message) {
           setNotice(p.message);
         }
@@ -241,6 +314,71 @@ export default function App() {
     ];
     return () => {
       un.forEach((p) => p.then((fn) => fn()));
+    };
+  }, []);
+
+  // A download sent from the browser extension. Kept in a ref so the listener below subscribes only once: the big
+  // event effect re-subscribes whenever settings change, and a capture arriving in that gap would be lost.
+  const handleBrowserCapture = (payload: any) => {
+    // quality already chosen in the browser's video menu: start straight away
+    if (
+      payload.url &&
+      (getVideoSite(payload.url) || /\.(m3u8|mpd)(\?|#|$)/i.test(payload.url)) &&
+      (payload.mediaHeight || payload.mediaFps || payload.mediaAudioOnly || payload.convertTo)
+    ) {
+      api
+        .addDownload({
+          url: payload.url,
+          fileName: payload.fileName || undefined,
+          referer: payload.referer || undefined,
+          userAgent: payload.userAgent || undefined,
+          cookies: payload.cookies || undefined,
+          mediaHeight: payload.mediaHeight || undefined,
+          mediaFps: payload.mediaFps || undefined,
+          mediaAudioOnly: payload.mediaAudioOnly || undefined,
+          convertTo: payload.convertTo || undefined,
+        })
+        .then(() => refreshAll())
+        .catch((e) => {
+          const msg = typeof e === "string" ? e : e?.message || "Could not start the video download.";
+          if (isProLicenseError(msg)) {
+            // video downloads need Pro: ask for the key now instead of failing quietly in the background
+            setNotice("Video downloading needs a BoltGrab Pro license. Enter your key to continue.");
+            setIsLicenseModalOpen(true);
+          } else {
+            setNotice(msg);
+          }
+        });
+      return;
+    }
+    // a video page sent from the browser menu: open the quality picker instead of the file dialog
+    if (payload.url && getVideoSite(payload.url)) {
+      window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
+      return;
+    }
+    setQuickAddUrl(payload.url || "");
+    setCapturedMeta({
+      fileName: payload.fileName || "",
+      cookies: payload.cookies || "",
+      referer: payload.referer || "",
+      userAgent: payload.userAgent || "",
+    });
+    setIsAddModalOpen(true);
+  };
+  const captureHandler = useRef(handleBrowserCapture);
+  captureHandler.current = handleBrowserCapture;
+
+  useEffect(() => {
+    const un = listen<any>("browser-download-captured", ({ payload }) => captureHandler.current(payload));
+    // Downloads the browser sent while this window was still loading (e.g. the browser started BoltGrab).
+    un.then(() =>
+      api
+        .takePendingCaptures()
+        .then((list) => list.forEach((p) => captureHandler.current(p)))
+        .catch(() => {}),
+    );
+    return () => {
+      un.then((f) => f());
     };
   }, []);
 
@@ -302,43 +440,6 @@ export default function App() {
       listen<QueueInfo>("queue-updated", ({ payload: q }) => {
         setQueues((cur) => cur.map((item) => (item.id === q.id ? q : item)));
       }),
-      listen<any>("browser-download-captured", ({ payload }) => {
-        // quality already chosen in the browser's video menu: start straight away
-        if (
-          payload.url &&
-          (getVideoSite(payload.url) || /\.(m3u8|mpd)(\?|#|$)/i.test(payload.url)) &&
-          (payload.mediaHeight || payload.mediaFps || payload.mediaAudioOnly || payload.convertTo)
-        ) {
-          api
-            .addDownload({
-              url: payload.url,
-              fileName: payload.fileName || undefined,
-              referer: payload.referer || undefined,
-              userAgent: payload.userAgent || undefined,
-              cookies: payload.cookies || undefined,
-              mediaHeight: payload.mediaHeight || undefined,
-              mediaFps: payload.mediaFps || undefined,
-              mediaAudioOnly: payload.mediaAudioOnly || undefined,
-              convertTo: payload.convertTo || undefined,
-            })
-            .then(() => refreshAll())
-            .catch((e) => setNotice(typeof e === "string" ? e : e?.message || "Could not start the video download."));
-          return;
-        }
-        // a video page sent from the browser menu: open the quality picker instead of the file dialog
-        if (payload.url && getVideoSite(payload.url)) {
-          window.dispatchEvent(new CustomEvent("flowget-fill-url", { detail: payload.url }));
-          return;
-        }
-        setQuickAddUrl(payload.url || "");
-        setCapturedMeta({
-          fileName: payload.fileName || "",
-          cookies: payload.cookies || "",
-          referer: payload.referer || "",
-          userAgent: payload.userAgent || "",
-        });
-        setIsAddModalOpen(true);
-      }),
     ];
 
     const openDownloadsFolderHandler = () => {
@@ -353,7 +454,7 @@ export default function App() {
     };
   }, [settings, activeProgressModalId]);
 
-  // Copied links are detected by the backend (system-wide, even while FlowGet is in the background)
+  // Copied links are detected by the backend (system-wide, even while BoltGrab is in the background)
   useEffect(() => {
     const un = listen<{ url: string; kind: string }>("clipboard-url", ({ payload }) => {
       setClipboardCandidateUrl(payload.url);
@@ -393,7 +494,7 @@ export default function App() {
           activeIds.forEach((id) => api.pause(id).catch(() => {}));
           if ("Notification" in window && Notification.permission === "granted") {
             try {
-              new Notification("FlowGet Battery Saver", {
+              new Notification("BoltGrab Battery Saver", {
                 body: "Paused active downloads because laptop battery is below 20%.",
               });
             } catch {}
@@ -470,6 +571,12 @@ export default function App() {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // A dialog is open: the list behind it must not react (Delete would remove every selected download unseen).
+      const modalOpen = !!document.querySelector('[role="dialog"][aria-modal="true"]');
+      // Space and Enter on a focused button, link or menu item belong to that control, not to the download list.
+      const onControl = !!(e.target as HTMLElement | null)?.closest?.('button, a[href], select, [role="menuitem"], [role="button"], [role="combobox"]');
+      if (modalOpen) return;
+
       // Ctrl+N -> Add URL
       if ((e.ctrlKey || e.metaKey) && (e.key === "n" || e.key === "N")) {
         e.preventDefault();
@@ -500,8 +607,8 @@ export default function App() {
         }
       }
 
-      // Delete -> Remove selected
-      if (e.key === "Delete" || e.key === "Backspace") {
+      // Delete -> Remove selected (Backspace is deliberately not a shortcut: a stray press must not start a removal)
+      if (e.key === "Delete") {
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag !== "input" && activeTag !== "textarea" && selectedIds.size > 0) {
           e.preventDefault();
@@ -511,7 +618,7 @@ export default function App() {
       }
 
       // Space -> Pause / Resume selected
-      if (e.key === " ") {
+      if (e.key === " " && !onControl) {
         const activeTag = document.activeElement?.tagName.toLowerCase();
         if (activeTag !== "input" && activeTag !== "textarea" && selectedIds.size > 0) {
           e.preventDefault();
@@ -585,7 +692,8 @@ export default function App() {
           cmp = (a.etaSecs || 9999999) - (b.etaSecs || 9999999);
           break;
         case "date":
-          cmp = (a.createdAt || 0) - (b.createdAt || 0);
+          // The column shows the completion time (or the start time while unfinished), so that is what it sorts by.
+          cmp = (a.completedAt || a.createdAt || 0) - (b.completedAt || b.createdAt || 0);
           break;
       }
       return sortOrder === "asc" ? cmp : -cmp;
@@ -616,18 +724,25 @@ export default function App() {
   }, [downloads]);
 
   // Selection logic
-  const handleToggleSelect = (id: string, shiftKey: boolean) => {
+  // Standard list selection: a plain click selects only that row, Ctrl/Cmd (or the checkbox) toggles it, and Shift
+  // selects the range from the last clicked row.
+  const selectionAnchor = useRef<string | null>(null);
+  const handleToggleSelect = (id: string, shiftKey: boolean, toggle = false) => {
+    const order = filteredAndSortedDownloads.map((d) => d.id);
+    const anchor = selectionAnchor.current;
+    if (shiftKey && anchor && order.includes(anchor) && order.includes(id)) {
+      const a = order.indexOf(anchor);
+      const b = order.indexOf(id);
+      const range = order.slice(Math.min(a, b), Math.max(a, b) + 1);
+      setSelectedIds((prev) => (toggle ? new Set([...prev, ...range]) : new Set(range)));
+      return;
+    }
+    selectionAnchor.current = id;
     setSelectedIds((prev) => {
+      if (!toggle) return new Set([id]);
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        if (!shiftKey && next.size === 0) {
-          next.add(id);
-        } else {
-          next.add(id);
-        }
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -710,12 +825,24 @@ export default function App() {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  const handleDeleteSelected = () => {
     if (selectedIds.size === 0) return;
-    for (const id of Array.from(selectedIds)) {
-      await api.remove(id, false).catch(() => {});
-    }
-    setSelectedIds(new Set());
+    const ids = Array.from(selectedIds);
+    const n = ids.length;
+    const first = downloads[ids[0]];
+    setConfirmRequest({
+      title: n === 1 ? "Remove this download?" : `Remove ${n} downloads?`,
+      subject: n === 1 && first ? first.fileName : undefined,
+      message: "It will be removed from the list. Files already saved on disk are kept.",
+      confirmLabel: "Remove",
+      danger: true,
+      onConfirm: async () => {
+        for (const id of ids) {
+          await api.remove(id, false).catch(() => {});
+        }
+        setSelectedIds(new Set());
+      },
+    });
   };
 
   const handleShareSelected = () => {
@@ -789,6 +916,18 @@ export default function App() {
   };
 
   const handleRedownload = async (d: DownloadInfo) => {
+    if (d.state === "completed") {
+      setConfirmRequest({
+        title: "Download again?",
+        subject: d.fileName,
+        message: "This file is already downloaded. Downloading it again starts from the beginning.",
+        confirmLabel: "Download again",
+        onConfirm: () => {
+          api.restart(d.id).catch(() => {});
+        },
+      });
+      return;
+    }
     await api.restart(d.id).catch(() => {});
   };
 
@@ -911,6 +1050,8 @@ export default function App() {
           <Toolbar
             onQuickAddUrl={handleQuickAdd}
             onDownloadVideo={handleDownloadVideo}
+            onNeedLicense={() => setIsLicenseModalOpen(true)}
+            isLicensed={Boolean(licenseStatus?.isLicensed)}
             onOpenAddModal={() => {
               setQuickAddUrl("");
               setIsAddModalOpen(true);
@@ -1009,6 +1150,8 @@ export default function App() {
             setCapturedMeta({});
           }}
           onAdded={refreshAll}
+          onNeedLicense={() => setIsLicenseModalOpen(true)}
+          isLicensed={Boolean(licenseStatus?.isLicensed)}
           categories={categories}
           queues={queues}
           defaultDownloadDir={settings?.downloadDir || "C:\\Downloads"}
@@ -1022,6 +1165,18 @@ export default function App() {
 
       {/* Batch Download Modal */}
       {isImportOpen && <ImportExportModal onClose={() => setIsImportOpen(false)} onChanged={refreshAll} />}
+
+      {confirmRequest && <ConfirmModal {...confirmRequest} onClose={() => setConfirmRequest(null)} />}
+
+      <SpaceAlerts
+        items={spaceAlerts}
+        onDismiss={(id) => setDismissedSpace((cur) => new Set(cur).add(id))}
+        onClean={(item) => {
+          setCleanerDrive(item.drive);
+          setIsDiskCleanerOpen(true);
+          setDismissedSpace((cur) => new Set(cur).add(item.id));
+        }}
+      />
 
       {pendingOpen && safety[pendingOpen.id] && (
         <SafetyConfirmModal
@@ -1097,8 +1252,12 @@ export default function App() {
       {isDiskCleanerOpen && (
         <DiskCleanerModal
           downloads={Object.values(downloads)}
-          onClose={() => setIsDiskCleanerOpen(false)}
+          onClose={() => {
+            setIsDiskCleanerOpen(false);
+            setCleanerDrive("");
+          }}
           onClean={handleDiskClean}
+          initialDrive={cleanerDrive}
           defaultDrive={settings?.defaultDrive ?? ""}
           downloadDir={settings?.downloadDir ?? ""}
           onDefaultChanged={refreshAll}

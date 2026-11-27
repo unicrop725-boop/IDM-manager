@@ -23,7 +23,7 @@ const SOURCES: { id: Source; label: string; hint: string; exts: string[] }[] = [
   {
     id: "fdm",
     label: "Free Download Manager",
-    hint: "Save or export your list of links from FDM as a text file. FlowGet reads every download link in it.",
+    hint: "Save or export your list of links from FDM as a text file. BoltGrab reads every download link in it.",
     exts: ["txt", "csv", "json", "xml", "html", "*"],
   },
   {
@@ -35,7 +35,7 @@ const SOURCES: { id: Source; label: string; hint: string; exts: string[] }[] = [
   {
     id: "browser",
     label: "Browser download history",
-    hint: "Lists what Chrome, Edge or Brave downloaded before, so you can fetch it again with FlowGet.",
+    hint: "Lists what Chrome, Edge or Brave downloaded before, so you can fetch it again with BoltGrab.",
     exts: [],
   },
   {
@@ -184,7 +184,7 @@ export default function ImportExportModal({ onClose, onChanged }: Props) {
     setMessage(null);
     try {
       const day = new Date().toISOString().slice(0, 10);
-      const path = await api.pickFile("Save FlowGet backup", ["json"], true, `flowget-backup-${day}.json`);
+      const path = await api.pickFile("Save BoltGrab backup", ["json"], true, `flowget-backup-${day}.json`);
       if (!path) return;
       setBusy(true);
       const n = await api.exportBackup(path);
@@ -199,7 +199,7 @@ export default function ImportExportModal({ onClose, onChanged }: Props) {
   const chooseRestore = async () => {
     setMessage(null);
     try {
-      const path = await api.pickFile("Choose a FlowGet backup", ["json"]);
+      const path = await api.pickFile("Choose a BoltGrab backup", ["json"]);
       if (path) setConfirmRestore(path);
     } catch (e) {
       setMessage({ ok: false, text: errText(e) });

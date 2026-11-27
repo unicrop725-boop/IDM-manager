@@ -1,4 +1,4 @@
-// FlowGet Content Script - Universal Media Detector, Auto-Suggest Sniffer & Alt-Key Tracker
+// BoltGrab Content Script - Universal Media Detector, Auto-Suggest Sniffer & Alt-Key Tracker
 
 (() => {
   // The script can be injected again (after the extension is reloaded): only one copy may run per page.
@@ -95,11 +95,14 @@
 
     // A link that says "download" (like the Download buttons on Behance) is taken whatever its file type, when "capture every download" is on.
     const isDownloadLink = captureSettings.captureAll && link.hasAttribute("download") && /^https?:/i.test(url);
-    if ((ext && captureSettings.fileTypes.has(ext)) || isDownloadLink) {
+    // Only addresses BoltGrab can fetch itself. A blob: or data: link (a file the page just generated, such as an exported
+    // report) exists only inside the page, so it is left to the browser instead of being swallowed.
+    const fetchable = /^(https?|ftp):/i.test(url);
+    if (fetchable && ((ext && captureSettings.fileTypes.has(ext)) || isDownloadLink)) {
       e.preventDefault();
       e.stopPropagation();
 
-      console.log("[FlowGet Content] Intercepted click on download link:", url);
+      console.log("[BoltGrab Content] Intercepted click on download link:", url);
 
       chrome.runtime.sendMessage({
         type: "DOWNLOAD_MEDIA",
@@ -142,7 +145,7 @@
         url: loc,
         type: "video",
         ext: "mp4/stream",
-        size: "HD Stream / yt-dlp",
+        size: "HD Stream",
       });
     }
 
@@ -150,6 +153,10 @@
     if (!isMediaSite) {
       for (const vid of document.querySelectorAll("video")) {
         const r = vid.getBoundingClientRect();
+        // A video with an ordinary file address is listed on its own below; counting the page as well would show
+        // "2 videos" for one video and make "Download all" fetch it twice.
+        const ownSrc = vid.currentSrc || vid.src;
+        if (ownSrc && !ownSrc.startsWith("blob:")) continue;
         if (r.width >= 120 && r.height >= 80) {
           addResource({ title: document.title || "Video on this page", url: loc, type: "video", ext: "stream", size: "Video on this page" });
           break;
@@ -320,7 +327,7 @@
           color: #15200A;
         ">${FLOWGET_GLYPH}</div>
         <div style="display: flex; flex-direction: column; line-height: 1.25;">
-          <span style="font-weight: 600; font-size: 12px; color: #F4F4F5;">Download with FlowGet</span>
+          <span style="font-weight: 600; font-size: 12px; color: #F4F4F5;">Download with BoltGrab</span>
           <span style="font-size: 11px; color: #A1A1AA;">Found ${escapeHtml(summaryText)}</span>
         </div>
         <button id="flowget-bar-download-all" style="
@@ -399,7 +406,7 @@
   // the biggest visible <video>. It is deliberately NOT placed inside the site's player markup: players such as
   // Pinterest's re-render their DOM, stack transparent layers above their children and swallow clicks.
   //
-  // Clicking it opens a menu of the real qualities the video offers (looked up by the FlowGet app), with the best
+  // Clicking it opens a menu of the real qualities the video offers (looked up by the BoltGrab app), with the best
   // all-round choice marked "Recommended". Picking a row sends exactly that quality to the app.
   const VIDEO_PAGE_LINK = /\/(pin|watch|video|videos|reel|reels|shorts|status|clip)\b/i;
   const FORMATS_CACHE_MS = 5 * 60 * 1000;
@@ -520,7 +527,7 @@
 
   const grabber = {
     host: null, anchor: null, btn: null, label: null, hint: null, panel: null, panelTitle: null, panelSub: null, panelBody: null,
-    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, helpOpen: false, pill: null, help: null, busy: false, hintShown: false, hintTimer: 0, formats: new Map(),
+    stack: null, slot: null, pointer: { x: -1, y: -1 }, video: null, target: null, open: false, helpOpen: false, pill: null, help: null, busy: false, hintShown: false, hintTimer: 0, formats: new Map(), inflight: new Map(), prefetchTimer: 0,
   };
 
   function buildGrabber() {
@@ -533,7 +540,7 @@
       <style>${grabberCss}</style>
       <div class="anchor"><div class="stack">
         <div class="pill">
-          <button class="btn" type="button" data-action="toggle" data-state="idle" aria-haspopup="true" aria-label="Download this video with FlowGet">
+          <button class="btn" type="button" data-action="toggle" data-state="idle" aria-haspopup="true" aria-label="Download this video with BoltGrab">
             <span class="icon">${FLOWGET_GLYPH}</span><span class="label">Download Video</span>
           </button>
           <div class="ctl">
@@ -542,15 +549,15 @@
           </div>
         </div>
         <div class="hint" role="status">Click to choose a quality and download</div>
-        <div class="panel help" hidden role="dialog" aria-label="About the FlowGet video button">
+        <div class="panel help" hidden role="dialog" aria-label="About the BoltGrab video button">
           <div class="head">
             <div><div class="t">About this button</div></div>
             <button class="x" type="button" data-action="help-close" aria-label="Close">✕</button>
           </div>
           <div class="hbody">
-            <p><b>Download Video</b> appears on videos. Click it, pick a quality, and FlowGet downloads the video using many connections at once.</p>
+            <p><b>Download Video</b> appears on videos. Click it, pick a quality, and BoltGrab downloads the video using many connections at once.</p>
             <ul>
-              <li>The FlowGet app must be installed on this PC.</li>
+              <li>The BoltGrab app must be installed on this PC.</li>
               <li>The <b>✕</b> hides the button on this page until you reload it.</li>
               <li>Videos protected by DRM, such as paid streaming services, cannot be downloaded.</li>
             </ul>
@@ -558,16 +565,16 @@
               <button type="button" data-action="hide-page">Hide on this page</button>
               <button type="button" data-action="hide-always">Turn off everywhere</button>
             </div>
-            <div class="hnote">Turn it back on any time in the FlowGet extension: Video download button.</div>
+            <div class="hnote">Turn it back on any time in the BoltGrab extension: Video download button.</div>
           </div>
         </div>
-        <div class="panel" hidden role="dialog" aria-label="FlowGet video download">
+        <div class="panel" hidden role="dialog" aria-label="BoltGrab video download">
           <div class="head">
             <div><div class="t">Download this video</div><div class="s"></div></div>
             <button class="x" type="button" data-action="close" aria-label="Close">✕</button>
           </div>
           <div class="body"></div>
-          <button class="foot" type="button" data-action="more">Open in FlowGet for more options</button>
+          <button class="foot" type="button" data-action="more">Open in BoltGrab for more options</button>
         </div>
       </div></div>
     `;
@@ -798,12 +805,69 @@
 
   const hasQualities = (d) => Boolean(d && d.ok && Array.isArray(d.videoOptions) && d.videoOptions.length);
 
-  async function askFormats(url) {
+  // `prefetch`: a quiet look-ahead; it must never start the app if it is closed.
+  async function askFormats(url, prefetch) {
     try {
-      return await chrome.runtime.sendMessage({ type: "GET_FORMATS", url });
+      return await chrome.runtime.sendMessage({ type: "GET_FORMATS", url, prefetch: prefetch === true });
     } catch {
       return { ok: false, error: "The extension was updated. Reload this page and try again." };
     }
+  }
+
+  /**
+   * The qualities for `url`: from the cache, from a lookup that is already running (a click right after the
+   * look-ahead shares it), or a new one. The page and the streaming playlists the player loaded are asked about at
+   * the same time (waiting for the page to fail first, then trying each playlist in turn, made the menu very slow).
+   */
+  function loadFormats(url, prefetch) {
+    const hit = grabber.formats.get(url);
+    if (hit && Date.now() - hit.at < FORMATS_CACHE_MS) return Promise.resolve(hit);
+    const running = grabber.inflight.get(url);
+    if (running) return running;
+
+    const job = (async () => {
+      const pageAsk = askFormats(url, prefetch);
+      const startStreamAsks = async () => {
+        let streams = [];
+        try {
+          streams = ((await chrome.runtime.sendMessage({ type: "GET_STREAMS" })) || {}).streams || [];
+        } catch {
+          streams = [];
+        }
+        return streams.slice(0, 2).map((candidate) => askFormats(candidate, prefetch).then((data) => ({ candidate, data })));
+      };
+
+      // Slow page answer: start on the playlists now instead of after the page has finished failing.
+      const early = await Promise.race([pageAsk, new Promise((r) => setTimeout(() => r(null), 1500))]);
+      let streamAsks = hasQualities(early) ? null : startStreamAsks();
+
+      let data = await pageAsk;
+      let streamUrl = null;
+      if (!hasQualities(data) && !(data && data.offline)) {
+        streamAsks = streamAsks || startStreamAsks();
+        for (const ask of await streamAsks) {
+          const attempt = await ask;
+          if (hasQualities(attempt.data)) {
+            data = attempt.data;
+            streamUrl = attempt.candidate;
+            break;
+          }
+        }
+      }
+      const result = { at: Date.now(), data, streamUrl, prefetch: prefetch === true };
+      if (hasQualities(data)) grabber.formats.set(url, result);
+      return result;
+    })().finally(() => grabber.inflight.delete(url));
+    grabber.inflight.set(url, job);
+    return job;
+  }
+
+  /** The button just appeared on a video: read its qualities in the background so the menu opens at once. */
+  function prefetchFormats(video) {
+    if (!video || !video.isConnected || grabber.video !== video) return;
+    const target = videoTarget(video);
+    if (target.direct) return; // a plain file link has no menu
+    loadFormats(target.url, true).catch(() => {});
   }
 
   function pageTitleName() {
@@ -824,40 +888,23 @@
     box.append(h("div", "spin"), h("span", "", "Reading the available qualities…"));
     grabber.panelBody.replaceChildren(box);
 
-    let data = await askFormats(url);
+    // A look-ahead may already be running or finished; if the page address could not be read, the player's own
+    // streaming playlist (which lists every quality) is used instead, the way IDM does.
+    let res = await loadFormats(url, false);
+    // The quiet look-ahead is not allowed to start a closed app; a real click is.
+    if (res.prefetch && res.data && res.data.offline) res = await loadFormats(url, false);
+    const { data, streamUrl } = res;
     if (!grabber.open || !grabber.target || grabber.target.url !== url) return; // closed or moved on meanwhile
 
-    let streamUrl = null;
-    if (!hasQualities(data) && !(data && data.offline)) {
-      // The page address could not be read (some sites use pin/video links the downloader does not know). The player
-      // itself loaded a streaming playlist listing every quality: use that, the way IDM does.
-      let streams = [];
-      try {
-        streams = ((await chrome.runtime.sendMessage({ type: "GET_STREAMS" })) || {}).streams || [];
-      } catch {
-        streams = [];
-      }
-      for (const candidate of streams.slice(0, 3)) {
-        const attempt = await askFormats(candidate);
-        if (!grabber.open || !grabber.target || grabber.target.url !== url) return;
-        if (hasQualities(attempt)) {
-          data = attempt;
-          streamUrl = candidate;
-          break;
-        }
-      }
-    }
-
     if (hasQualities(data)) {
-      grabber.formats.set(url, { at: Date.now(), data, streamUrl });
       if (streamUrl) grabber.target = { url: streamUrl, fileName: pageTitleName() };
       renderFormats(data);
     } else if (data && data.offline) {
-      showMessage("FlowGet isn't running", "Open the FlowGet app, then try again.");
+      showMessage("BoltGrab isn't running", "Open the BoltGrab app, then try again.");
     } else if (data && data.error === "not a video page") {
-      showMessage("Qualities aren't available here", "FlowGet can still download this video at its best quality.", "Download best quality");
+      showMessage("Qualities aren't available here", "BoltGrab can still download this video at its best quality.", "Download best quality");
     } else {
-      showMessage("Couldn't list the qualities", (data && data.error) || "Try again, or let FlowGet pick the best quality.", "Download best quality");
+      showMessage("Couldn't list the qualities", (data && data.error) || "Try again, or let BoltGrab pick the best quality.", "Download best quality");
     }
   }
 
@@ -923,7 +970,7 @@
     }
     setGrabberState(
       ok ? "ok" : "error",
-      queued ? "Waiting for FlowGet…" : ok ? "Sent to FlowGet ✓" : "Open the FlowGet app",
+      queued ? "Waiting for FlowGet…" : ok ? "Sent to BoltGrab ✓" : "Open the BoltGrab app",
     );
     setTimeout(() => {
       grabber.busy = false;
@@ -1122,6 +1169,9 @@
       grabber.video = video;
       grabber.slot = null;
       recomputeSlot = true;
+      // Still on this video after a moment (not just the pointer passing by): read its qualities ahead of the click.
+      clearTimeout(grabber.prefetchTimer);
+      grabber.prefetchTimer = setTimeout(() => prefetchFormats(video), 600);
       if (!grabber.hintShown) {
         // First video on this page: point at the button for a few seconds so it is obvious what it does.
         grabber.hintShown = true;

@@ -18,7 +18,7 @@ You pay for a fast connection, and yet that file crawls. Before you blame your p
 
 ## 1. Measure your actual line speed
 
-Run a speed test on the same device. If the result matches what you pay for, your line is fine and the slowness is somewhere else. If it is far lower, go straight to checks 4 to 7. FlowGet has a built-in speed test that measures latency, download and upload.
+Run a speed test on the same device. If the result matches what you pay for, your line is fine and the slowness is somewhere else. If it is far lower, go straight to checks 4 to 7. BoltGrab has a built-in speed test that measures latency, download and upload.
 
 ## 2. Try a different file from a different site
 
@@ -48,7 +48,7 @@ Downloads are written to disk. A nearly full drive, a slow USB disk or a hard dr
 
 Browsers download a file over a single connection. If the server limits each connection to, say, 1 MB/s, you get 1 MB/s even on a very fast line. A download manager splits the file into parts and fetches them at the same time, so several capped connections add up.
 
-FlowGet uses up to 32 connections, starts with a few and adds more while the speed keeps improving, and backs off if the server starts refusing connections. If one part is slow, another connection takes over its remaining work instead of waiting. You can see how this behaves in the [speed results on our home page](/#speed).
+BoltGrab uses up to 32 connections, starts with a few and adds more while the speed keeps improving, and backs off if the server starts refusing connections. If one part is slow, another connection takes over its remaining work instead of waiting. You can see how this behaves in the [speed results on our home page](/#speed).
 
 Be realistic: when the limit is your own line, or a server that allows only one connection, more connections cannot help.
 

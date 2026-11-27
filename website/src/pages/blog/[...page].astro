@@ -18,7 +18,7 @@ const first = page.currentPage === 1;
 
 const title = first ? "Blog: guides for faster, safer downloads" : `Blog, page ${page.currentPage}`;
 const description = first
-  ? "Practical guides on download speed, resuming broken downloads, video streams, bandwidth control and file safety on Windows, from the FlowGet team."
+  ? "Practical guides on download speed, resuming broken downloads, video streams, bandwidth control and file safety on Windows, from the BoltGrab team."
   : `Articles about downloads on Windows, page ${page.currentPage}.`;
 
 const jsonLd = [
@@ -63,7 +63,7 @@ const jsonLd = [
       <h2>Latest Posts</h2>
       {posts.length === 0 && <p class="fine">The first articles are on their way.</p>}
       <div class="bgrid">
-        {page.data.map((p) => <PostCard post={p} />)}
+        {page.data.map((p, i) => <PostCard post={p} eager={i === 0 && (page.currentPage ?? 1) === 1} />)}
       </div>
 
       {(page.url.prev || page.url.next) && (

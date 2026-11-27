@@ -1,5 +1,5 @@
-//! FlowGet Native Messaging Host executable.
-//! Connects browser extensions (Chrome, Edge, Brave, Firefox) via stdio to the FlowGet desktop app.
+//! BoltGrab Native Messaging Host executable.
+//! Connects browser extensions (Chrome, Edge, Brave, Firefox) via stdio to the BoltGrab desktop app.
 //!
 //! Security notes
 //! * The browser only starts this program for the extension IDs listed in the host manifest
@@ -75,17 +75,17 @@ fn handle_message(bytes: &[u8]) -> Result<String, String> {
     payload_check::validate_download_payload(&value)?;
     // Re-serialise what we validated instead of forwarding the raw bytes.
     let body = serde_json::to_vec(&value).map_err(|e| e.to_string())?;
-    forward_to_app(&body).map_err(|e| format!("FlowGet is not running or not reachable ({e})"))
+    forward_to_app(&body).map_err(|e| format!("BoltGrab is not running or not reachable ({e})"))
 }
 
-/// Start the FlowGet app (it sits next to this executable) and wait until it accepts connections.
+/// Start the BoltGrab app (it sits next to this executable) and wait until it accepts connections.
 fn launch_app_and_wait(addr: &std::net::SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
     use std::net::TcpStream;
 
     let exe = std::env::current_exe()?;
-    let app = exe.parent().ok_or("no parent directory")?.join(if cfg!(windows) { "flowget.exe" } else { "flowget" });
+    let app = exe.parent().ok_or("no parent directory")?.join(if cfg!(windows) { "BoltGrab.exe" } else { "boltgrab" });
     if !app.is_file() {
-        return Err("FlowGet is not running and its program was not found next to the native host".into());
+        return Err("BoltGrab is not running and its program was not found next to the native host".into());
     }
     Command::new(&app).spawn()?;
     // Starting the window and the local server takes a few seconds.
@@ -95,7 +95,7 @@ fn launch_app_and_wait(addr: &std::net::SocketAddr) -> Result<(), Box<dyn std::e
             return Ok(());
         }
     }
-    Err("FlowGet did not start in time".into())
+    Err("BoltGrab did not start in time".into())
 }
 
 fn forward_to_app(payload: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
@@ -152,7 +152,7 @@ fn arg_value(args: &[String], flag: &str) -> Option<String> {
 fn chromium_manifest(exe: &str, extension_id: &str) -> String {
     serde_json::to_string_pretty(&serde_json::json!({
         "name": "com.flowget.app",
-        "description": "FlowGet Download Manager Native Messaging Host",
+        "description": "BoltGrab Download Manager Native Messaging Host",
         "path": exe,
         "type": "stdio",
         "allowed_origins": [format!("chrome-extension://{extension_id}/")],
@@ -163,7 +163,7 @@ fn chromium_manifest(exe: &str, extension_id: &str) -> String {
 fn firefox_manifest(exe: &str, addon_id: &str) -> String {
     serde_json::to_string_pretty(&serde_json::json!({
         "name": "com.flowget.app",
-        "description": "FlowGet Download Manager Native Messaging Host",
+        "description": "BoltGrab Download Manager Native Messaging Host",
         "path": exe,
         "type": "stdio",
         "allowed_extensions": [addon_id],
@@ -196,7 +196,7 @@ fn register_for_all_browsers(args: &[String]) -> Result<(), Box<dyn std::error::
     let exe_dir = current_exe.parent().ok_or("Cannot find parent directory")?;
     let exe = current_exe.to_string_lossy().to_string();
 
-    println!("Registering the FlowGet native messaging host");
+    println!("Registering the BoltGrab native messaging host");
     let mut targets: Vec<(&str, &str, std::path::PathBuf)> = Vec::new();
 
     if let Some(id) = &chromium_id {
@@ -248,12 +248,12 @@ mod tests {
     #[test]
     fn manifests_have_no_wildcards_and_are_valid_json() {
         let m: serde_json::Value = serde_json::from_str(&chromium_manifest(
-            r"C:\Program Files\FlowGet\flowget-host.exe",
+            r"C:\Program Files\BoltGrab\flowget-host.exe",
             "abcdefghijklmnopabcdefghijklmnop",
         ))
         .unwrap();
         assert_eq!(m["allowed_origins"][0], "chrome-extension://abcdefghijklmnopabcdefghijklmnop/");
-        assert_eq!(m["path"], r"C:\Program Files\FlowGet\flowget-host.exe");
+        assert_eq!(m["path"], r"C:\Program Files\BoltGrab\flowget-host.exe");
         let f: serde_json::Value = serde_json::from_str(&firefox_manifest("x.exe", "flowget@example.com")).unwrap();
         assert_eq!(f["allowed_extensions"][0], "flowget@example.com");
         assert!(f.get("allowed_origins").is_none());

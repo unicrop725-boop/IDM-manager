@@ -5,9 +5,9 @@ import { SITE, buyHref } from "../config";
 
 const site = Astro.site!.href.replace(/\/$/, "");
 const faq = [
-  { q: "Can FlowGet import my IDM downloads?", a: "It can import the list of links from an IDM export file (.ef2 or a text list), including the cookies and referrers IDM saved for each link. Files that IDM only partly downloaded are not continued; the links are added again and download from the start." },
+  { q: "Can BoltGrab import my IDM downloads?", a: "It can import the list of links from an IDM export file (.ef2 or a text list), including the cookies and referrers IDM saved for each link. Files that IDM only partly downloaded are not continued; the links are added again and download from the start." },
   { q: "Do I have to uninstall IDM first?", a: "No, but turn off IDM's browser integration (or its browser extension) so that only one program captures your clicks. Otherwise both may try to take the same download." },
-  { q: "Is FlowGet affiliated with Internet Download Manager?", a: "No. FlowGet is an independent product. Internet Download Manager and IDM are trademarks of their owners and are named here only to describe how to move your links." },
+  { q: "Is BoltGrab affiliated with Internet Download Manager?", a: "No. BoltGrab is an independent product. Internet Download Manager and IDM are trademarks of their owners and are named here only to describe how to move your links." },
 ];
 const jsonLd = [
   {
@@ -26,14 +26,14 @@ const jsonLd = [
 ];
 ---
 <Base
-  title="Switch from Internet Download Manager (IDM) to FlowGet"
-  description="Moving from IDM to FlowGet: export your links from IDM, import them with their cookies and referrers, and set up the browser extension. Step-by-step, with what carries over and what does not."
+  title="Switch from Internet Download Manager (IDM) to BoltGrab"
+  description="Moving from IDM to BoltGrab: export your IDM links, import them with cookies and referrers, and set up the extension. See what carries over and what does not."
   jsonLd={jsonLd}
 >
   <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Switch from IDM" }]} />
   <div class="wrap">
     <div class="page-head" style="padding-top:24px">
-      <h1>Switch from IDM to <span class="grad-text">FlowGet</span></h1>
+      <h1>Switch from IDM to <span class="grad-text">BoltGrab</span></h1>
       <p>Already use Internet Download Manager? You can bring your links with you in a few minutes. Here is how, and what to expect.</p>
     </div>
 
@@ -41,18 +41,18 @@ const jsonLd = [
       <h2>Move your downloads in four steps</h2>
       <ol style="padding-left:22px;display:grid;gap:10px">
         <li><b>Export from IDM.</b> In IDM choose <b>Tasks &gt; Export</b> and save the file (an <code>.ef2</code> export, or a plain text list of links).</li>
-        <li><b>Import into FlowGet.</b> Open FlowGet, choose <b>Tasks &gt; Import &amp; Backup</b>, pick <b>Internet Download Manager</b> and choose the file. FlowGet lists what it found.</li>
+        <li><b>Import into BoltGrab.</b> Open BoltGrab, choose <b>Tasks &gt; Import &amp; Backup</b>, pick <b>Internet Download Manager</b> and choose the file. BoltGrab lists what it found.</li>
         <li><b>Choose what to add.</b> Tick the downloads you want, decide whether they start right away, and add them. Cookies and referrers saved by IDM come along, so links that need a login session still work while they are valid.</li>
-        <li><b>Add the browser extension.</b> Install the FlowGet extension for Chrome, Edge or Brave and turn off IDM's browser integration so only one program captures your clicks.</li>
+        <li><b>Add the browser extension.</b> Install the BoltGrab extension for Chrome, Edge or Brave and turn off IDM's browser integration so only one program captures your clicks.</li>
       </ol>
 
       <h2>What carries over, and what does not</h2>
       <ul>
         <li><b>Carries over:</b> the links, plus the cookies, referrers and user agent IDM saved with them.</li>
-        <li><b>Does not carry over:</b> files IDM only partly downloaded (the links are added again and start from zero), IDM's own settings and its scheduler rules. Set up FlowGet's queues, schedules and speed limits once in Settings.</li>
+        <li><b>Does not carry over:</b> files IDM only partly downloaded (the links are added again and start from zero), IDM's own settings and its scheduler rules. Set up BoltGrab's queues, schedules and speed limits once in Settings.</li>
       </ul>
 
-      <h2>What you get in FlowGet</h2>
+      <h2>What you get in BoltGrab</h2>
       <ul>
         <li><a href="/features/#engine">Parallel downloads that adapt</a> when one connection is slow, and resume after crashes, restarts and lost connections.</li>
         <li><a href="/features/#extension">A browser extension</a> with a quality list on videos, notifications, and downloads that wait if the app is closed.</li>
@@ -65,7 +65,7 @@ const jsonLd = [
       <div class="band" style="margin-top:40px;text-align:left;padding:32px">
         <h2 style="font-size:28px">Ready to switch?</h2>
         <p style="margin-left:0">One payment of ${SITE.priceUsd} for a lifetime license, no subscription.</p>
-        <a class="btn btn-primary" href={buyHref()}>Get FlowGet Pro</a>
+        <a class="btn btn-primary" href={buyHref()}>Get BoltGrab Pro</a>
       </div>
 
       <h2>Questions</h2>

@@ -73,7 +73,7 @@ const NETWORKS: Network[] = [
 export default function ShareModal({ download, onClose }: Props) {
   const [copied, setCopied] = useState(false);
 
-  const shareText = `Check out "${download.fileName}" on FlowGet:\n${download.url}`;
+  const shareText = `Check out "${download.fileName}" on BoltGrab:\n${download.url}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(download.url);
@@ -83,7 +83,7 @@ export default function ShareModal({ download, onClose }: Props) {
 
   const handleEmail = () => {
     const subject = `Download Link: ${download.fileName}`;
-    const body = `Hi,\n\nHere is the download link for ${download.fileName}:\n${download.url}\n\nDownloaded via FlowGet.`;
+    const body = `Hi,\n\nHere is the download link for ${download.fileName}:\n${download.url}\n\nDownloaded via BoltGrab.`;
     const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.open(mailto, "_self");
   };

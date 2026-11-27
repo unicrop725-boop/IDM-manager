@@ -31,7 +31,7 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
           <div className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[11px] text-[var(--text-disabled)] uppercase font-semibold">FlowGet Usage</span>
+                <span className="text-[11px] text-[var(--text-disabled)] uppercase font-semibold">BoltGrab Usage</span>
                 <div className="text-xl font-bold font-mono text-purple-400 mt-0.5">
                   {formatSpeed(flowgetSpeedBps)}
                 </div>
@@ -43,18 +43,18 @@ export default function BandwidthModal({ downloads, onClose }: Props) {
           {/* Apps Breakdown List */}
           <div className="space-y-2">
             <div className="text-[11px] font-semibold text-[var(--text-disabled)] uppercase tracking-wider">
-              FlowGet downloads right now
+              BoltGrab downloads right now
             </div>
 
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] divide-y divide-[var(--border-subtle)]">
-              {/* FlowGet */}
+              {/* BoltGrab */}
               <div className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 font-bold text-xs">
                     FG
                   </div>
                   <div>
-                    <div className="font-semibold text-[var(--text-primary)]">FlowGet</div>
+                    <div className="font-semibold text-[var(--text-primary)]">BoltGrab</div>
                     <div className="text-[11px] text-purple-300">
                       {activeDownloads.length} active download{activeDownloads.length === 1 ? "" : "s"}
                     </div>

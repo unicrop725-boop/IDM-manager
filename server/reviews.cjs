@@ -45,7 +45,9 @@ function createHandler(ctx) {
       });
       req.on("end", () => {
         try {
-          resolve(raw ? JSON.parse(raw) : {});
+          const v = raw ? JSON.parse(raw) : {};
+          if (v === null || typeof v !== "object" || Array.isArray(v)) return reject(new Problem(400, "Expected a JSON object."));
+          resolve(v);
         } catch {
           reject(new Problem(400, "Invalid request."));
         }
@@ -80,7 +82,7 @@ function createHandler(ctx) {
       if (!auth.allowedOrigins.includes(origin)) throw new Problem(403, "This website is not allowed to post reviews.");
       if (!String(req.headers["content-type"] || "").toLowerCase().startsWith("application/json")) throw new Problem(415, "Expected JSON.");
       if (limited("review:" + clientIp(req), 10, 60 * 60 * 1000)) throw new Problem(429, "Too many attempts. Try again later.");
-      if (!hasLicense(user.email)) throw new Problem(403, "Reviews can be written by people who bought FlowGet Pro.");
+      if (!hasLicense(user.email)) throw new Problem(403, "Reviews can be written by people who bought BoltGrab Pro.");
       const body = await readBody(req);
       const rating = Number(body.rating);
       if (!Number.isInteger(rating) || rating < 1 || rating > 5) throw new Problem(400, "Choose a rating from 1 to 5 stars.");

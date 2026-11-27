@@ -30,7 +30,7 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
     try {
       const res = await api.activateLicense(key);
       if (res.isLicensed) {
-        setSuccessMsg("FlowGet Lifetime Pro successfully activated! Enjoy unlimited speed and features.");
+        setSuccessMsg("BoltGrab Lifetime Pro successfully activated! Enjoy unlimited speed and features.");
         await onRefreshStatus();
       } else {
         setError("Invalid license key signature.");
@@ -66,7 +66,7 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-3.5 bg-[var(--bg-panel)]">
           <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
             <Key className="w-4 h-4 text-purple-400" />
-            <span>FlowGet License & Subscription</span>
+            <span>BoltGrab License & Subscription</span>
           </div>
         </div>
 
@@ -76,6 +76,13 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
             <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {status.licenseNotice && !status.isLicensed && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-300 flex items-start gap-2" role="alert">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <span>{status.licenseNotice}</span>
             </div>
           )}
 
@@ -92,14 +99,14 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-bold text-emerald-400">
                   <ShieldCheck size={16} />
-                  <span>FlowGet Pro Lifetime Active</span>
+                  <span>BoltGrab Pro Lifetime Active</span>
                 </span>
                 <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-300 font-mono">
                   2 PCs Allowed
                 </span>
               </div>
               <div className="text-[11px] text-zinc-300">
-                Registered to: <strong className="text-white font-mono">{status.licenseEmail || "Verified Buyer"}</strong>
+                Registered to: <strong className="text-[var(--text-primary)] font-mono">{status.licenseEmail || "Verified Buyer"}</strong>
               </div>
               <div className="pt-2 border-t border-emerald-500/20 flex justify-end">
                 <button
@@ -159,13 +166,13 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
           {!status.isLicensed && (
             <div className="rounded-xl border border-white/5 bg-[var(--bg-app)] p-3 flex items-center justify-between">
               <div>
-                <div className="font-semibold text-white">FlowGet Lifetime Pro</div>
+                <div className="font-semibold text-white">BoltGrab Lifetime Pro</div>
                 <div className="text-[10px] text-[var(--text-secondary)]">One-time payment • 2 PCs • All updates included</div>
               </div>
               <button
                 type="button"
                 onClick={() => {
-                  window.open("https://flowget.net/checkout", "_blank");
+                  window.open("https://boltgrab.online/buy/", "_blank");
                 }}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium transition text-[11px]"
               >

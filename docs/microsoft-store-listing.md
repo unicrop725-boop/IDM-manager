@@ -34,7 +34,7 @@ KEY HIGHLIGHTS:
 • Turbo Mode Network Bonding: Combine your Wi-Fi and Ethernet connections simultaneously to achieve combined aggregated bandwidth.
 
 🎬 ADVANCED STREAMING & MEDIA CAPTURE
-• Direct non-DRM HLS (.m3u8) and DASH (.mpd) multi-segment downloads merged losslessly with bundled high-speed FFmpeg.
+• Direct non-DRM HLS (.m3u8) and DASH (.mpd) multi-segment downloads merged losslessly without re-encoding.
 • In-app video resolution picker: Download videos in 4K, 1080p, 720p, or convert straight to audio MP3/M4A.
 
 🌐 SEAMLESS BROWSER INTEGRATION

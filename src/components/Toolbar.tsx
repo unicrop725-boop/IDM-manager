@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { t } from "../i18n";
 import {
   Link2,
   CloudDownload,
@@ -21,6 +22,7 @@ import type { MediaResolveResult } from "../types";
 import { formatBytes } from "../format";
 import { Select } from "./Select";
 import { getVideoSite, formatDuration, heightLabel } from "../utils/videoUrl";
+import { isProLicenseError } from "../utils/license";
 
 interface ToolbarProps {
   onQuickAddUrl: (url: string) => void;
@@ -36,6 +38,9 @@ interface ToolbarProps {
     }
   ) => Promise<void>;
   onOpenAddModal: () => void;
+  /** Opens the license-key popup (video downloads need Pro). */
+  onNeedLicense?: () => void;
+  isLicensed?: boolean;
   hasSelection: boolean;
   canResume: boolean;
   canPause: boolean;
@@ -73,6 +78,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onQuickAddUrl,
   onDownloadVideo,
   onOpenAddModal,
+  onNeedLicense,
+  isLicensed,
   hasSelection,
   canResume,
   canPause,
@@ -95,6 +102,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [selHeight, setSelHeight] = useState("");
   const [selFps, setSelFps] = useState("");
   const [dismissed, setDismissed] = useState(false);
+  const [needsLicense, setNeedsLicense] = useState(false);
   const [saveDir, setSaveDir] = useState("");
   const [container, setContainer] = useState<"mp4" | "mkv" | "mp3" | "m4a">("mp4");
   const [starting, setStarting] = useState(false);
@@ -142,8 +150,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         if (mine !== token.current) return;
         const msg = typeof e === "string" ? e : (e as Error)?.message || "";
         setMediaError(
-          msg.includes("yt-dlp is not")
-            ? "yt-dlp is not installed. Install it with: pip install yt-dlp"
+          msg.includes("is not available") || msg.includes("could not be installed")
+            ? "The video component is not ready yet. Check your internet connection and try again."
             : "Could not read this video link."
         );
         setMediaState("error");
@@ -205,6 +213,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   const startVideo = async () => {
     setStarting(true);
+    setNeedsLicense(false);
     try {
       await onDownloadVideo(
         urlInput.trim(),
@@ -214,8 +223,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       );
       setUrlInput("");
     } catch (e) {
-      setMediaError(typeof e === "string" ? e : (e as Error)?.message || "Could not start the download.");
-      setMediaState("error");
+      const msg = typeof e === "string" ? e : (e as Error)?.message || "Could not start the download.";
+      if (isProLicenseError(msg)) {
+        // keep the quality picker open, ask for the key, and let the user press Download again
+        setNeedsLicense(true);
+        onNeedLicense?.();
+      } else {
+        setMediaError(msg);
+        setMediaState("error");
+      }
     } finally {
       setStarting(false);
     }
@@ -278,6 +294,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             )}
 
             {mediaState === "error" && <div className="text-rose-400 py-1">{mediaError}</div>}
+
+            {needsLicense && !isLicensed && (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-rose-300">
+                <span>Video downloading needs a BoltGrab Pro license. Enter your key to continue.</span>
+                <button
+                  type="button"
+                  onClick={onNeedLicense}
+                  className="flex-shrink-0 rounded-lg gradient-accent px-3 py-1 font-medium text-white hover:opacity-90"
+                >
+                  Enter license key
+                </button>
+              </div>
+            )}
 
             {mediaState === "ready" && mediaInfo && (
               <div className="space-y-3">
@@ -402,17 +431,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Action Buttons: large icon on top, small label below */}
       <div className="tool-group flex items-center gap-3 flex-shrink-0">
-        <ToolButton icon={Play} label="Resume" color="text-emerald-400" onClick={onResume} disabled={!canResume} />
-        <ToolButton icon={Square} label="Stop" color="text-amber-400" onClick={onPause} disabled={!canPause} />
-        <ToolButton icon={TimerOff} label="Stop All" color="text-rose-400" onClick={onStopAll} />
+        <ToolButton icon={Play} label={t("resume", "Resume")} color="text-emerald-400" onClick={onResume} disabled={!canResume} />
+        <ToolButton icon={Square} label={t("stop", "Stop")} color="text-amber-400" onClick={onPause} disabled={!canPause} />
+        <ToolButton icon={TimerOff} label={t("stop_all", "Stop All")} color="text-rose-400" onClick={onStopAll} />
 
         <div className="h-9 w-[1px] bg-[var(--border-subtle)] mx-2" />
 
-        <ToolButton icon={Trash2} label="Delete" color="text-red-400" onClick={onDelete} disabled={!hasSelection} />
-        <ToolButton icon={Settings} label="Options" color="text-sky-400" onClick={onOpenOptions} />
-        <ToolButton icon={Copy} label="Queues" color="text-purple-400" onClick={onOpenQueues} />
-        <ToolButton icon={CalendarClock} label="Schedule" color="text-teal-400" onClick={onOpenSchedule} />
-        <ToolButton icon={Forward} label="Share" color="text-blue-400" onClick={onShare} disabled={!hasSelection} />
+        <ToolButton icon={Trash2} label={t("delete", "Delete")} color="text-red-400" onClick={onDelete} disabled={!hasSelection} />
+        <ToolButton icon={Settings} label={t("options", "Options")} color="text-sky-400" onClick={onOpenOptions} />
+        <ToolButton icon={Copy} label={t("queues", "Queues")} color="text-purple-400" onClick={onOpenQueues} />
+        <ToolButton icon={CalendarClock} label={t("schedule", "Schedule")} color="text-teal-400" onClick={onOpenSchedule} />
+        <ToolButton icon={Forward} label={t("share", "Share")} color="text-blue-400" onClick={onShare} disabled={!hasSelection} />
       </div>
     </div>
     </div>

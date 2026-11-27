@@ -23,3 +23,6 @@ server/licenses_dev.json
 website/.env
 .env
 *.env
+
+# Licence signing key: NEVER commit
+server/license_private_key.txt

@@ -1,7 +1,8 @@
-//! yt-dlp and ffmpeg, installed and kept up to date by FlowGet itself, so nobody has to edit PATH.
+//! The video engine (yt-dlp) and media converter (ffmpeg), installed and kept up to date by BoltGrab itself, so
+//! nobody has to edit PATH. Their real names must never be shown to the user: use `friendly_name` / `scrub`.
 //!
 //! The programs live in `%APPDATA%\com.flowget.app\tools`. That folder is put in front of the process's PATH at start,
-//! so every program FlowGet launches (and yt-dlp, which looks for ffmpeg) finds the managed copies first and falls back
+//! so every program BoltGrab launches (and yt-dlp, which looks for ffmpeg) finds the managed copies first and falls back
 //! to anything the user installed themselves. Downloads are checked against the SHA-256 the publisher lists.
 
 use std::path::{Path, PathBuf};
@@ -54,7 +55,7 @@ pub fn prepend_to_path() {
 pub struct ToolInfo {
     pub name: String,
     pub installed: bool,
-    /// "FlowGet" (managed copy), "System" (found on PATH) or "Missing".
+    /// "BoltGrab" (managed copy), "System" (found on PATH) or "Missing".
     pub source: String,
     pub version: Option<String>,
     pub path: Option<String>,
@@ -91,7 +92,8 @@ pub fn find(name: &str) -> Option<(PathBuf, bool)> {
     std::env::split_paths(&path).map(|d| d.join(&exe)).find(|p| p.is_file()).map(|p| (p, false))
 }
 
-fn hide_window(cmd: &mut Command) -> &mut Command {
+/// Stop Windows from opening a console window for a helper program we launch.
+pub fn hide_window(cmd: &mut Command) -> &mut Command {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -120,7 +122,7 @@ pub fn status() -> Vec<ToolInfo> {
             Some((path, managed)) => ToolInfo {
                 name: name.to_string(),
                 installed: true,
-                source: if managed { "FlowGet" } else { "System" }.into(),
+                source: if managed { "BoltGrab" } else { "System" }.into(),
                 version: version_of(&path, name),
                 path: Some(path.to_string_lossy().into_owned()),
             },
@@ -170,7 +172,7 @@ fn hex(bytes: &[u8]) -> String {
 
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("FlowGet")
+        .user_agent("BoltGrab")
         .connect_timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())
@@ -228,15 +230,15 @@ fn swap_in(new: &Path, target: &Path) -> Result<(), String> {
 pub type InstallResult = Result<String, String>;
 
 async fn install_ytdlp(force: bool) -> InstallResult {
-    emit("yt-dlp", "checking", 0, 0, "Checking for the latest yt-dlp…");
+    emit("yt-dlp", "checking", 0, 0, "Checking for the latest video engine…");
     let expected = parse_checksum(&fetch_text(YTDLP_SUMS_URL).await?, "yt-dlp.exe")
-        .ok_or("The yt-dlp release has no checksum for yt-dlp.exe, so it was not installed.")?;
+        .ok_or("The video engine update has no checksum, so it was not installed.")?;
     let tools = dir();
     std::fs::create_dir_all(&tools).map_err(|e| e.to_string())?;
     let target = tools.join("yt-dlp.exe");
     if !force && target.is_file() && sha256_file(&target).map(|h| h == expected).unwrap_or(false) {
-        emit("yt-dlp", "done", 0, 0, "yt-dlp is up to date.");
-        return Ok("yt-dlp is already up to date.".into());
+        emit("yt-dlp", "done", 0, 0, "The video engine is up to date.");
+        return Ok("The video engine is already up to date.".into());
     }
     let part = tools.join("yt-dlp.exe.part");
     let actual = download_to(YTDLP_URL, &part, "yt-dlp").await.inspect_err(|_| {
@@ -245,11 +247,11 @@ async fn install_ytdlp(force: bool) -> InstallResult {
     emit("yt-dlp", "verifying", 0, 0, "Checking the download…");
     if actual != expected {
         let _ = std::fs::remove_file(&part);
-        return Err("The downloaded yt-dlp did not match its published checksum, so it was discarded.".into());
+        return Err("The downloaded video engine did not match its published checksum, so it was discarded.".into());
     }
     swap_in(&part, &target)?;
-    emit("yt-dlp", "done", 0, 0, "yt-dlp installed.");
-    Ok("yt-dlp is installed and up to date.".into())
+    emit("yt-dlp", "done", 0, 0, "Video engine installed.");
+    Ok("The video engine is installed and up to date.".into())
 }
 
 /// Find `name` anywhere below `root`.
@@ -271,11 +273,11 @@ async fn install_ffmpeg(force: bool) -> InstallResult {
     let tools = dir();
     std::fs::create_dir_all(&tools).map_err(|e| e.to_string())?;
     if !force && tools.join("ffmpeg.exe").is_file() {
-        return Ok("ffmpeg is already installed.".into());
+        return Ok("The media converter is already installed.".into());
     }
-    emit("ffmpeg", "checking", 0, 0, "Checking for ffmpeg…");
+    emit("ffmpeg", "checking", 0, 0, "Checking for the media converter…");
     let expected = parse_checksum(&fetch_text(FFMPEG_SHA_URL).await?, "ffmpeg-release-essentials.zip")
-        .ok_or("The ffmpeg download has no checksum, so it was not installed.")?;
+        .ok_or("The media converter download has no checksum, so it was not installed.")?;
     let zip = tools.join("ffmpeg-download.zip");
     let actual = download_to(FFMPEG_URL, &zip, "ffmpeg").await.inspect_err(|_| {
         let _ = std::fs::remove_file(&zip);
@@ -283,9 +285,9 @@ async fn install_ffmpeg(force: bool) -> InstallResult {
     emit("ffmpeg", "verifying", 0, 0, "Checking the download…");
     if actual != expected {
         let _ = std::fs::remove_file(&zip);
-        return Err("The downloaded ffmpeg did not match its published checksum, so it was discarded.".into());
+        return Err("The downloaded media converter did not match its published checksum, so it was discarded.".into());
     }
-    emit("ffmpeg", "extracting", 0, 0, "Unpacking ffmpeg…");
+    emit("ffmpeg", "extracting", 0, 0, "Unpacking the media converter…");
     let extract = tools.join("ffmpeg-unpack");
     let _ = std::fs::remove_dir_all(&extract);
     std::fs::create_dir_all(&extract).map_err(|e| e.to_string())?;
@@ -297,15 +299,15 @@ async fn install_ffmpeg(force: bool) -> InstallResult {
     .map_err(|e| e.to_string())?;
     let result = (|| {
         if !unpacked.map(|s| s.success()).unwrap_or(false) {
-            return Err("Windows could not unpack the ffmpeg download.".to_string());
+            return Err("Windows could not unpack the media converter download.".to_string());
         }
         for exe in ["ffmpeg.exe", "ffprobe.exe"] {
             if let Some(src) = find_file(&extract, exe) {
                 let staged = tools.join(format!("{exe}.part"));
-                std::fs::copy(&src, &staged).map_err(|e| format!("Could not copy {exe}: {e}"))?;
+                std::fs::copy(&src, &staged).map_err(|e| format!("Could not copy a media converter file: {e}"))?;
                 swap_in(&staged, &tools.join(exe))?;
             } else if exe == "ffmpeg.exe" {
-                return Err("The ffmpeg download did not contain ffmpeg.exe.".to_string());
+                return Err("The media converter download was incomplete.".to_string());
             }
         }
         Ok(())
@@ -313,8 +315,8 @@ async fn install_ffmpeg(force: bool) -> InstallResult {
     let _ = std::fs::remove_file(&zip);
     let _ = std::fs::remove_dir_all(&extract);
     result?;
-    emit("ffmpeg", "done", 0, 0, "ffmpeg installed.");
-    Ok("ffmpeg is installed.".into())
+    emit("ffmpeg", "done", 0, 0, "Media converter installed.");
+    Ok("The media converter is installed.".into())
 }
 
 /// Install (or, with `force` / for yt-dlp, update) one tool: "yt-dlp" or "ffmpeg".
@@ -323,7 +325,7 @@ pub async fn install(tool: &str, force: bool) -> InstallResult {
     let result = match tool {
         "yt-dlp" => install_ytdlp(force).await,
         "ffmpeg" => install_ffmpeg(force).await,
-        other => Err(format!("Unknown tool \"{other}\".")),
+        _ => Err("Unknown component.".to_string()),
     };
     if let Err(e) = &result {
         emit(tool, "error", 0, 0, e);
@@ -331,12 +333,35 @@ pub async fn install(tool: &str, force: bool) -> InstallResult {
     result
 }
 
+/// What the user sees instead of a helper program's real name.
+pub fn friendly_name(tool: &str) -> &'static str {
+    match tool {
+        "yt-dlp" => "The video engine",
+        "ffmpeg" => "The media converter",
+        _ => "A required component",
+    }
+}
+
+/// Replace the names of the programs BoltGrab uses behind the scenes in text that is shown to the user
+/// (their own error output can mention them).
+pub fn scrub(text: &str) -> String {
+    let mut out = text.to_string();
+    for (name, shown) in [("yt-dlp", "the video engine"), ("ffprobe", "the media converter"), ("ffmpeg", "the media converter")] {
+        let mut lower = out.to_ascii_lowercase();
+        while let Some(i) = lower.find(name) {
+            out.replace_range(i..i + name.len(), shown);
+            lower = out.to_ascii_lowercase();
+        }
+    }
+    out
+}
+
 /// Install `tool` if it is not available yet.
 pub async fn ensure(tool: &str) -> Result<(), String> {
     if find(tool).is_none() {
-        install(tool, false)
-            .await
-            .map_err(|e| format!("{tool} is needed for this download and could not be installed automatically. {e}"))?;
+        install(tool, false).await.map_err(|e| {
+            format!("{} is needed for this download and could not be installed automatically. {e}", friendly_name(tool))
+        })?;
     }
     Ok(())
 }
@@ -390,6 +415,14 @@ f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d  yt-dlp.exe\n\
         assert_eq!(parse_checksum(&format!("{h}\n"), "anything.zip").as_deref(), Some(&h.to_ascii_lowercase()[..]));
         assert_eq!(parse_checksum("<html>not found</html>", "x"), None);
         assert_eq!(parse_checksum("", "x"), None);
+    }
+
+    #[test]
+    fn scrub_hides_helper_program_names() {
+        let s = scrub("ERROR: yt-dlp failed; ffmpeg not found. Update with yt-dlp -U (FFmpeg, ffprobe)");
+        let lower = s.to_ascii_lowercase();
+        assert!(!lower.contains("yt-dlp") && !lower.contains("ffmpeg") && !lower.contains("ffprobe"), "{s}");
+        assert!(s.contains("the video engine failed"), "{s}");
     }
 
     #[test]

@@ -1,5 +1,5 @@
 // src/utils/crashReporter.ts
-// Opt-in anonymous crash reporter for FlowGet
+// Opt-in anonymous crash reporter for BoltGrab
 
 export interface CrashReport {
   id: string;
@@ -50,7 +50,7 @@ export function recordCrashReport(
   const report: CrashReport = {
     id: `crash_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: Date.now(),
-    appName: "FlowGet",
+    appName: "BoltGrab",
     version: "1.0.0",
     os: typeof navigator !== "undefined" ? navigator.platform : "Windows",
     errorName: err.name || "Error",

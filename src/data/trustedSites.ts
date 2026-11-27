@@ -1,5 +1,5 @@
 /**
- * The websites shown in the "Trusted Sites" area of FlowGet.
+ * The websites shown in the "Trusted Sites" area of BoltGrab.
  *
  * This is the one file to edit to change that list. Add one object per website:
  *
@@ -27,7 +27,7 @@ export interface TrustedSite {
 
 export const TRUSTED_SITES: TrustedSite[] = [
   // DUMMY ENTRIES for testing the page: replace them with your real list.
-  { name: "Example Software", url: "https://software.example.com/", category: "Software", description: "Official installers for popular programs, checked by the FlowGet team.", tags: ["official"] },
+  { name: "Example Software", url: "https://software.example.com/", category: "Software", description: "Official installers for popular programs, checked by the BoltGrab team.", tags: ["official"] },
   { name: "Open Tools Hub", url: "https://tools.example.org/", category: "Software", description: "Free and open-source tools with published checksums.", tags: ["open source", "free"] },
   { name: "Driver Depot", url: "https://drivers.example.com/", category: "Software", description: "Original drivers and firmware straight from the hardware makers.", tags: ["official"] },
   { name: "Portable Apps Corner", url: "https://portable.example.net/", category: "Software", description: "Apps that run from a USB drive without installing.", tags: ["portable", "free"] },

@@ -1,6 +1,6 @@
 ---
-title: "How to check that a downloaded file is safe (hashes, VirusTotal, double extensions)"
-description: "Five quick checks before you run anything you downloaded: the source, the file name, the checksum, a VirusTotal lookup and Windows SmartScreen. With the commands to use."
+title: "How to check if a downloaded file is safe: 5 quick checks"
+description: "Five quick checks before you run a download: the source, the file name, the checksum, a VirusTotal lookup and Windows SmartScreen, with the commands to use."
 pubDate: 2026-11-23T06:00:00Z
 tags: ["safety", "windows", "security"]
 cover: "/img/blog/how-to-check-a-downloaded-file-is-safe.jpg"
@@ -25,7 +25,7 @@ The single best protection is downloading from the right place: the author's own
 - download buttons that are really adverts
 - links shared in messages from people you do not know
 
-If you keep a list of sites you trust, you will make fewer mistakes. FlowGet's *Trusted Sites* page is a curated list for exactly this.
+If you keep a list of sites you trust, you will make fewer mistakes. BoltGrab's *Trusted Sites* page is a curated list for exactly this.
 
 ## 2. Read the file name properly
 
@@ -35,7 +35,7 @@ Windows hides known file extensions by default, which attackers exploit. A file 
 2. Look at the **last** extension. Only that one counts.
 3. Treat these as programs: `.exe`, `.msi`, `.bat`, `.cmd`, `.scr`, `.js`, `.vbs`, `.ps1`, `.jar`, `.lnk`.
 
-Another trick uses a hidden character that reverses text, so `invoicefdp.exe` is displayed as `invoiceexe.pdf`. And long runs of spaces can push the real ending out of sight: `report.pdf          .exe`. FlowGet warns about double extensions, extra spaces and reversed names, and asks before opening such a file.
+Another trick uses a hidden character that reverses text, so `invoicefdp.exe` is displayed as `invoiceexe.pdf`. And long runs of spaces can push the real ending out of sight: `report.pdf          .exe`. BoltGrab warns about double extensions, extra spaces and reversed names, and asks before opening such a file.
 
 ## 3. Compare the checksum
 
@@ -65,7 +65,7 @@ How to read the result:
 - **One or two detections:** often a false alarm, but look at which engines and read the comments.
 - **"Not found":** nobody has scanned this exact file. That is normal for new or rare files, and it is not proof of safety.
 
-If you let FlowGet do the lookup (add your own free VirusTotal key in *Options > Safety*), it sends only the fingerprint, never the file, and shows the result next to your download.
+If you let BoltGrab do the lookup (add your own free VirusTotal key in *Options > Safety*), it sends only the fingerprint, never the file, and shows the result next to your download.
 
 ## 5. Heed Windows SmartScreen, and use your antivirus
 
@@ -73,7 +73,7 @@ When Windows says "Windows protected your PC", it is telling you that it does no
 
 ## What if the "file" is not a file?
 
-Sometimes a download is not malware, just wrong: the site sends a login page or error page where the file should be, and the browser saves it with the file's name. The result is a tiny file that will not open. FlowGet detects this and tells you the server sent a web page, so you can sign in and try again. Our guide to [expired links and 403 errors](/blog/download-link-expired-403-error-fix/) explains the usual causes.
+Sometimes a download is not malware, just wrong: the site sends a login page or error page where the file should be, and the browser saves it with the file's name. The result is a tiny file that will not open. BoltGrab detects this and tells you the server sent a web page, so you can sign in and try again. Our guide to [expired links and 403 errors](/blog/download-link-expired-403-error-fix/) explains the usual causes.
 
 ## A 30-second routine
 

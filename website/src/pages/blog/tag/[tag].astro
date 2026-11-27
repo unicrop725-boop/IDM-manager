@@ -31,7 +31,7 @@ const jsonLd = [
 ---
 <Base
   title={`${tag}: articles and guides`}
-  description={`FlowGet articles about ${tag}: ${posts.length} guide${posts.length === 1 ? "" : "s"} for Windows users on speed, reliability and safety of downloads.`}
+  description={`BoltGrab articles about ${tag}: ${posts.length} guide${posts.length === 1 ? "" : "s"} for Windows users on speed, reliability and safety of downloads.`}
   current="blog"
   jsonLd={jsonLd}
 >
@@ -42,7 +42,7 @@ const jsonLd = [
       <p>{posts.length} guide{posts.length === 1 ? "" : "s"}. <a href="/blog/" style="color:var(--sky)">All articles</a></p>
     </div>
     <div class="bgrid">
-      {posts.map((p) => <PostCard post={p} />)}
+      {posts.map((p, i) => <PostCard post={p} eager={i === 0} />)}
     </div>
   </div>
 </Base>

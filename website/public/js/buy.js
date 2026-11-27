@@ -1,4 +1,4 @@
-/* Buy page: asks the FlowGet API to start a Dodo Payments checkout, then sends the buyer to Dodo's hosted payment page. */
+/* Buy page: asks the BoltGrab API to start a Dodo Payments checkout, then sends the buyer to Dodo's hosted payment page. */
 (function () {
   "use strict";
   var root = document.getElementById("buy");

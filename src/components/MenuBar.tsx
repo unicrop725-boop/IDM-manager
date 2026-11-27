@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { t } from "../i18n";
 import { ThemeToggle } from "./ThemeToggle";
 import { Plus, Play, Pause, Trash2, FolderOpen, HardDrive, Gauge, Settings, Info, Sun, Moon, Layers, Globe, BarChart3, Activity, Upload, Key, RefreshCw } from "lucide-react";
 
@@ -66,7 +67,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       className="h-14 w-full flex items-center justify-between px-5 grad-bar-down select-none text-[13px] text-[var(--text-secondary)] z-40"
     >
       {/* Menus List */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 max-[720px]:gap-0">
         {/* Tasks */}
         <div className="relative">
           <button
@@ -75,7 +76,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               activeMenu === "Tasks" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
-            Tasks
+            {t("tasks", "Tasks")}
           </button>
           {activeMenu === "Tasks" && (
             <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150">
@@ -169,7 +170,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               activeMenu === "File" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
-            File
+            {t("file", "File")}
           </button>
           {activeMenu === "File" && (
             <div className="dd-anim absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
@@ -205,7 +206,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               activeMenu === "Downloads" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
-            Downloads
+            {t("downloads", "Downloads")}
           </button>
           {activeMenu === "Downloads" && (
             <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
@@ -255,7 +256,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               activeMenu === "View" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
-            View
+            {t("view", "View")}
           </button>
           {activeMenu === "View" && (
             <div className="dd-anim absolute left-0 mt-1 w-48 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
@@ -293,7 +294,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               activeMenu === "Help" ? "bg-[var(--bg-hover)] text-[var(--text-primary)]" : ""
             }`}
           >
-            Help
+            {t("help", "Help")}
           </button>
           {activeMenu === "Help" && (
             <div className="dd-anim absolute left-0 mt-1 w-52 rounded-xl bg-[var(--bg-card)] border border-[var(--border-subtle)] shadow-2xl py-1 z-50">
@@ -324,13 +325,13 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
               <button
                 onClick={() => {
-                  alert("FlowGet 1.0 - Next-Gen High Performance Download Manager\nBuilt with Rust, Tauri 2, and React.\nLifetime Pro license.");
+                  alert("BoltGrab 1.0 - Next-Gen High Performance Download Manager\nBuilt with Rust, Tauri 2, and React.\nLifetime Pro license.");
                   setActiveMenu(null);
                 }}
                 className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 text-[var(--text-primary)]"
               >
                 <Info className="w-3.5 h-3.5 text-indigo-400" />
-                <span>About FlowGet</span>
+                <span>About BoltGrab</span>
               </button>
             </div>
           )}
@@ -338,9 +339,11 @@ export const MenuBar: React.FC<MenuBarProps> = ({
       </div>
 
       {/* Right: Theme Toggle + Rounded Search Box */}
-      <div className="flex items-center gap-3">
-        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
-      <div className="fancy-field relative w-[290px] h-10">
+      <div className="flex items-center gap-3 max-[720px]:gap-1 min-w-0">
+        <div className="max-[480px]:hidden">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+        </div>
+      <div className="fancy-field relative w-[290px] max-[720px]:w-40 max-[480px]:w-28 h-10 min-w-0">
         <svg
           className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 fill-[var(--text-secondary)] pointer-events-none"
           aria-hidden="true"
@@ -353,7 +356,7 @@ export const MenuBar: React.FC<MenuBarProps> = ({
           type="search"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Search in the List"
+          placeholder={t("search_placeholder", "Search in the List")}
           className="fancy-input"
         />
       </div>

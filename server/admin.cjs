@@ -423,7 +423,7 @@ function createHandler(ctx) {
     // Latest sign-ups and purchases, mixed.
     const activity = [
       ...users.map((u) => ({ type: "user", at: u.createdAt, title: u.name || u.email, sub: u.name ? u.email : "New sign-up", demo: !!u.demo })),
-      ...payments.map((p) => ({ type: "purchase", at: p.at, title: p.email || "Purchase", sub: p.revoked ? "Refunded" : "Bought FlowGet Pro", amount: p.amount || 0, currency: p.currency || "USD", demo: !!p.demo })),
+      ...payments.map((p) => ({ type: "purchase", at: p.at, title: p.email || "Purchase", sub: p.revoked ? "Refunded" : "Bought BoltGrab Pro", amount: p.amount || 0, currency: p.currency || "USD", demo: !!p.demo })),
     ]
       .sort((x, y) => y.at - x.at)
       .slice(0, 12);
@@ -647,7 +647,10 @@ function createHandler(ctx) {
       req.on("end", () => {
         try {
           const t = Buffer.concat(chunks).toString("utf8");
-          resolve(t ? JSON.parse(t) : {});
+          const v = t ? JSON.parse(t) : {};
+          // null, arrays, numbers and strings are valid JSON but not a request we understand.
+          if (v === null || typeof v !== "object" || Array.isArray(v)) return reject(new Problem(400, "Expected a JSON object."));
+          resolve(v);
         } catch {
           reject(new Problem(400, "Invalid request."));
         }
@@ -677,7 +680,10 @@ function createHandler(ctx) {
 
     if (method === "POST" && pathname === "/api/admin/reviews") {
       const body = await readBody(req);
-      const r = (db.reviews || {})[String(body.id || "")];
+      // Own properties only: an id such as "__proto__" or "constructor" must never resolve to Object.prototype
+      // (Object.assign onto it below would add "status" to every object in the server).
+      const reviewId = String(body.id || "");
+      const r = Object.prototype.hasOwnProperty.call(db.reviews || {}, reviewId) ? db.reviews[reviewId] : null;
       if (!r) throw new Problem(404, "Review not found.");
       if (body.action === "delete") delete db.reviews[r.id];
       else if (body.action === "approve") Object.assign(r, { status: "approved", approvedAt: Date.now() });

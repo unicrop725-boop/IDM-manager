@@ -156,8 +156,8 @@
     --bg-hover: #E9ECEF;
     --border-subtle: #E2E8F0;
     --text-primary: #18181B;
-    --text-secondary: #71717A;
-    --text-disabled: #A1A1AA;
+    --text-secondary: #5B5B64;
+    --text-disabled: #7C7C86;
     --accent-purple: #B58A2C;
     --accent-teal: #4F9A2E;
     --accent-gradient: #B2D959;
@@ -1119,4 +1119,44 @@ button:disabled.bg-sky-500 {
 }
 :root.light .bg-layer {
   opacity: 0.5;
+}
+
+/* Dialogs never outgrow the window: at the smallest window size (or with large text) the card scrolls instead of its buttons going off-screen. */
+/* In the base layer on purpose: these are only defaults. Unlayered CSS would beat Tailwind's
+   utilities and silently remove every dialog's own max-w-* / overflow-* (dialogs went full width). */
+@layer base {
+  .notch-card[role="dialog"] {
+    max-width: calc(100vw - 2rem);
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+}
+
+/* Out-of-space alert: slides in from the right edge, then pulses a red glow a few times so it cannot be missed */
+@keyframes space-alert-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes space-alert-glow {
+  0%, 100% { box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 0 rgba(239, 68, 68, 0.0); }
+  50% { box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 0 7px rgba(239, 68, 68, 0.35), 0 0 42px rgba(239, 68, 68, 0.45); }
+}
+@keyframes space-alert-ring {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.space-alert {
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), 0 0 30px rgba(239, 68, 68, 0.25);
+  animation: space-alert-in 0.45s cubic-bezier(0.2, 0.9, 0.25, 1) both, space-alert-glow 1.6s ease-in-out 0.5s 4;
+}
+.space-alert-icon::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 2px solid rgb(239, 68, 68);
+  animation: space-alert-ring 1.6s ease-out 0.5s 4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .space-alert, .space-alert-icon::after { animation: none; }
 }

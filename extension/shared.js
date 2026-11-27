@@ -23,8 +23,8 @@ var FLOWGET_DEFAULTS = {
   enabled: true,
   autoSuggestBarEnabled: true,
   videoButtonEnabled: true, // the "Download Video" button that floats over videos
-  autoLaunch: true, // start FlowGet when something is grabbed while it is closed
-  notifyOnStart: true, // a desktop notification when FlowGet starts a download
+  autoLaunch: true, // start BoltGrab when something is grabbed while it is closed
+  notifyOnStart: true, // a desktop notification when BoltGrab starts a download
   captureAll: true, // take over every browser download, whatever its file type (like IDM); off = only the types below
   fileTypes: FLOWGET_DEFAULT_TYPES,
   minSizeBytes: 0,

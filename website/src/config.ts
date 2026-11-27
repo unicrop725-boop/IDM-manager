@@ -15,8 +15,8 @@ export const SITE = {
 
   // Where "Download" buttons go: a direct link to the installer, or your releases page.
   downloadUrl: "https://github.com/unicrop725-boop/IDM-manager/releases/latest",
-  // Chrome Web Store / Edge Add-ons page. Leave empty until it is published.
-  extensionUrl: "",
+  // Chrome Web Store / Edge Add-ons page, or local .zip download in /public/downloads/.
+  extensionUrl: "/downloads/boltgrab-extension.zip",
   // Where "Buy" buttons go. The on-site /buy/ page starts a Dodo Payments checkout (needs PUBLIC_API_URL and the server's DODO_* settings).
   // Set a full URL here to use an external page instead.
   buyUrl: "/buy/",

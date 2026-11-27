@@ -34,6 +34,7 @@ const jsonLd = [
   description={`BoltGrab articles about ${tag}: ${posts.length} guide${posts.length === 1 ? "" : "s"} for Windows users on speed, reliability and safety of downloads.`}
   current="blog"
   jsonLd={jsonLd}
+  noindex
 >
   <Breadcrumbs items={[{ name: "Home", href: "/" }, { name: "Blog", href: "/blog/" }, { name: tag }]} />
   <div class="wrap">
@@ -42,7 +43,7 @@ const jsonLd = [
       <p>{posts.length} guide{posts.length === 1 ? "" : "s"}. <a href="/blog/" style="color:var(--sky)">All articles</a></p>
     </div>
     <div class="bgrid">
-      {posts.map((p, i) => <PostCard post={p} eager={i === 0} />)}
+      {posts.map((p, i) => <PostCard post={p} eager={i === 0} level="h2" />)}
     </div>
   </div>
 </Base>

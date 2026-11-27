@@ -156,7 +156,7 @@ impl EngineError {
                 "The connection to the server was lost or timed out. Check your internet connection, then press Resume.".into()
             }
             EngineError::Certificate(_) => {
-                "This site's security certificate is not valid (expired, self-signed or issued for another address), so FlowGet will not download from it. Check the address, and that the date and time on this PC are right. If you trust the site, ask its owner to fix the certificate.".into()
+                "This site's security certificate is not valid (expired, self-signed or issued for another address), so BoltGrab will not download from it. Check the address, and that the date and time on this PC are right. If you trust the site, ask its owner to fix the certificate.".into()
             }
             EngineError::Dns(_) => {
                 "The website's address could not be found. Check the link for typing mistakes and that your internet works, then press Resume.".into()
@@ -168,7 +168,7 @@ impl EngineError {
                 "The server refused the connection. It may be down, or a firewall, VPN or proxy is blocking it. Check those, then press Resume.".into()
             }
             EngineError::WrongFile => {
-                "The server sent a web page instead of the file. This usually means the site needs you to sign in or the link has expired. Open the link in your browser, sign in, then download it from there with the FlowGet extension. If you really want the page itself, rename the file to end in .html.".into()
+                "The server sent a web page instead of the file. This usually means the site needs you to sign in or the link has expired. Open the link in your browser, sign in, then download it from there with the BoltGrab extension. If you really want the page itself, rename the file to end in .html.".into()
             }
             EngineError::TooManyRedirects => {
                 "The link keeps redirecting to other addresses and never reaches a file.".into()

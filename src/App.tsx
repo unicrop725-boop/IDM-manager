@@ -343,7 +343,7 @@ export default function App() {
           const msg = typeof e === "string" ? e : e?.message || "Could not start the video download.";
           if (isProLicenseError(msg)) {
             // video downloads need Pro: ask for the key now instead of failing quietly in the background
-            setNotice("Video downloading needs a FlowGet Pro license. Enter your key to continue.");
+            setNotice("Video downloading needs a BoltGrab Pro license. Enter your key to continue.");
             setIsLicenseModalOpen(true);
           } else {
             setNotice(msg);
@@ -370,7 +370,7 @@ export default function App() {
 
   useEffect(() => {
     const un = listen<any>("browser-download-captured", ({ payload }) => captureHandler.current(payload));
-    // Downloads the browser sent while this window was still loading (e.g. the browser started FlowGet).
+    // Downloads the browser sent while this window was still loading (e.g. the browser started BoltGrab).
     un.then(() =>
       api
         .takePendingCaptures()
@@ -454,7 +454,7 @@ export default function App() {
     };
   }, [settings, activeProgressModalId]);
 
-  // Copied links are detected by the backend (system-wide, even while FlowGet is in the background)
+  // Copied links are detected by the backend (system-wide, even while BoltGrab is in the background)
   useEffect(() => {
     const un = listen<{ url: string; kind: string }>("clipboard-url", ({ payload }) => {
       setClipboardCandidateUrl(payload.url);
@@ -494,7 +494,7 @@ export default function App() {
           activeIds.forEach((id) => api.pause(id).catch(() => {}));
           if ("Notification" in window && Notification.permission === "granted") {
             try {
-              new Notification("FlowGet Battery Saver", {
+              new Notification("BoltGrab Battery Saver", {
                 body: "Paused active downloads because laptop battery is below 20%.",
               });
             } catch {}

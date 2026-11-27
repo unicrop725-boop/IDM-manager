@@ -30,8 +30,8 @@ const icons: Record<string, string> = {
 };
 ---
 <Base
-  title='Features: every FlowGet feature in detail'
-  description='Every FlowGet feature in detail: parallel downloads, resume, browser extension, video downloads, bandwidth control, safety checks, queues, import and backup.'
+  title='Features: every BoltGrab feature in detail'
+  description='Every BoltGrab feature in detail: parallel downloads, resume, browser extension, video downloads, bandwidth control, safety checks, queues, import and backup.'
   current='features'
   jsonLd={jsonLd}
 >
@@ -42,7 +42,7 @@ const icons: Record<string, string> = {
     <div class="wrap">
       <span class="eyebrow"><i></i>The full tour</span>
       <h1>Every feature, <span class="grad-text">in detail</span></h1>
-      <p class="lead">What FlowGet does, how it does it, and where its limits are. Everything on this page is in the app today.</p>
+      <p class="lead">What BoltGrab does, how it does it, and where its limits are. Everything on this page is in the app today.</p>
       <div class="stats">
         <div class="stat dark"><b>A download manager built for the moments a connection fails.</b><span>Windows 10 &amp; 11</span></div>
         <div class="stat"><strong>32</strong><span>Connections per file</span></div>
@@ -74,15 +74,15 @@ const icons: Record<string, string> = {
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["engine"]}></svg></span><span>Speed &amp; reliability</span></h2>
           <p class="fsec-intro">The download engine is written in Rust. It is built for connections that are slow, flaky or interrupted.</p>
           <div class="fitems">
-            <div class="fitem"><h3>Parallel connections</h3><p>Each file is split into parts fetched at the same time, up to 32 connections (8 by default). Small files use fewer. FlowGet starts with 4 connections and adds one at a time while the speed keeps improving. If a server starts refusing connections (error 429 or 503), it backs off. The best count for each website is remembered.</p></div>
+            <div class="fitem"><h3>Parallel connections</h3><p>Each file is split into parts fetched at the same time, up to 32 connections (8 by default). Small files use fewer. BoltGrab starts with 4 connections and adds one at a time while the speed keeps improving. If a server starts refusing connections (error 429 or 503), it backs off. The best count for each website is remembered.</p></div>
             <div class="fitem"><h3>Work stealing</h3><p>When a connection finishes its part, it takes half of what is left on the slowest part instead of sitting idle. Pieces smaller than 256 KB are never split.</p></div>
             <div class="fitem"><h3>Stall detection</h3><p>A connection that receives nothing for 3 seconds, or runs far below the average speed for 8 seconds, is closed and reopened on the remaining bytes.</p></div>
             <div class="fitem"><h3>Smart retry</h3><p>Network errors are retried with growing pauses (1 second up to 60), for as long as it takes. Server errors are retried a limited number of times and respect the server's "retry after" request. A connection that was working when it dropped reconnects within a fraction of a second.</p></div>
-            <div class="fitem"><h3>Resume, always</h3><p>Progress is saved about once a second, and the file is flushed to disk before the database is updated, so the saved progress never claims bytes that are not there. After a crash, a restart or a power cut, the download continues from the last saved byte. FlowGet checks that the file on the server has not changed since (size, ETag, date).</p></div>
-            <div class="fitem"><h3>Resume on restart</h3><p>Downloads that were running when FlowGet closed continue by themselves the next time it starts. Downloads you paused yourself stay paused. You can switch this off in Settings.</p></div>
-            <div class="fitem"><h3>Waits for the internet</h3><p>When the connection drops, active downloads are parked as "Waiting for network" and continue the moment it returns. FlowGet watches for Windows network changes and double-checks with a quick connection test, so it also works where "ping" is blocked.</p></div>
-            <div class="fitem"><h3>Expired links</h3><p>Many sites use signed links that expire. FlowGet reopens the original page to get a fresh link and checks it is the same file. If that is not possible, the download keeps its progress and you can paste a new link.</p></div>
-            <div class="fitem"><h3>HTTP/1.1, HTTP/2 and HTTP/3</h3><p>FlowGet uses HTTP/2 when the server offers it, and tries HTTP/3 (QUIC, experimental) when a server announces it, falling back to normal connections straight away if it does not work.</p></div>
+            <div class="fitem"><h3>Resume, always</h3><p>Progress is saved about once a second, and the file is flushed to disk before the database is updated, so the saved progress never claims bytes that are not there. After a crash, a restart or a power cut, the download continues from the last saved byte. BoltGrab checks that the file on the server has not changed since (size, ETag, date).</p></div>
+            <div class="fitem"><h3>Resume on restart</h3><p>Downloads that were running when BoltGrab closed continue by themselves the next time it starts. Downloads you paused yourself stay paused. You can switch this off in Settings.</p></div>
+            <div class="fitem"><h3>Waits for the internet</h3><p>When the connection drops, active downloads are parked as "Waiting for network" and continue the moment it returns. BoltGrab watches for Windows network changes and double-checks with a quick connection test, so it also works where "ping" is blocked.</p></div>
+            <div class="fitem"><h3>Expired links</h3><p>Many sites use signed links that expire. BoltGrab reopens the original page to get a fresh link and checks it is the same file. If that is not possible, the download keeps its progress and you can paste a new link.</p></div>
+            <div class="fitem"><h3>HTTP/1.1, HTTP/2 and HTTP/3</h3><p>BoltGrab uses HTTP/2 when the server offers it, and tries HTTP/3 (QUIC, experimental) when a server announces it, falling back to normal connections straight away if it does not work.</p></div>
             <div class="fitem"><h3>Mirrors</h3><p>Add extra links to the same file. Each is checked against the main link (same size and version) before it is used, then shares the work. A mirror that keeps failing is set aside. Your password and cookies are never sent to a mirror on a different website.</p></div>
             <div class="fitem"><h3>Checks that the file is right</h3><p>The final size is verified, and you can enter a SHA-256, SHA-1 or MD5 checksum. A mismatch is reported clearly instead of leaving you with a bad file.</p></div>
             <div class="fitem"><h3>Writes straight into place</h3><p>The file is created at full size and every part writes directly to its position. There are no temporary part files to merge at the end.</p></div>
@@ -97,37 +97,37 @@ const icons: Record<string, string> = {
             <div class="fitem"><h3>Paste a link</h3><p>Type or paste a link in the box at the top and press Enter. With the box empty, the button opens the full dialog.</p></div>
             <div class="fitem"><h3>Full Add dialog</h3><p>Choose file name, category, save folder, queue, start action, number of connections, checksum, speed limit, proxy, user agent, referer, cookies and mirrors. Programs and disguised file names are flagged right there, before anything downloads.</p></div>
             <div class="fitem"><h3>Drag and drop</h3><p>Drop a link onto the Drop Link widget in the corner of the window.</p></div>
-            <div class="fitem"><h3>Clipboard detection</h3><p>Copy a file link, video link or magnet link anywhere and FlowGet offers to download it. You can switch this off.</p></div>
+            <div class="fitem"><h3>Clipboard detection</h3><p>Copy a file link, video link or magnet link anywhere and BoltGrab offers to download it. You can switch this off.</p></div>
             <div class="fitem"><h3>Batch download</h3><p>Paste many links, or use patterns such as <code>img_[001-100].jpg</code> or <code>part_[a-z].zip</code> to add a whole sequence in one go.</p></div>
             <div class="fitem"><h3>Site grabber</h3><p>Crawl a web page to a chosen depth and pick the files you want by type.</p></div>
-            <div class="fitem"><h3>Smart names and duplicates</h3><p>Messy names (percent codes, tracking parameters) can be cleaned automatically. FlowGet warns when you are about to download something already in your list, and gives same-name files a unique name.</p></div>
+            <div class="fitem"><h3>Smart names and duplicates</h3><p>Messy names (percent codes, tracking parameters) can be cleaned automatically. BoltGrab warns when you are about to download something already in your list, and gives same-name files a unique name.</p></div>
             <div class="fitem"><h3>Automatic sorting</h3><p>Files are sorted into categories (Music, Videos, Programs and so on) by their ending, each with its own default folder you can change.</p></div>
           </div>
         </section>
 
         <section class="fsec" id="extension">
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["extension"]}></svg></span><span>Browser extension</span></h2>
-          <p class="fsec-intro">For Chrome, Edge and Brave. It talks only to FlowGet on your own PC.</p>
+          <p class="fsec-intro">For Chrome, Edge and Brave. It talks only to BoltGrab on your own PC.</p>
           <div class="fitems">
-            <div class="fitem"><h3>Takes over downloads</h3><p>When you click a download, FlowGet takes it from the browser and passes along your login session (cookies and referer), so files behind a sign-in work. Hold Alt while clicking to let the browser download normally.</p></div>
+            <div class="fitem"><h3>Takes over downloads</h3><p>When you click a download, BoltGrab takes it from the browser and passes along your login session (cookies and referer), so files behind a sign-in work. Hold Alt while clicking to let the browser download normally.</p></div>
             <div class="fitem"><h3>You choose what it captures</h3><p>"Capture every download" is on by default and takes over any file type, like a full download manager. Turn it off to pick only what you want from predefined groups (archives, programs, video, audio, documents, images and design, other), with presets and your own extra types.</p></div>
             <div class="fitem"><h3>Download button on videos</h3><p>A small round button sits inside the video and opens a quality list, like the one in IDM, with the file size of each option and a recommended choice (the best up to 1080p). It stays out of the way of the site's own buttons, and stays clickable on pages that try to block it. There is also an audio-only (MP3) choice.</p></div>
             <div class="fitem"><h3>Works on sites that hide the video</h3><p>Many players hide the real video behind a streaming playlist. The extension notices those playlists and lists the qualities from them, so downloads still work.</p></div>
-            <div class="fitem"><h3>Right-click menu</h3><p>"Download with FlowGet" on any link, and "Download all links on this page" for pages full of files.</p></div>
-            <div class="fitem"><h3>Opens the app for you</h3><p>If FlowGet is closed when you grab something, the extension starts it, waits, and delivers the download. If the app cannot be started, the browser downloads the file itself, so nothing is lost.</p></div>
-            <div class="fitem"><h3>Built to be dependable</h3><p>It checks every 30 seconds that FlowGet is answering and retries short outages. Downloads grabbed while the app is unreachable wait (in memory only, up to a day) and are sent as soon as it answers, with a count on the toolbar icon. You get a notification when a download starts, or a plain explanation when it cannot.</p></div>
-            <div class="fitem"><h3>Popup at a glance</h3><p>Shows whether FlowGet is connected, how much free space your download drive has, and the downloads detected on the current page.</p></div>
+            <div class="fitem"><h3>Right-click menu</h3><p>"Download with BoltGrab" on any link, and "Download all links on this page" for pages full of files.</p></div>
+            <div class="fitem"><h3>Opens the app for you</h3><p>If BoltGrab is closed when you grab something, the extension starts it, waits, and delivers the download. If the app cannot be started, the browser downloads the file itself, so nothing is lost.</p></div>
+            <div class="fitem"><h3>Built to be dependable</h3><p>It checks every 30 seconds that BoltGrab is answering and retries short outages. Downloads grabbed while the app is unreachable wait (in memory only, up to a day) and are sent as soon as it answers, with a count on the toolbar icon. You get a notification when a download starts, or a plain explanation when it cannot.</p></div>
+            <div class="fitem"><h3>Popup at a glance</h3><p>Shows whether BoltGrab is connected, how much free space your download drive has, and the downloads detected on the current page.</p></div>
           </div>
         </section>
 
         <section class="fsec" id="video">
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["video"]}></svg></span><span>Video &amp; streams</span></h2>
-          <p class="fsec-intro">Included with your FlowGet license.</p>
+          <p class="fsec-intro">Included with your BoltGrab license.</p>
           <div class="fitems">
             <div class="fitem"><h3>Quality picker</h3><p>Choose a resolution and frame rate, or audio only. Convert to MP4, MP3 or M4A when you want a different format.</p></div>
             <div class="fitem"><h3>Streams</h3><p>HLS (.m3u8) and DASH (.mpd) streams are fetched and joined into one file without re-encoding. Playlists are read for you, and every quality is listed.</p></div>
-            <div class="fitem"><h3>Set up automatically</h3><p>The first time a video needs extra components, FlowGet sets them up in its own folder and verifies each download. Nothing to configure. The video component is refreshed about once a week, and you can update or reinstall it from Settings.</p></div>
-            <div class="fitem"><h3>Protected content</h3><p>Videos protected by DRM (paid streaming services) are refused with a clear message. FlowGet does not bypass DRM.</p></div>
+            <div class="fitem"><h3>Set up automatically</h3><p>The first time a video needs extra components, BoltGrab sets them up in its own folder and verifies each download. Nothing to configure. The video component is refreshed about once a week, and you can update or reinstall it from Settings.</p></div>
+            <div class="fitem"><h3>Protected content</h3><p>Videos protected by DRM (paid streaming services) are refused with a clear message. BoltGrab does not bypass DRM.</p></div>
           </div>
         </section>
 
@@ -138,7 +138,7 @@ const icons: Record<string, string> = {
             <div class="fitem"><h3>Speed limits</h3><p>Set a limit for all downloads, or for a single one, and change it while it runs.</p></div>
             <div class="fitem"><h3>Limits by time and day</h3><p>Add schedules with days of the week, a start and an end time, and an action: limit to a speed, pause downloads, or lift the limit (for example, full speed at night). Windows that run past midnight work as you would expect. The stricter limit always wins.</p></div>
             <div class="fitem"><h3>Slow mode</h3><p>One click in the bar at the bottom keeps downloads gentle (1 MB/s by default, adjustable) so browsing and calls stay smooth.</p></div>
-            <div class="fitem"><h3>Metered and hotspot connections</h3><p>FlowGet holds downloads on connections Windows marks as metered (phone hotspots, mobile data), and on Wi-Fi names you list as hotspots. They continue by themselves on a normal network. A "Download anyway" button is there when you need it.</p></div>
+            <div class="fitem"><h3>Metered and hotspot connections</h3><p>BoltGrab holds downloads on connections Windows marks as metered (phone hotspots, mobile data), and on Wi-Fi names you list as hotspots. They continue by themselves on a normal network. A "Download anyway" button is there when you need it.</p></div>
             <div class="fitem"><h3>Always tells you why</h3><p>A small badge shows what is limiting or holding your downloads right now, such as "Limited to 2 MB/s (Mon–Fri 09:00–17:00)".</p></div>
           </div>
         </section>
@@ -147,13 +147,13 @@ const icons: Record<string, string> = {
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["safety"]}></svg></span><span>Safety &amp; privacy</span></h2>
           <p class="fsec-intro">Clear warnings before you get hurt, and nothing sent anywhere without you turning it on.</p>
           <div class="fitems">
-            <div class="fitem"><h3>Warnings about risky files</h3><p>Programs and scripts (.exe, .msi, .bat, .scr and others) get a warning. Disguises such as <em>invoice.pdf.exe</em>, extra spaces before the real ending, and hidden text-direction characters get a stronger one. A small shield appears next to the file, and FlowGet asks before opening it.</p></div>
+            <div class="fitem"><h3>Warnings about risky files</h3><p>Programs and scripts (.exe, .msi, .bat, .scr and others) get a warning. Disguises such as <em>invoice.pdf.exe</em>, extra spaces before the real ending, and hidden text-direction characters get a stronger one. A small shield appears next to the file, and BoltGrab asks before opening it.</p></div>
             <div class="fitem"><h3>A web page instead of your file</h3><p>If a site answers with a login or error page where the file should be, the download stops with a plain explanation and nothing is saved under the wrong name.</p></div>
-            <div class="fitem"><h3>VirusTotal check (optional)</h3><p>Add your own free API key and FlowGet looks up each finished file's SHA-256 fingerprint on VirusTotal, showing how many engines flag it. Only the fingerprint is sent, never the file. Files VirusTotal has never seen are shown as unknown.</p></div>
+            <div class="fitem"><h3>VirusTotal check (optional)</h3><p>Add your own free API key and BoltGrab looks up each finished file's SHA-256 fingerprint on VirusTotal, showing how many engines flag it. Only the fingerprint is sent, never the file. Files VirusTotal has never seen are shown as unknown.</p></div>
             <div class="fitem"><h3>Windows Defender and extraction</h3><p>Optionally scan finished files with Windows Defender, extract archives automatically, and open the folder when a download completes.</p></div>
             <div class="fitem"><h3>Passwords in the Windows vault</h3><p>Passwords for downloads that need a login are stored in the Windows Credential Manager, not in the app's database. A login typed into the link itself is moved out of the link and stored the same way.</p></div>
             <div class="fitem"><h3>Plain-language errors</h3><p>No vague "probing" or error codes. The list says what is happening ("Connecting…") and, if it fails, why: site not found, certificate not trusted, connection refused, server not answering, wrong password, disk full. Hover for what to do next.</p></div>
-            <div class="fitem"><h3>No ads, no tracking</h3><p>FlowGet sends no usage statistics or crash reports. See the <a href="/privacy/">privacy page</a> for the few optional features that contact other services.</p></div>
+            <div class="fitem"><h3>No ads, no tracking</h3><p>BoltGrab sends no usage statistics or crash reports. See the <a href="/privacy/">privacy page</a> for the few optional features that contact other services.</p></div>
           </div>
         </section>
 
@@ -161,7 +161,7 @@ const icons: Record<string, string> = {
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["organise"]}></svg></span><span>Organise &amp; manage</span></h2>
           <div class="fitems">
             <div class="fitem"><h3>Categories, filters and search</h3><p>The sidebar groups downloads by type, plus Unfinished and Finished, each with a count. Search matches several words at once across name, link and category, and stays quick with thousands of entries.</p></div>
-            <div class="fitem"><h3>Queues and scheduling</h3><p>Create queues with a limit on how many run at once, and a schedule with start time, stop time and days. Choose what happens when a queue finishes: nothing, sleep, shut down, hibernate, quit FlowGet, or run a program. Run only on Wi-Fi, or only at night.</p></div>
+            <div class="fitem"><h3>Queues and scheduling</h3><p>Create queues with a limit on how many run at once, and a schedule with start time, stop time and days. Choose what happens when a queue finishes: nothing, sleep, shut down, hibernate, quit BoltGrab, or run a program. Run only on Wi-Fi, or only at night.</p></div>
             <div class="fitem"><h3>Everything one click away</h3><p>Pause, resume, restart, move, rename, open, open the folder, extract, scan, refresh a link, share, and see full Properties for any download. Multi-select and keyboard shortcuts included.</p></div>
             <div class="fitem"><h3>Disk space and cleaning</h3><p>See your download drive's free space (it shows a warning gauge when the drive is nearly full), and use the Disk Cleaner to find duplicate links, old finished downloads and failed ones.</p></div>
             <div class="fitem"><h3>Statistics</h3><p>A summary of your downloads, computed from your own list.</p></div>
@@ -172,7 +172,7 @@ const icons: Record<string, string> = {
         <section class="fsec" id="trusted">
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["trusted"]}></svg></span><span>Trusted Sites</span></h2>
           <div class="fitems">
-            <div class="fitem"><h3>A curated list inside the app</h3><p>A page of websites we recommend for safe downloads, with search and category filters and three views: icons, cards and a wide list. A click opens the site in your browser, and FlowGet takes over the download. Downloads from a listed site get a green "Trusted site" mark in the Add dialog.</p></div>
+            <div class="fitem"><h3>A curated list inside the app</h3><p>A page of websites we recommend for safe downloads, with search and category filters and three views: icons, cards and a wide list. A click opens the site in your browser, and BoltGrab takes over the download. Downloads from a listed site get a green "Trusted site" mark in the Add dialog.</p></div>
           </div>
         </section>
 
@@ -196,7 +196,7 @@ const icons: Record<string, string> = {
         <section class="fsec" id="limits">
           <h2><span class="fico"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons["limits"]}></svg></span><span>Good to know</span></h2>
           <div class="knows">
-            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>FlowGet is for Windows 10 and 11 for now.</p></div>
+            <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>BoltGrab is for Windows 10 and 11 for now.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Speed limits, schedules and slow mode apply to normal file downloads. Videos from video sites are not throttled or paused by them.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>Turbo Mode needs two working networks. SFTP needs Python with the paramiko package installed.</p></div>
             <div class="know"><span class="kico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span><p>The VirusTotal check needs your own free API key, and the free plan allows 4 lookups a minute.</p></div>
@@ -207,7 +207,7 @@ const icons: Record<string, string> = {
         <div class="band" style="margin-top:56px">
           <h2>Get every feature with one payment</h2>
           <p>$19.99 lifetime license, no subscription.</p>
-          <a class="btn btn-primary" href="/#pricing">Get FlowGet Pro</a>
+          <a class="btn btn-primary" href="/#pricing">Get BoltGrab Pro</a>
         </div>
       </div>
     </div>

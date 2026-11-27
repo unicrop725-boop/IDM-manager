@@ -34,12 +34,12 @@ Many routers offer **QoS** or **bandwidth control** that prioritises traffic or 
 
 ## Option 3: a download manager
 
-Setting the limit where the downloads happen is the simplest approach, and it can follow a schedule. In FlowGet:
+Setting the limit where the downloads happen is the simplest approach, and it can follow a schedule. In BoltGrab:
 
 1. **A global limit.** Set a maximum speed for all downloads (*Options > Connection*), or for one download, and change it while it runs.
 2. **Schedules.** In *Options > Bandwidth* add rules with days and times. Each rule can *limit to* a speed, *pause downloads*, or *lift the limit*. For example: limit to 2 MB/s on weekdays from 09:00 to 17:00, and no limit from midnight to 06:00. Windows that run past midnight work as you would expect, and the stricter limit always wins.
 3. **Slow mode.** One click in the bar at the bottom of the window holds downloads at a gentle speed (1 MB/s by default) while you are in a meeting.
-4. **Metered and hotspot connections.** Turn on *pause on metered connections* and FlowGet holds downloads when Windows marks the network as metered, or when you connect to a Wi-Fi name you listed as a hotspot. They resume by themselves on a normal network, and a "Download anyway" button is there when you need it.
+4. **Metered and hotspot connections.** Turn on *pause on metered connections* and BoltGrab holds downloads when Windows marks the network as metered, or when you connect to a Wi-Fi name you listed as a hotspot. They resume by themselves on a normal network, and a "Download anyway" button is there when you need it.
 
 A badge in the status bar always shows why downloads are limited or held, for example "Limited to 2 MB/s (Mon-Fri 09:00-17:00)".
 

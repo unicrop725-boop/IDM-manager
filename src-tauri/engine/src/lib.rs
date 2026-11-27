@@ -1,4 +1,4 @@
-//! FlowGet download engine.
+//! BoltGrab download engine.
 //!
 //! This crate contains **no UI and no Tauri code**. The desktop app talks to it through
 //! [`Engine`] (commands) and an event channel of [`EngineEvent`] (progress / state / persistence).

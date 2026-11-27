@@ -1,4 +1,4 @@
-// FlowGet Browser Integration - Service Worker (Manifest V3)
+// BoltGrab Browser Integration - Service Worker (Manifest V3)
 
 importScripts("shared.js");
 
@@ -53,7 +53,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         throw new Error("offline");
       })
       .then((data) => sendResponse(data))
-      .catch(() => sendResponse({ ok: false, error: "FlowGet is not running. Open the app and try again.", offline: true }));
+      .catch(() => sendResponse({ ok: false, error: "BoltGrab is not running. Open the app and try again.", offline: true }));
     return true;
   }
 
@@ -82,7 +82,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "OPEN_APP") {
-    // From the popup's "Open FlowGet" button: start the app, or bring it to the front when it is already running.
+    // From the popup's "Open BoltGrab" button: start the app, or bring it to the front when it is already running.
     (async () => {
       if (await isAppUp()) {
         await fetch(SHOW_URL).catch(() => {});
@@ -151,14 +151,14 @@ chrome.runtime.onInstalled.addListener(async () => {
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "flowget_download_link",
-    title: "Download with FlowGet",
+    title: "Download with BoltGrab",
     contexts: ["link", "image", "video", "audio"],
   });
 
   // On video pages (YouTube, Vimeo, ...) right-clicking the page offers the video itself.
   chrome.contextMenus.create({
     id: "flowget_download_page_video",
-    title: "Download this video with FlowGet",
+    title: "Download this video with BoltGrab",
     contexts: ["page"],
     documentUrlPatterns: VIDEO_PAGE_PATTERNS,
   });
@@ -190,23 +190,23 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// URLs handed back to the browser because FlowGet could not be reached; they must not be captured a second time.
+// URLs handed back to the browser because BoltGrab could not be reached; they must not be captured a second time.
 const handedBack = new Set();
 
 // Intercept browser downloads
 chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   (async () => {
     try {
-      // Visible in chrome://extensions > FlowGet > "service worker" > Console: proves the extension saw this download.
-      console.log("[FlowGet] browser download seen:", (downloadItem.url || "").slice(0, 160), "| name:", downloadItem.filename, "| type:", downloadItem.mime, "| size:", downloadItem.fileSize);
+      // Visible in chrome://extensions > BoltGrab > "service worker" > Console: proves the extension saw this download.
+      console.log("[BoltGrab] browser download seen:", (downloadItem.url || "").slice(0, 160), "| name:", downloadItem.filename, "| type:", downloadItem.mime, "| size:", downloadItem.fileSize);
       if (handedBack.delete(downloadItem.url)) return;
 
       const settings = await getSettings();
       if (!settings.enabled) return;
 
-      // Only normal web addresses can be fetched by FlowGet; blob:, data: and file: downloads stay with the browser.
+      // Only normal web addresses can be fetched by BoltGrab; blob:, data: and file: downloads stay with the browser.
       if (!/^(https?|ftp):/i.test(downloadItem.url || "")) {
-        console.log("[FlowGet] left to the browser: not a normal web address (blob:/data:/file:)");
+        console.log("[BoltGrab] left to the browser: not a normal web address (blob:/data:/file:)");
         return;
       }
 
@@ -232,7 +232,7 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
         return;
       }
 
-      console.log("[FlowGet] taking over this download");
+      console.log("[BoltGrab] taking over this download");
       // Cancel the browser's download
       chrome.downloads.cancel(downloadItem.id).catch(() => {});
 
@@ -257,16 +257,16 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
       if (delivered) {
         notifyStarted(payload);
       } else {
-        // FlowGet could not be reached, started or refused it: give the download back to the browser so nothing is lost.
+        // BoltGrab could not be reached, started or refused it: give the download back to the browser so nothing is lost.
         handedBack.add(downloadItem.url);
         chrome.downloads.download({ url: downloadItem.url }).catch(() => handedBack.delete(downloadItem.url));
         notifyProblem(
-          result && result.rejected ? "FlowGet could not take this download" : "FlowGet is not running",
-          "The browser is downloading " + nameFromPayload(payload) + " itself. Open FlowGet to use it next time.",
+          result && result.rejected ? "BoltGrab could not take this download" : "BoltGrab is not running",
+          "The browser is downloading " + nameFromPayload(payload) + " itself. Open BoltGrab to use it next time.",
         );
       }
     } catch (err) {
-      console.warn("[FlowGet] Interception error:", err);
+      console.warn("[BoltGrab] Interception error:", err);
     }
   })();
 
@@ -274,13 +274,13 @@ chrome.downloads.onDeterminingFilename.addListener((downloadItem, suggest) => {
   return false;
 });
 
-/** Small confirmation on the toolbar icon: green tick when FlowGet took the link, red "!" when it did not. */
+/** Small confirmation on the toolbar icon: green tick when BoltGrab took the link, red "!" when it did not. */
 function showResult(ok) {
   try {
     chrome.action.setBadgeBackgroundColor({ color: ok ? "#16a34a" : "#dc2626" });
     chrome.action.setBadgeText({ text: ok ? "OK" : "!" });
     chrome.action.setTitle({
-      title: ok ? "Sent to FlowGet" : "FlowGet is not running - open the app and try again",
+      title: ok ? "Sent to BoltGrab" : "BoltGrab is not running - open the app and try again",
     });
     // Afterwards show the number of waiting downloads again, or nothing.
     setTimeout(() => getPending().then((p) => updateWaitingBadge(p.length)).catch(() => updateWaitingBadge(0)), 3500);
@@ -299,7 +299,7 @@ function isDirectFileUrl(url) {
   }
 }
 
-/** Lets the browser download `url` itself (FlowGet's capture is skipped once for it). False when it cannot. */
+/** Lets the browser download `url` itself (BoltGrab's capture is skipped once for it). False when it cannot. */
 function handBackToBrowser(url) {
   if (!/^(https?|ftp):/i.test(url || "")) return false;
   handedBack.add(url);
@@ -336,20 +336,20 @@ async function handleDirectDownload({ url, fileName, referer, tabId, quality }) 
   if (result && result.rejected) {
     // The click was already taken from the browser, so give the download back: a refused link must not be lost.
     handBackToBrowser(url);
-    notifyProblem("FlowGet could not start this download", (result.error || "The app refused the link.") + " The browser is downloading it instead.");
+    notifyProblem("BoltGrab could not start this download", (result.error || "The app refused the link.") + " The browser is downloading it instead.");
     return false;
   }
   // The app cannot be reached (it is closed and could not be started, or is not installed). A plain file link is given
   // back to the browser so the user still gets the file; waiting for an app that may never open would swallow every
-  // click. Video-page links (resolved by the app with yt-dlp) have no browser fallback, so those wait for FlowGet.
+  // click. Video-page links (resolved by the app with yt-dlp) have no browser fallback, so those wait for BoltGrab.
   if (!quality && isDirectFileUrl(url) && handBackToBrowser(url)) {
-    notifyProblem("FlowGet is not running", `${nameFromPayload(payload)} is downloading in the browser instead. Open FlowGet to use it next time.`);
+    notifyProblem("BoltGrab is not running", `${nameFromPayload(payload)} is downloading in the browser instead. Open BoltGrab to use it next time.`);
     return "browser";
   }
   const waiting = await queuePayload(payload);
   notifyProblem(
-    "FlowGet is not running",
-    `${nameFromPayload(payload)} is waiting. It starts as soon as FlowGet opens (${waiting} waiting). Click to open FlowGet.`,
+    "BoltGrab is not running",
+    `${nameFromPayload(payload)} is waiting. It starts as soon as BoltGrab opens (${waiting} waiting). Click to open BoltGrab.`,
   );
   return "queued";
 }
@@ -446,7 +446,7 @@ function scheduleHealthChecks() {
       if (!alarm) chrome.alarms.create(HEALTH_ALARM, { delayInMinutes: 0.1, periodInMinutes: 0.5 });
     });
   } catch (e) {
-    console.warn("[FlowGet] Could not schedule the health check", e);
+    console.warn("[BoltGrab] Could not schedule the health check", e);
   }
 }
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -505,7 +505,7 @@ async function flushPending() {
   if (sent) {
     notify(
       "flowget-sent",
-      "Downloads sent to FlowGet",
+      "Downloads sent to BoltGrab",
       sent === 1 ? "The waiting download has started." : `${sent} waiting downloads have started.`,
     );
   }
@@ -517,10 +517,10 @@ function updateWaitingBadge(count) {
     if (count > 0) {
       chrome.action.setBadgeBackgroundColor({ color: "#d97706" });
       chrome.action.setBadgeText({ text: String(count) });
-      chrome.action.setTitle({ title: `${count} download${count === 1 ? "" : "s"} waiting for FlowGet - open the app` });
+      chrome.action.setTitle({ title: `${count} download${count === 1 ? "" : "s"} waiting for BoltGrab - open the app` });
     } else {
       chrome.action.setBadgeText({ text: "" });
-      chrome.action.setTitle({ title: "FlowGet Download Integration" });
+      chrome.action.setTitle({ title: "BoltGrab Download Integration" });
     }
   } catch {
     /* the badge is only a courtesy */
@@ -558,7 +558,7 @@ function notify(id, title, message) {
 /** "Download started" - on by default, can be switched off in the popup. */
 async function notifyStarted(payload) {
   if (!(await getSettings()).notifyOnStart) return;
-  notify("", "Download started in FlowGet", nameFromPayload(payload));
+  notify("", "Download started in BoltGrab", nameFromPayload(payload));
 }
 
 /** Problems always show: they need the user to do something. */
@@ -566,7 +566,7 @@ function notifyProblem(title, message) {
   notify("flowget-problem", title, message);
 }
 
-// Clicking a notification brings FlowGet forward, or starts it.
+// Clicking a notification brings BoltGrab forward, or starts it.
 chrome.notifications.onClicked.addListener(async (id) => {
   chrome.notifications.clear(id);
   if (await isAppUp()) fetch(SHOW_URL).catch(() => {});
@@ -589,13 +589,13 @@ async function openFlowGetLink() {
     // The tab only exists to hand the link to Windows; close it again.
     setTimeout(() => chrome.tabs.remove(tab.id).catch(() => {}), 2500);
   } catch (e) {
-    console.warn("[FlowGet] Could not open flowget://", e);
+    console.warn("[BoltGrab] Could not open flowget://", e);
   }
 }
 
 let launching = null;
 
-/** True once the app answers. Starts it when it is closed, if the user has "open FlowGet automatically" on. */
+/** True once the app answers. Starts it when it is closed, if the user has "open BoltGrab automatically" on. */
 async function ensureAppRunning({ force = false } = {}) {
   if (await isAppUp()) return true;
   if (!force && !(await getSettings()).autoLaunch) return false;
@@ -678,7 +678,7 @@ async function deliverToFlowGet(payload) {
 
   // 3. Open the app through its flowget:// link, wait for it, and deliver the download.
   if (await ensureAppRunning()) return postToApp(payload);
-  console.warn("[FlowGet] Could not reach the FlowGet app.");
+  console.warn("[BoltGrab] Could not reach the BoltGrab app.");
 }
 
 async function getSettings() {

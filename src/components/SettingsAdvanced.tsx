@@ -65,7 +65,7 @@ export function ToolsPanel() {
           <h4 className="font-semibold text-[var(--text-primary)]">Video tools, installed for you</h4>
           <p className="text-[11px] text-[var(--text-secondary)]">
             The video engine (for video sites) and the media converter (for joining and converting) are set up by
-            FlowGet the first time a video needs them. Nothing to configure. Each download is verified for safety.
+            BoltGrab the first time a video needs them. Nothing to configure. Each download is verified for safety.
           </p>
         </div>
       </div>
@@ -131,7 +131,7 @@ export function ToolsPanel() {
         <div>
           <div>Keep the video engine up to date automatically</div>
           <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-            Video sites change often, so FlowGet checks for an update about once a week and installs it quietly.
+            Video sites change often, so BoltGrab checks for an update about once a week and installs it quietly.
           </p>
         </div>
       </label>
@@ -413,7 +413,7 @@ export function SafetyPanel() {
         <div>
           <h4 className="font-semibold text-[var(--text-primary)]">Safety checks</h4>
           <p className="text-[11px] text-[var(--text-secondary)]">
-            FlowGet always warns about programs (.exe, .msi, scripts) and about disguised files such as
+            BoltGrab always warns about programs (.exe, .msi, scripts) and about disguised files such as
             “invoice.pdf.exe”, and asks before opening a risky file.
           </p>
         </div>
@@ -429,7 +429,7 @@ export function SafetyPanel() {
           )}
         </div>
         <p className="text-[11px] text-[var(--text-secondary)]">
-          When a download finishes, FlowGet looks up its fingerprint (SHA-256) on VirusTotal and shows how many of ~70
+          When a download finishes, BoltGrab looks up its fingerprint (SHA-256) on VirusTotal and shows how many of ~70
           antivirus engines flag it. <b>Only the fingerprint is sent, never the file.</b> A file VirusTotal has never
           seen is shown as “unknown”, which is normal for new files. The free key allows 4 lookups a minute.
         </p>

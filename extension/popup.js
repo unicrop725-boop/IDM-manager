@@ -1,4 +1,4 @@
-// FlowGet extension popup.
+// BoltGrab extension popup.
 
 const PING_URL = "http://127.0.0.1:21588/api/ping";
 
@@ -97,10 +97,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? `App not running · ${waiting} waiting`
         : "App not running";
     pill.title = state.appOnline
-      ? "FlowGet is running and ready to receive downloads."
+      ? "BoltGrab is running and ready to receive downloads."
       : waiting
-        ? `${waiting} download${waiting === 1 ? " is" : "s are"} waiting. They start as soon as FlowGet opens.`
-        : "Open the FlowGet app so downloads can be sent to it.";
+        ? `${waiting} download${waiting === 1 ? " is" : "s are"} waiting. They start as soon as BoltGrab opens.`
+        : "Open the BoltGrab app so downloads can be sent to it.";
 
     // Refresh the storage card when the connection changes, and now and then while the app is open.
     if (state.appOnline !== lastOnline || (state.appOnline && Date.now() - lastStorageAt > 20000)) {
@@ -126,7 +126,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       $("storage-free").textContent = "—";
       $("storage-of").textContent = "";
       $("storage-bar").style.width = "0";
-      $("storage-note").textContent = "Open FlowGet to see your free space";
+      $("storage-note").textContent = "Open BoltGrab to see your free space";
       return;
     }
     const used = Math.max(0, info.totalBytes - info.freeBytes);
@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bar.dataset.level = pct >= 95 ? "full" : pct >= 85 ? "warn" : "ok";
     const sameDrive = Boolean(info.downloadDir) && info.downloadDir[0].toUpperCase() === String(info.drive)[0].toUpperCase();
     $("storage-note").textContent = stale
-      ? "Last known value — FlowGet is closed"
+      ? "Last known value — BoltGrab is closed"
       : sameDrive
         ? `${pct}% used · downloads save to ${info.downloadDir}`
         : `${pct}% used`;
@@ -177,7 +177,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     btn.disabled = false;
     await checkApp();
-    if (!state.appOnline) toast("Couldn't open FlowGet. Start it from the Start menu.", "error");
+    if (!state.appOnline) toast("Couldn't open BoltGrab. Start it from the Start menu.", "error");
   });
 
   checkApp();
@@ -311,7 +311,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         toast(okText);
         setTimeout(() => window.close(), 900);
       } else {
-        toast("FlowGet isn't running — open the app first", "error");
+        toast("BoltGrab isn't running — open the app first", "error");
       }
     } catch {
       toast("Couldn't reach the extension", "error");
@@ -369,7 +369,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       el(
         "div",
         "empty-text",
-        "Open a video page or a page with file links. You can also send this page straight to FlowGet below.",
+        "Open a video page or a page with file links. You can also send this page straight to BoltGrab below.",
       ),
     );
     return box;
@@ -390,11 +390,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     body.append(title, meta);
 
     const go = el("button", "icon-btn");
-    go.title = "Download with FlowGet";
-    go.setAttribute("aria-label", `Download ${item.title || item.url} with FlowGet`);
+    go.title = "Download with BoltGrab";
+    go.setAttribute("aria-label", `Download ${item.title || item.url} with BoltGrab`);
     go.append(svg('<path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>', 16, 2.6));
     go.addEventListener("click", () =>
-      send({ type: "DOWNLOAD_MEDIA", url: item.url, fileName: item.fileName || undefined }, "Sent to FlowGet"),
+      send({ type: "DOWNLOAD_MEDIA", url: item.url, fileName: item.fileName || undefined }, "Sent to BoltGrab"),
     );
 
     card.append(icon, body, go);
@@ -413,7 +413,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (visible.length === 0) return;
     send(
       { type: "DOWNLOAD_BATCH", items: visible.map((i) => ({ url: i.url, fileName: i.fileName || undefined })) },
-      visible.length === 1 ? "Sent to FlowGet" : `Sent ${visible.length} items to FlowGet`,
+      visible.length === 1 ? "Sent to BoltGrab" : `Sent ${visible.length} items to BoltGrab`,
     );
   });
 
@@ -422,7 +422,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       toast("This page can't be downloaded", "error");
       return;
     }
-    send({ type: "DOWNLOAD_MEDIA", url: state.tab.url }, "Page sent to FlowGet");
+    send({ type: "DOWNLOAD_MEDIA", url: state.tab.url }, "Page sent to BoltGrab");
   });
 
   // ---------- Extension up to date? ----------
@@ -431,7 +431,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const onDisk = await (await fetch(chrome.runtime.getURL("manifest.json"), { cache: "no-store" })).json();
     if (onDisk.version !== chrome.runtime.getManifest().version) {
-      toast("Updating the FlowGet extension…");
+      toast("Updating the BoltGrab extension…");
       setTimeout(() => chrome.runtime.reload(), 700);
     }
   } catch {

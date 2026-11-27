@@ -92,7 +92,7 @@ function draw(kind) {
     flow(c, w, h, 6, 0.55, 0.77, 0.19);
     roundedIcon(c, (w - 84) / 2, 42, 84);
     c.textAlign = "center"; c.textBaseline = "alphabetic";
-    c.fillStyle = "#FFFFFF"; c.font = "700 30px Outfit"; c.fillText("FlowGet", w / 2, 172);
+    c.fillStyle = "#FFFFFF"; c.font = "700 30px Outfit"; c.fillText("BoltGrab", w / 2, 172);
     c.fillStyle = LIME; c.font = "600 10.5px Outfit"; c.fillText("DOWNLOAD MANAGER", w / 2, 192);
     c.fillStyle = "rgba(255,255,255,0.72)"; c.font = "400 11px Outfit";
     c.fillText("Fast. Smart. Resumable.", w / 2, 212);
@@ -103,7 +103,7 @@ function draw(kind) {
     flow(c, w, h, 3, 0.5, 0.8, 0.14);
     roundedIcon(c, 10, 8.5, 40);
     c.textAlign = "left"; c.textBaseline = "alphabetic";
-    c.fillStyle = "#FFFFFF"; c.font = "700 21px Outfit"; c.fillText("FlowGet", 58, 31);
+    c.fillStyle = "#FFFFFF"; c.font = "700 21px Outfit"; c.fillText("BoltGrab", 58, 31);
     c.fillStyle = LIME; c.font = "600 8px Outfit"; c.fillText("DOWNLOAD MANAGER", 59, 43);
   }
   // shrink to the real size

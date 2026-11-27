@@ -349,12 +349,12 @@ export const api = {
   takePendingCaptures: () =>
     isTauri ? invoke<any[]>("take_pending_captures") : Promise.resolve<any[]>([]),
 
-  // yt-dlp / ffmpeg installed and updated by FlowGet itself
+  // yt-dlp / ffmpeg installed and updated by BoltGrab itself
   getToolsStatus: () =>
     isTauri
       ? invoke<ToolInfo[]>("get_tools_status")
       : Promise.resolve<ToolInfo[]>([
-          { name: "yt-dlp", installed: true, source: "FlowGet", version: "2026.01.01", path: null },
+          { name: "yt-dlp", installed: true, source: "BoltGrab", version: "2026.01.01", path: null },
           { name: "ffmpeg", installed: false, source: "Missing", version: null, path: null },
         ]),
   installTool: (tool: string, force = false) =>

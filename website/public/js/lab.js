@@ -1,12 +1,12 @@
-/* Speed lab: replays the measured test runs, sped up. The times are the real measurements from FlowGet's own test server. */
+/* Speed lab: replays the measured test runs, sped up. The times are the real measurements from BoltGrab's own test server. */
 (function () {
   "use strict";
   var box = document.getElementById("lab");
   if (!box) return;
   var SCEN = {
-    slow: { d: "One connection is slow. A plain 8-part downloader waits for its slowest part to finish; FlowGet hands that part's remaining work to idle connections.", t: [14.4, 16.5, 5.5] },
-    silent: { d: "One connection goes silent mid-download. Fixed parts wait on it; FlowGet notices, gives its work to the others and carries on.", t: [15.3, 32.0, 4.0] },
-    outage: { d: "The internet drops for 30 seconds. All three have to wait; FlowGet continues from the last saved byte as soon as the network returns.", t: [70.3, 61.4, 36.6] }
+    slow: { d: "One connection is slow. A plain 8-part downloader waits for its slowest part to finish; BoltGrab hands that part's remaining work to idle connections.", t: [14.4, 16.5, 5.5] },
+    silent: { d: "One connection goes silent mid-download. Fixed parts wait on it; BoltGrab notices, gives its work to the others and carries on.", t: [15.3, 32.0, 4.0] },
+    outage: { d: "The internet drops for 30 seconds. All three have to wait; BoltGrab continues from the last saved byte as soon as the network returns.", t: [70.3, 61.4, 36.6] }
   };
   var SPEEDUP = 8; // measured seconds per real second
   var current = "slow", raf = 0, started = 0, seen = false;
@@ -27,7 +27,7 @@
       fill(i, f, Math.min(el, d), f >= 1 && d === best);
     });
     raf = all ? 0 : requestAnimationFrame(frame);
-    if (all) box.querySelector("[data-lab-result]").innerHTML = "FlowGet finished <b>" + (Math.max.apply(null, t.slice(0, 2)) / t[2]).toFixed(1) + "×</b> sooner than the slower of the other two.";
+    if (all) box.querySelector("[data-lab-result]").innerHTML = "BoltGrab finished <b>" + (Math.max.apply(null, t.slice(0, 2)) / t[2]).toFixed(1) + "×</b> sooner than the slower of the other two.";
   }
   function run() {
     cancelAnimationFrame(raf);

@@ -4,7 +4,7 @@ members = ["engine"]
 [package]
 name = "flowget"
 version = "0.1.0"
-description = "FlowGet - a modern download manager"
+description = "BoltGrab - a modern download manager"
 edition = "2021"
 default-run = "flowget"
 

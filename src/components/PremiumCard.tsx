@@ -46,7 +46,7 @@ export const PremiumCard: React.FC<PremiumCardProps> = ({
         </div>
         <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
           <span>
-            FlowGet is a paid app. Without a license, downloading is limited to 2 connections. Buy a lifetime license to unlock full 32-stream multi-threading, Turbo Mode, and HLS/DASH media streaming.
+            BoltGrab is a paid app. Without a license, downloading is limited to 2 connections. Buy a lifetime license to unlock full 32-stream multi-threading, Turbo Mode, and HLS/DASH media streaming.
           </span>
         </p>
       </div>

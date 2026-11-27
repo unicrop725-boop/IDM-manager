@@ -1,4 +1,4 @@
-/* Admin dashboard: KPIs, charts, users, purchases and a blog editor. Talks to /api/admin on the FlowGet API. */
+/* Admin dashboard: KPIs, charts, users, purchases and a blog editor. Talks to /api/admin on the BoltGrab API. */
 (function () {
   "use strict";
   var root = document.getElementById("admin");
@@ -227,7 +227,7 @@
 
   var TABS = ["overview", "users", "purchases", "reviews", "blog"];
   var TITLES = {
-    overview: ["Overview", "How FlowGet is doing"],
+    overview: ["Overview", "How BoltGrab is doing"],
     users: ["Users", "Everyone who created an account"],
     purchases: ["Purchases", "Payments, licenses and refunds"],
     reviews: ["Reviews", "Approve what buyers write before it appears on the website"],
@@ -385,7 +385,7 @@
       clear(fn);
       var f = st.funnel, base = Math.max(1, f.signups);
       var wrap = h("div", { class: "fn" });
-      [["Signed up", f.signups], ["Finished profile", f.completed], ["Bought FlowGet Pro", f.bought]].forEach(function (r) {
+      [["Signed up", f.signups], ["Finished profile", f.completed], ["Bought BoltGrab Pro", f.bought]].forEach(function (r) {
         var pct = Math.round((r[1] / base) * 100);
         var fill = h("div", { class: "fill" });
         fill.style.width = Math.max(r[1] ? 3 : 0, pct) + "%";

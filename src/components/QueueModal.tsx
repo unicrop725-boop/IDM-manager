@@ -250,7 +250,7 @@ export default function QueueModal({ queue, onSave, onClose }: Props) {
                 <option value="sleep">Sleep computer</option>
                 <option value="shutdown">Shut down computer</option>
                 <option value="hibernate">Hibernate computer</option>
-                <option value="exitApp">Exit FlowGet app</option>
+                <option value="exitApp">Exit BoltGrab app</option>
                 <option value="runProgram">Run external program</option>
               </Select>
             </div>

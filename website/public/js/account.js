@@ -28,7 +28,7 @@
       d.licenses.forEach(function (l) {
         var li = document.createElement("li");
         var t = document.createElement("div"); t.className = "t";
-        t.textContent = "FlowGet Pro (" + (l.tier || "lifetime") + ") · up to " + (l.maxDevices || 2) + " PCs · " + (l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : "");
+        t.textContent = "BoltGrab Pro (" + (l.tier || "lifetime") + ") · up to " + (l.maxDevices || 2) + " PCs · " + (l.issuedAt ? new Date(l.issuedAt).toLocaleDateString() : "");
         var code = document.createElement("code"); code.textContent = l.licenseKey;
         var b = document.createElement("button"); b.type = "button"; b.className = "soft"; b.textContent = "Copy key";
         b.addEventListener("click", function () {

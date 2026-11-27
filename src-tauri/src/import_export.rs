@@ -345,12 +345,12 @@ pub async fn build_backup(db: &Db, engine: &Engine) -> Result<Backup, String> {
 
 pub fn parse_backup(text: &str) -> Result<Backup, String> {
     let b: Backup = serde_json::from_str(text)
-        .map_err(|_| "This is not a FlowGet backup file (or it is damaged).".to_string())?;
+        .map_err(|_| "This is not a BoltGrab backup file (or it is damaged).".to_string())?;
     if b.app != "FlowGet" {
-        return Err("This is not a FlowGet backup file.".into());
+        return Err("This is not a BoltGrab backup file.".into());
     }
     if b.format > BACKUP_FORMAT {
-        return Err("This backup was made by a newer FlowGet. Update FlowGet and try again.".into());
+        return Err("This backup was made by a newer BoltGrab. Update BoltGrab and try again.".into());
     }
     Ok(b)
 }

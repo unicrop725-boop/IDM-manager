@@ -1,8 +1,8 @@
-//! The video engine (yt-dlp) and media converter (ffmpeg), installed and kept up to date by FlowGet itself, so
+//! The video engine (yt-dlp) and media converter (ffmpeg), installed and kept up to date by BoltGrab itself, so
 //! nobody has to edit PATH. Their real names must never be shown to the user: use `friendly_name` / `scrub`.
 //!
 //! The programs live in `%APPDATA%\com.flowget.app\tools`. That folder is put in front of the process's PATH at start,
-//! so every program FlowGet launches (and yt-dlp, which looks for ffmpeg) finds the managed copies first and falls back
+//! so every program BoltGrab launches (and yt-dlp, which looks for ffmpeg) finds the managed copies first and falls back
 //! to anything the user installed themselves. Downloads are checked against the SHA-256 the publisher lists.
 
 use std::path::{Path, PathBuf};
@@ -55,7 +55,7 @@ pub fn prepend_to_path() {
 pub struct ToolInfo {
     pub name: String,
     pub installed: bool,
-    /// "FlowGet" (managed copy), "System" (found on PATH) or "Missing".
+    /// "BoltGrab" (managed copy), "System" (found on PATH) or "Missing".
     pub source: String,
     pub version: Option<String>,
     pub path: Option<String>,
@@ -122,7 +122,7 @@ pub fn status() -> Vec<ToolInfo> {
             Some((path, managed)) => ToolInfo {
                 name: name.to_string(),
                 installed: true,
-                source: if managed { "FlowGet" } else { "System" }.into(),
+                source: if managed { "BoltGrab" } else { "System" }.into(),
                 version: version_of(&path, name),
                 path: Some(path.to_string_lossy().into_owned()),
             },
@@ -172,7 +172,7 @@ fn hex(bytes: &[u8]) -> String {
 
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("FlowGet")
+        .user_agent("BoltGrab")
         .connect_timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())
@@ -342,7 +342,7 @@ pub fn friendly_name(tool: &str) -> &'static str {
     }
 }
 
-/// Replace the names of the programs FlowGet uses behind the scenes in text that is shown to the user
+/// Replace the names of the programs BoltGrab uses behind the scenes in text that is shown to the user
 /// (their own error output can mention them).
 pub fn scrub(text: &str) -> String {
     let mut out = text.to_string();

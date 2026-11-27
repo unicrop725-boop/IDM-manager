@@ -325,13 +325,13 @@ export const MenuBar: React.FC<MenuBarProps> = ({
               <div className="h-[1px] bg-[var(--border-subtle)] my-1" />
               <button
                 onClick={() => {
-                  alert("FlowGet 1.0 - Next-Gen High Performance Download Manager\nBuilt with Rust, Tauri 2, and React.\nLifetime Pro license.");
+                  alert("BoltGrab 1.0 - Next-Gen High Performance Download Manager\nBuilt with Rust, Tauri 2, and React.\nLifetime Pro license.");
                   setActiveMenu(null);
                 }}
                 className="w-full text-left px-3 py-1.5 hover:bg-[var(--bg-hover)] flex items-center gap-2 text-[var(--text-primary)]"
               >
                 <Info className="w-3.5 h-3.5 text-indigo-400" />
-                <span>About FlowGet</span>
+                <span>About BoltGrab</span>
               </button>
             </div>
           )}

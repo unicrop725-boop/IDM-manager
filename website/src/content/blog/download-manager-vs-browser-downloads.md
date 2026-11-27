@@ -4,7 +4,7 @@ description: "Browsers download fine for small files. Here is what a dedicated d
 pubDate: 2026-11-23T06:30:00Z
 tags: ["download manager", "windows", "comparison"]
 cover: "/img/blog/download-manager-vs-browser-downloads.jpg"
-coverAlt: "A single browser connection compared with many FlowGet connections"
+coverAlt: "A single browser connection compared with many BoltGrab connections"
 faq:
   - q: "Do I need a download manager?"
     a: "For small files on a stable connection, your browser is enough. A download manager helps with large files, unreliable connections, many downloads at once, scheduled downloads and videos."
@@ -67,4 +67,4 @@ You probably do not need a manager if you mostly download small files, your conn
 4. **Clear errors** instead of vague codes.
 5. **Active development:** sites change, and tools must keep up.
 
-FlowGet is built around these points. See the [full feature list](/features/) or, if you are coming from another manager, [how to move your downloads over from IDM](/switch-from-idm/).
+BoltGrab is built around these points. See the [full feature list](/features/) or, if you are coming from another manager, [how to move your downloads over from IDM](/switch-from-idm/).

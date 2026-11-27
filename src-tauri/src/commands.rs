@@ -431,7 +431,7 @@ pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -
         crate::media_stream::validate_remote_url(&request.url)?;
         let lic_status = crate::licensing::get_status(&state.db).await;
         if !lic_status.media_download_allowed {
-            return Err("Video downloading requires a FlowGet Pro license.".to_string());
+            return Err("Video downloading requires a BoltGrab Pro license.".to_string());
         }
 
         let id = uuid::Uuid::new_v4().to_string();
@@ -1005,7 +1005,7 @@ pub fn get_start_with_windows() -> bool {
     #[cfg(target_os = "windows")]
     {
         let out = crate::tools::hide_window(&mut std::process::Command::new("reg.exe"))
-            .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "FlowGet"])
+            .args(["query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run", "/v", "BoltGrab"])
             .output();
         if let Ok(o) = out {
             return o.status.success();
@@ -1026,7 +1026,7 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
                     "add",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "FlowGet",
+                    "BoltGrab",
                     "/t",
                     "REG_SZ",
                     "/d",
@@ -1045,7 +1045,7 @@ pub fn set_start_with_windows(enabled: bool) -> CmdResult<bool> {
                     "delete",
                     r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run",
                     "/v",
-                    "FlowGet",
+                    "BoltGrab",
                     "/f",
                 ])
                 .status()
@@ -1142,7 +1142,7 @@ pub fn get_adapters(state: State<'_, AppState>) -> Vec<AdapterInfo> {
 pub async fn set_turbo_mode(state: State<'_, AppState>, enabled: bool) -> CmdResult<bool> {
     let lic_status = crate::licensing::get_status(&state.db).await;
     if enabled && !lic_status.turbo_mode_allowed {
-        return Err("Turbo Mode requires a FlowGet Lifetime license.".to_string());
+        return Err("Turbo Mode requires a BoltGrab Lifetime license.".to_string());
     }
     state.engine.set_turbo_mode(enabled);
     state
@@ -1179,7 +1179,7 @@ pub async fn download_stream_media(
 ) -> CmdResult<String> {
     let lic_status = crate::licensing::get_status(&state.db).await;
     if !lic_status.media_download_allowed {
-        return Err("Media stream downloading requires a FlowGet Pro license.".to_string());
+        return Err("Media stream downloading requires a BoltGrab Pro license.".to_string());
     }
 
     crate::tools::ensure("ffmpeg").await?;

@@ -1,4 +1,4 @@
-//! FlowGet desktop app: wires the download engine to the database, queue manager, and UI.
+//! BoltGrab desktop app: wires the download engine to the database, queue manager, and UI.
 
 pub mod bandwidth;
 pub mod batch;
@@ -102,7 +102,7 @@ async fn event_pump(app: AppHandle, db: db::Db, mut rx: UnboundedReceiver<Engine
     }
 }
 
-/// True when another FlowGet already answers on the extension port (so a second copy must not start).
+/// True when another BoltGrab already answers on the extension port (so a second copy must not start).
 fn another_instance_running() -> bool {
     use std::io::{Read, Write};
     use std::net::{SocketAddr, TcpStream};
@@ -112,7 +112,7 @@ fn another_instance_running() -> bool {
     let Ok(mut s) = TcpStream::connect_timeout(&addr, Duration::from_millis(400)) else { return false };
     let _ = s.set_read_timeout(Some(Duration::from_millis(1500)));
     let _ = s.set_write_timeout(Some(Duration::from_millis(1500)));
-    // /api/show also brings the running window to the front, which is what the user wanted by starting FlowGet again.
+    // /api/show also brings the running window to the front, which is what the user wanted by starting BoltGrab again.
     if s.write_all(b"GET /api/show HTTP/1.1\r\nHost: 127.0.0.1:21588\r\nConnection: close\r\n\r\n").is_err() {
         return false;
     }
@@ -121,7 +121,7 @@ fn another_instance_running() -> bool {
     buf.starts_with("HTTP/1.1 200")
 }
 
-/// Make `flowget://...` links open this program, so the browser extension can start FlowGet when it is closed.
+/// Make `flowget://...` links open this program, so the browser extension can start BoltGrab when it is closed.
 /// Per-user (HKCU), no administrator rights; rewritten on every start so it always points at the current exe.
 #[cfg(windows)]
 fn register_url_protocol() {
@@ -131,7 +131,7 @@ fn register_url_protocol() {
     let reg = |args: &[&str]| {
         let _ = std::process::Command::new("reg.exe").args(args).creation_flags(0x0800_0000).output();
     };
-    reg(&["add", r"HKCU\Software\Classes\flowget", "/ve", "/d", "URL:FlowGet", "/f"]);
+    reg(&["add", r"HKCU\Software\Classes\flowget", "/ve", "/d", "URL:BoltGrab", "/f"]);
     reg(&["add", r"HKCU\Software\Classes\flowget", "/v", "URL Protocol", "/d", "", "/f"]);
     reg(&["add", r"HKCU\Software\Classes\flowget\shell\open\command", "/ve", "/d", &command, "/f"]);
 }
@@ -288,7 +288,7 @@ pub fn run() {
                 Some(w) => w,
                 None => {
                     tauri::WebviewWindowBuilder::new(app, "main", tauri::WebviewUrl::default())
-                        .title("FlowGet")
+                        .title("BoltGrab")
                         .inner_size(1080.0, 720.0)
                         .min_inner_size(760.0, 460.0)
                         .center()
@@ -370,7 +370,7 @@ pub fn run() {
             commands::deactivate_license_key,
         ])
         .build(tauri::generate_context!())
-        .expect("FlowGet could not start");
+        .expect("BoltGrab could not start");
 
     app.run(|handle, event| {
         if let RunEvent::ExitRequested { code: None, api, .. } = &event {

@@ -271,7 +271,7 @@ export interface DriveEntry {
 export interface ToolInfo {
   name: string;
   installed: boolean;
-  /** "FlowGet" (managed copy), "System" (found on PATH) or "Missing". */
+  /** "BoltGrab" (managed copy), "System" (found on PATH) or "Missing". */
   source: string;
   version: string | null;
   path: string | null;

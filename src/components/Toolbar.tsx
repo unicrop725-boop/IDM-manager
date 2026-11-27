@@ -297,7 +297,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
             {needsLicense && !isLicensed && (
               <div className="flex items-center justify-between gap-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-rose-300">
-                <span>Video downloading needs a FlowGet Pro license. Enter your key to continue.</span>
+                <span>Video downloading needs a BoltGrab Pro license. Enter your key to continue.</span>
                 <button
                   type="button"
                   onClick={onNeedLicense}

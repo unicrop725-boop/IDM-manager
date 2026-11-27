@@ -97,7 +97,7 @@ pub fn protocol_label(v: reqwest::Version) -> &'static str {
 /// True if this build can speak HTTP/3 at all.
 pub const H3_COMPILED: bool = cfg!(all(feature = "http3", reqwest_unstable));
 pub const DEFAULT_USER_AGENT: &str =
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) FlowGet/0.1";
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) BoltGrab/0.1";
 
 /// Per-download HTTP options, supplied by the user (or later by the browser extension).
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

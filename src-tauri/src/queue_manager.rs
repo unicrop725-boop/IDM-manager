@@ -253,7 +253,7 @@ impl QueueManager {
                 #[cfg(target_os = "windows")]
                 {
                     let _ = crate::tools::hide_window(&mut std::process::Command::new("shutdown.exe"))
-                        .args(["/s", "/t", "30", "/c", "FlowGet scheduled download completed."])
+                        .args(["/s", "/t", "30", "/c", "BoltGrab scheduled download completed."])
                         .spawn();
                 }
             }

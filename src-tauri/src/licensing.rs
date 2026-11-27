@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::db::Db;
 
-/// Embedded Ed25519 Public Key for FlowGet Offline License Verification
+/// Embedded Ed25519 Public Key for BoltGrab Offline License Verification
 pub const PUBLIC_KEY_HEX: &str = "ded7e146d3187012e95c8a8913f5be710c6cafd0a741511f6185cf4879a9f796";
 
 pub const TRIAL_DURATION_SECS: u64 = 30 * 86400; // 30 Days
@@ -384,7 +384,7 @@ async fn confirmed_recently(db: &Db, license_key: &str, now: u64) -> bool {
 // "no" (HTTP 403) takes the license away; being offline, or a server hiccup, never does.
 
 /// Where the license server lives.
-pub const DEFAULT_LICENSE_API: &str = "https://api.flowget.net";
+pub const DEFAULT_LICENSE_API: &str = "https://api.boltgrab.online";
 
 /// In DEBUG builds `FLOWGET_LICENSE_API` may point the app at a test server. A release build ignores it: otherwise a
 /// single environment variable pointing at a fake server that always answers "OK" would switch off the refund and

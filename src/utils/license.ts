@@ -1,2 +1,2 @@
-/** True when the backend refused an action because it needs a FlowGet Pro license. */
-export const isProLicenseError = (message: string): boolean => /requires a FlowGet Pro license/i.test(message);
+/** True when the backend refused an action because it needs a BoltGrab Pro license. */
+export const isProLicenseError = (message: string): boolean => /requires a BoltGrab Pro license/i.test(message);

@@ -1,4 +1,4 @@
-//! Local loopback IPC server connecting browser extensions and the native host to FlowGet.
+//! Local loopback IPC server connecting browser extensions and the native host to BoltGrab.
 //!
 //! Anything on the machine can open a TCP connection to 127.0.0.1, including web pages in the user's
 //! browser (via `fetch`) and DNS-rebinding sites. The rules below keep those out:
@@ -30,7 +30,7 @@ const MAX_HEAD_BYTES: usize = 16 * 1024;
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// Downloads the browser sent before the app window was ready to receive events. When the browser starts FlowGet
+/// Downloads the browser sent before the app window was ready to receive events. When the browser starts BoltGrab
 /// itself, the first request can arrive while the window is still loading; an event emitted then would be lost
 /// even though the extension was told "sent". They wait here until the window asks for them.
 struct Inbox {
@@ -127,7 +127,7 @@ pub(crate) struct Reply {
     pub resolve: Option<String>,
     /// The browser wants the drive space of the download folder (answered after the reply is built).
     pub storage: bool,
-    /// The browser asked for the FlowGet window to be brought to the front.
+    /// The browser asked for the BoltGrab window to be brought to the front.
     pub show: bool,
 }
 
@@ -166,7 +166,7 @@ async fn lookup_formats(url: &str) -> String {
         Err(_) => serde_json::json!({ "ok": false, "error": "Timed out while reading the video." }),
         Ok(Err(e)) => {
             let msg = if e.contains("video service is not available") {
-                "The video component is not ready yet. Open FlowGet and try again.".to_string()
+                "The video component is not ready yet. Open BoltGrab and try again.".to_string()
             } else {
                 "Could not read this video.".to_string()
             };
@@ -375,7 +375,7 @@ impl IpcServer {
             return serde_json::json!({ "ok": false, "error": "unavailable" }).to_string();
         };
         let Some(state) = handle.try_state::<crate::AppState>() else {
-            return serde_json::json!({ "ok": false, "error": "FlowGet is still starting" }).to_string();
+            return serde_json::json!({ "ok": false, "error": "BoltGrab is still starting" }).to_string();
         };
         // The drive chosen for the Disk Space card, else the drive of the download folder.
         let chosen = state.db.get_setting("default_drive").await.unwrap_or_default();
@@ -418,7 +418,7 @@ impl IpcServer {
         }
         if let (Some(payload), Some(handle)) = (&reply.capture, &self.app_handle) {
             println!("[ipc_server] Received download capture for URL: {}", payload.url);
-            // Like IDM's pop-up: make sure the user sees the download dialog even if FlowGet is behind the browser.
+            // Like IDM's pop-up: make sure the user sees the download dialog even if BoltGrab is behind the browser.
             // (Not when the quality was already chosen in the browser: that download just starts.)
             if !payload.has_quality_choice() {
                 bring_to_front(handle);

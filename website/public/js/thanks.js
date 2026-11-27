@@ -16,7 +16,7 @@
 
   function paid(j) {
     $("t-key").textContent = j.licenseKey;
-    $("t-meta").textContent = "FlowGet Pro (lifetime) · up to 2 PCs" + (j.email ? " · " + j.email : "");
+    $("t-meta").textContent = "BoltGrab Pro (lifetime) · up to 2 PCs" + (j.email ? " · " + j.email : "");
     show("t-paid");
   }
 

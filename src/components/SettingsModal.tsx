@@ -200,7 +200,7 @@ export default function SettingsModal({
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-3.5">
           <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
             <SettingsIcon size={16} className="text-sky-400" />
-            <span>FlowGet Settings</span>
+            <span>BoltGrab Settings</span>
           </div>
         </div>
 
@@ -314,10 +314,10 @@ export default function SettingsModal({
                       onChange={(e) => setStartWithWindows(e.target.checked)}
                       className="rounded border-[var(--text-disabled)] text-sky-500"
                     />
-                    <span>Launch FlowGet on Windows startup</span>
+                    <span>Launch BoltGrab on Windows startup</span>
                   </label>
                   <p className="pl-6 text-[11px] text-[var(--text-secondary)]">
-                    Registers FlowGet into Windows user logon registry for background downloads and scheduled tasks.
+                    Registers BoltGrab into Windows user logon registry for background downloads and scheduled tasks.
                   </p>
                 </div>
 
@@ -633,7 +633,7 @@ export default function SettingsModal({
                         <span>Resume paused downloads on restart</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-                        Downloads that were running when FlowGet closed (or the PC restarted or crashed) continue by themselves the next time FlowGet starts. Downloads you paused yourself stay paused.
+                        Downloads that were running when BoltGrab closed (or the PC restarted or crashed) continue by themselves the next time BoltGrab starts. Downloads you paused yourself stay paused.
                       </p>
                     </div>
                   </label>
@@ -671,7 +671,7 @@ export default function SettingsModal({
                         <span>Detect copied download links</span>
                       </div>
                       <p className="text-[11px] font-normal text-[var(--text-secondary)]">
-                        When you copy a file, video (YouTube, ...) or magnet link anywhere, FlowGet comes forward and offers to download it.
+                        When you copy a file, video (YouTube, ...) or magnet link anywhere, BoltGrab comes forward and offers to download it.
                       </p>
                     </div>
                   </label>

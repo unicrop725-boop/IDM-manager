@@ -30,7 +30,7 @@ export const TitleBar: React.FC = () => {
           <Zap className="w-4 h-4 fill-current" />
         </div>
         <span className="text-[13px] text-[var(--text-primary)]">
-          FlowGet <span className="text-[var(--text-secondary)]">1.0</span>
+          BoltGrab <span className="text-[var(--text-secondary)]">1.0</span>
         </span>
       </div>
 

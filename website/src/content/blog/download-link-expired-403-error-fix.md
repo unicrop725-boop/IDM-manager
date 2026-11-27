@@ -26,7 +26,7 @@ Many sites do not give you a permanent address. They generate a **signed link** 
 
 Files that sit behind a login (a cloud account, a members area, a purchase) are only given to browsers that carry your login cookie. A separate program asking for the same address has no cookie, so the server answers 403, or sends the login page instead of the file.
 
-**Fix:** download through your browser, or use a download manager with a browser extension that passes your session along with the request. FlowGet's extension does this, so files behind a sign-in work.
+**Fix:** download through your browser, or use a download manager with a browser extension that passes your session along with the request. BoltGrab's extension does this, so files behind a sign-in work.
 
 ## Cause 3: the server checks who is asking
 
@@ -48,15 +48,15 @@ A 404 means the file is gone. A different problem is a file that was replaced by
 
 ## "My download is a web page"
 
-If the saved file is only a few kilobytes, open it in a text editor. If you see HTML (`<html>`, `<body>`), the server sent a page instead of the file, almost always a login or error page. FlowGet detects this and stops with a clear message instead of saving the page under the wrong name. Sign in in your browser and download it from there.
+If the saved file is only a few kilobytes, open it in a text editor. If you see HTML (`<html>`, `<body>`), the server sent a page instead of the file, almost always a login or error page. BoltGrab detects this and stops with a clear message instead of saving the page under the wrong name. Sign in in your browser and download it from there.
 
 ## Continuing an expired download
 
 If you already had most of a large file, you do not have to throw it away:
 
 1. Get a fresh link to the same file.
-2. In FlowGet, use **Refresh download address** on the download and paste the new link.
-3. FlowGet checks that the new link is for the same file (size, version tag) and continues from the saved bytes.
+2. In BoltGrab, use **Refresh download address** on the download and paste the new link.
+3. BoltGrab checks that the new link is for the same file (size, version tag) and continues from the saved bytes.
 
 Without that check, it would be impossible to know if the new link is the same file. Read more in [how to resume a broken download](/blog/how-to-resume-a-broken-download/).
 

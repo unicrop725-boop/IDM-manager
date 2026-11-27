@@ -10,13 +10,13 @@ const site = Astro.site!.href.replace(/\/$/, "");
 
 // One list drives both the visible FAQ and the structured data. `html` may contain links; `text` is the plain version.
 const faqs = [
-  { q: "Is there a free trial?", text: "No. FlowGet is a paid app: one payment for a lifetime license, with no subscription. Every feature is included.", html: "No. FlowGet is a paid app: one payment for a lifetime license, with no subscription. Every feature is included." },
-  { q: "How do I get and use my license key?", text: "After payment you receive your license key. Install FlowGet, open Help > Activate License and paste the key. It is checked on your PC, so it does not need the internet.", html: "After payment you receive your license key. Install FlowGet, open <b>Help &gt; Activate License</b> and paste the key. It is checked on your PC, so it does not need the internet." },
-  { q: "Which browsers does it work with?", text: "The extension is built for Chrome, Edge and Brave. You can also paste a link into FlowGet directly, or copy a link and let FlowGet offer to download it.", html: "The extension is built for Chrome, Edge and Brave. You can also paste a link into FlowGet directly, or copy a link and let FlowGet offer to download it." },
-  { q: "Can it download videos from websites?", text: "Yes, from many video sites, with a quality menu. FlowGet sets up the components it needs by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded.", html: "Yes, from many video sites, with a quality menu. FlowGet sets up the components it needs by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded." },
-  { q: "Does FlowGet collect my data?", text: "No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The privacy page lists every one.", html: 'No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The <a href="/privacy/">privacy page</a> lists every one.' },
+  { q: "Is there a free trial?", text: "No. BoltGrab is a paid app: one payment for a lifetime license, with no subscription. Every feature is included.", html: "No. BoltGrab is a paid app: one payment for a lifetime license, with no subscription. Every feature is included." },
+  { q: "How do I get and use my license key?", text: "After payment you receive your license key. Install BoltGrab, open Help > Activate License and paste the key. It is checked on your PC, so it does not need the internet.", html: "After payment you receive your license key. Install BoltGrab, open <b>Help &gt; Activate License</b> and paste the key. It is checked on your PC, so it does not need the internet." },
+  { q: "Which browsers does it work with?", text: "The extension is built for Chrome, Edge and Brave. You can also paste a link into BoltGrab directly, or copy a link and let BoltGrab offer to download it.", html: "The extension is built for Chrome, Edge and Brave. You can also paste a link into BoltGrab directly, or copy a link and let BoltGrab offer to download it." },
+  { q: "Can it download videos from websites?", text: "Yes, from many video sites, with a quality menu. BoltGrab sets up the components it needs by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded.", html: "Yes, from many video sites, with a quality menu. BoltGrab sets up the components it needs by itself the first time. Videos protected by DRM, such as paid streaming services, are not downloaded." },
+  { q: "Does BoltGrab collect my data?", text: "No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The privacy page lists every one.", html: 'No ads and no tracking. Your downloads, queues and settings stay on your PC. A few optional features contact other services when you use them, for example the VirusTotal lookup and the speed test. The <a href="/privacy/">privacy page</a> lists every one.' },
   { q: "Windows says it doesn't recognise the app. Is it safe?", text: "While an app is new, Windows SmartScreen can show a warning for software it has not seen often. You can check the installer's SHA-256 on the download page against the file you received before running it.", html: 'While an app is new, Windows SmartScreen can show a warning for software it has not seen often. You can check the installer\'s SHA-256 on the <a href="/download/">download page</a> against the file you received before running it.' },
-  { q: "Does it work on Mac or Linux?", text: "Not yet. FlowGet is for Windows 10 and 11 for now.", html: "Not yet. FlowGet is for Windows 10 and 11 for now." },
+  { q: "Does it work on Mac or Linux?", text: "Not yet. BoltGrab is for Windows 10 and 11 for now.", html: "Not yet. BoltGrab is for Windows 10 and 11 for now." },
 ];
 
 const jsonLd = [
@@ -45,8 +45,8 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
 ---
 <Base
   fullTitle
-  title="FlowGet – Fast, reliable download manager for Windows"
-  description="FlowGet is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave. One-time purchase."
+  title="BoltGrab – Fast, reliable download manager for Windows"
+  description="BoltGrab is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave. One-time purchase."
   current="home"
   jsonLd={jsonLd}
 >
@@ -59,7 +59,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
       <h1>Downloads that don't give up.</h1>
       <p class="lead">Split every file across many connections, carry on after any interruption, and take over downloads from your browser. Fast when the network is good, patient when it is not.</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="/#pricing">Get FlowGet Pro · $19.99</a>
+        <a class="btn btn-primary" href="/#pricing">Get BoltGrab Pro · $19.99</a>
         <a class="btn btn-ghost" href="/#demo">Try the live demo</a>
       </div>
       <p class="meta">One-time payment, lifetime license · No ads · No tracking</p>
@@ -81,7 +81,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
   <!-- ======================= Statement ======================= -->
   <section class="statement">
     <div class="wrap">
-      <p>Downloads rarely fail in one dramatic moment. A connection stalls, a link expires, the Wi-Fi blinks. <em>FlowGet keeps every part moving, remembers every byte and checks the file before you open it.</em></p>
+      <p>Downloads rarely fail in one dramatic moment. A connection stalls, a link expires, the Wi-Fi blinks. <em>BoltGrab keeps every part moving, remembers every byte and checks the file before you open it.</em></p>
     </div>
   </section>
 
@@ -147,7 +147,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
         <article class="tile">
           <div class="ico"><svg viewBox="0 0 24 24" set:html={`<circle cx="12" cy="12" r="9" ${stroke}/><path d="M3 12h18" ${stroke}/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z" ${stroke}/>`}></svg></div>
           <h3>Browser extension</h3>
-          <p>Works with Chrome, Edge and Brave. Click a link and FlowGet takes over, with your login session passed along.</p>
+          <p>Works with Chrome, Edge and Brave. Click a link and BoltGrab takes over, with your login session passed along.</p>
         </article>
 
         <article class="tile">
@@ -177,10 +177,10 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
       <div class="rowsec">
         <div class="t">
           <h3>Add a link, or a hundred</h3>
-          <p>Paste a link, click one in your browser, or type a pattern and let FlowGet build the whole list for you.</p>
+          <p>Paste a link, click one in your browser, or type a pattern and let BoltGrab build the whole list for you.</p>
           <ul class="ticks">
             <li>One click in Chrome, Edge or Brave. The extension connects by itself</li>
-            <li>Copy a link anywhere and FlowGet offers to download it</li>
+            <li>Copy a link anywhere and BoltGrab offers to download it</li>
             <li>Passwords are kept in the Windows Credential Manager</li>
           </ul>
         </div>
@@ -199,7 +199,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
       <div class="rowsec">
         <div class="t">
           <h3>Know what you are opening</h3>
-          <p>When a download finishes, FlowGet checks it and asks before opening anything that looks risky.</p>
+          <p>When a download finishes, BoltGrab checks it and asks before opening anything that looks risky.</p>
         </div>
         <ul class="ticks" style="margin:0">
           <li>Warns about programs and disguised double extensions</li>
@@ -215,7 +215,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
     <div class="wrap">
       <div class="sec-head center">
         <div class="eyebrow">Speed, measured</div>
-        <h2>Where FlowGet pulls ahead:<br />bad networks</h2>
+        <h2>Where BoltGrab pulls ahead:<br />bad networks</h2>
         <p>On a healthy connection a good downloader is already fast. The difference shows when connections stall, slow down or drop. Pick a scenario and watch the race.</p>
       </div>
       <div class="lab" id="lab">
@@ -225,15 +225,15 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
           <button type="button" data-scen="outage" aria-pressed="false">30-second outage</button>
           <button type="button" class="btn btn-lime btn-sm lab-run" data-lab-run>Run again</button>
         </div>
-        <p class="lab-desc" data-lab-desc>One connection is slow. A plain 8-part downloader waits for its slowest part to finish; FlowGet hands that part's remaining work to idle connections.</p>
+        <p class="lab-desc" data-lab-desc>One connection is slow. A plain 8-part downloader waits for its slowest part to finish; BoltGrab hands that part's remaining work to idle connections.</p>
         <div class="lab-bars">
           <div class="lab-bar"><span>One connection</span><div class="tr"><i></i></div><span class="tm">14.4 s</span></div>
           <div class="lab-bar"><span>8 fixed parts</span><div class="tr"><i></i></div><span class="tm">16.5 s</span></div>
-          <div class="lab-bar us"><span>FlowGet</span><div class="tr"><i></i></div><span class="tm">5.5 s</span></div>
+          <div class="lab-bar us"><span>BoltGrab</span><div class="tr"><i></i></div><span class="tm">5.5 s</span></div>
         </div>
         <div class="lab-foot"><span data-lab-result>Replay of the measured run, sped up.</span><span>Time to download the same file · lower is better</span></div>
       </div>
-      <p class="fine" style="max-width:900px;margin-inline:auto">This animation replays real measurements, sped up. They come from a local test server that misbehaves in a repeatable way, with every file checked against its SHA-256. "8 fixed parts" is a plain 8-connection downloader, not any particular product. On a healthy network the three are close, and in a short 5-second outage FlowGet was slightly slower than the plain downloader. Real-world results depend on your connection.</p>
+      <p class="fine" style="max-width:900px;margin-inline:auto">This animation replays real measurements, sped up. They come from a local test server that misbehaves in a repeatable way, with every file checked against its SHA-256. "8 fixed parts" is a plain 8-connection downloader, not any particular product. On a healthy network the three are close, and in a short 5-second outage BoltGrab was slightly slower than the plain downloader. Real-world results depend on your connection.</p>
     </div>
   </section>
 
@@ -247,7 +247,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
       </div>
       <div class="pricecard">
         <div class="l">
-          <small>FlowGet Pro · lifetime</small>
+          <small>BoltGrab Pro · lifetime</small>
           <div class="amt">$19.99</div>
           <p>A one-time payment, no renewals.</p>
         </div>
@@ -259,7 +259,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
             <li>One payment, no subscription and no renewals</li>
             <li>Windows 10 and 11</li>
           </ul>
-          <a class="btn btn-primary" href={buyHref()}>Buy FlowGet Pro</a>
+          <a class="btn btn-primary" href={buyHref()}>Buy BoltGrab Pro</a>
           <p class="fine" style="margin-top:14px">Already bought it? <a href="/download/" style="text-decoration:underline;text-underline-offset:3px">Download the installer</a></p>
         </div>
       </div>
@@ -312,7 +312,7 @@ const stroke = 'fill="none" stroke="currentColor" stroke-width="2" stroke-lineca
         <h2>Give your downloads a better engine.</h2>
         <p>Install it, add the extension, and the next big file is already on its way.</p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="/#pricing">Get FlowGet Pro · $19.99</a>
+          <a class="btn btn-primary" href="/#pricing">Get BoltGrab Pro · $19.99</a>
           <a class="btn btn-ghost" href="/#demo">Try the live demo</a>
         </div>
       </div>

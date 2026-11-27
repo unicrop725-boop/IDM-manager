@@ -1,4 +1,4 @@
-/* Sign in / sign up / account: split layout. Form on the left, FlowGet-coloured showcase on the right. */
+/* Sign in / sign up / account: split layout. Form on the left, BoltGrab-coloured showcase on the right. */
 body.authx { background: #E8EBEE; color: #18181B; }
 .authx ::selection { background: #FED24F; color: #15200a; }
 .authx :focus-visible { outline: 2px solid #4B7E31; outline-offset: 2px; }

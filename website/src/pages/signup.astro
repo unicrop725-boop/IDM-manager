@@ -3,7 +3,7 @@ import Base from "../layouts/Base.astro";
 import AuthShell from "../components/AuthShell.astro";
 import AuthForms from "../components/AuthForms.astro";
 ---
-<Base title="Create account" description="Create your FlowGet account." noindex bare bodyClass="authx">
+<Base title="Create account" description="Create your BoltGrab account." noindex bare bodyClass="authx">
   <link slot="head" rel="stylesheet" href={"/css/auth.css?v=" + Date.now()} />
   <AuthShell hint="Already have an account?" linkText="Sign in" linkHref="/signin/">
     <AuthForms mode="signup" />

@@ -16,7 +16,7 @@ interface Props extends ConfirmRequest {
   onClose: () => void;
 }
 
-/** FlowGet's own "are you sure?" dialog, used instead of the browser's plain confirm() popup. */
+/** BoltGrab's own "are you sure?" dialog, used instead of the browser's plain confirm() popup. */
 export function ConfirmModal({ title, subject, message, confirmLabel, danger, onConfirm, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none">

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "FlowGet",
+  "productName": "BoltGrab",
   "version": "0.1.0",
   "identifier": "com.flowget.app",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "FlowGet",
+        "title": "BoltGrab",
         "width": 1080,
         "height": 720,
         "minWidth": 760,
@@ -41,8 +41,8 @@
     "fileAssociations": [
       {
         "ext": ["flowget"],
-        "name": "FlowGet Download Package",
-        "description": "FlowGet Download Package",
+        "name": "BoltGrab Download Package",
+        "description": "BoltGrab Download Package",
         "role": "Viewer"
       }
     ],

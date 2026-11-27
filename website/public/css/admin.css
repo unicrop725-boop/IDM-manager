@@ -1,4 +1,4 @@
-/* Admin dashboard: dark sidebar, light workspace, FlowGet palette. */
+/* Admin dashboard: dark sidebar, light workspace, BoltGrab palette. */
 body.adm { background: #F4F5F7; color: #18181B; font-size: 14.5px; }
 .adm ::selection { background: #FED24F; color: #15200a; }
 .adm :focus-visible { outline: 2px solid #4B7E31; outline-offset: 2px; }

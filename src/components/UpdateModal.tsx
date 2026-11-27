@@ -1,6 +1,6 @@
 import { ModalCorner } from "./NotchCorner";
 // src/components/UpdateModal.tsx
-// "Check for Updates": FlowGet has no built-in updater yet, so this says so and points to the download page,
+// "Check for Updates": BoltGrab has no built-in updater yet, so this says so and points to the download page,
 // instead of pretending an update exists.
 
 import { useEffect, useState } from "react";
@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
 }
 
-const DOWNLOAD_PAGE = "https://flowget.net/download/";
+const DOWNLOAD_PAGE = "https://boltgrab.online/download/";
 
 export default function UpdateModal({ onClose }: Props) {
   const [version, setVersion] = useState<string>("");
@@ -52,7 +52,7 @@ export default function UpdateModal({ onClose }: Props) {
           <div className="flex items-start gap-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-app)] p-3 text-[var(--text-secondary)]">
             <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-500" />
             <p>
-              FlowGet does not update itself yet. To get the newest version, download the installer from the website and run it over this
+              BoltGrab does not update itself yet. To get the newest version, download the installer from the website and run it over this
               one. Your downloads, settings and license are kept.
             </p>
           </div>

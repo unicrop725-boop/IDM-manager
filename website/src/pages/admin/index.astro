@@ -2,7 +2,7 @@
 import Base from "../../layouts/Base.astro";
 import { SITE } from "../../config";
 ---
-<Base title="Admin" description="FlowGet admin." noindex bare bodyClass="adm">
+<Base title="Admin" description="BoltGrab admin." noindex bare bodyClass="adm">
   <link slot="head" rel="stylesheet" href="/css/vendor/toastui-editor.css" />
   <link slot="head" rel="stylesheet" href={"/css/admin.css?v=" + Date.now()} />
 
@@ -152,7 +152,7 @@ import { SITE } from "../../config";
               </div>
 
               <div class="row">
-                <div><label for="b-author">Author <small>(optional)</small></label><input id="b-author" type="text" maxlength="60" placeholder="FlowGet Team" /></div>
+                <div><label for="b-author">Author <small>(optional)</small></label><input id="b-author" type="text" maxlength="60" placeholder="BoltGrab Team" /></div>
                 <div><label for="b-img">Cover image <small>PNG, JPG or WebP, up to 2.5 MB</small></label><input id="b-img" type="file" accept="image/png,image/jpeg,image/webp" /></div>
               </div>
               <div id="b-img-prev" class="imgprev" hidden><img alt="" /><button type="button" id="b-img-clear" class="btn ghost sm">Remove</button></div>

@@ -39,9 +39,10 @@ export default defineConfig({
   },
   compressHTML: true,
   // Sign-in, account and admin pages are private: keep them out of the sitemap (admin/login included).
+  // Tag pages are noindex (thin, near-duplicates of the blog index), so they are not listed either.
   integrations: [
     sitemap({
-      filter: (page) => !/\/(signin|signup|account|buy|thanks|admin(\/login)?)\/$/.test(page),
+      filter: (page) => !/\/(signin|signup|account|buy|thanks|admin(\/login)?)\/$/.test(page) && !/\/blog\/tag\//.test(page),
       serialize(item) {
         const d = lastmodFor(new URL(item.url).pathname);
         if (d) item.lastmod = d.toISOString();

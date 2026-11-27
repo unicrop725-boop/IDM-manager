@@ -17,7 +17,7 @@ const jsonLd = [
 ---
 <Base
   title='Privacy: what BoltGrab stores and sends'
-  description='What BoltGrab keeps on your PC and the few optional features that contact other services. No ads and no tracking.'
+  description='What BoltGrab keeps on your PC, the few optional features that contact other services, and how this website counts visits. No ads and no tracking in the app.'
   current=''
   jsonLd={jsonLd}
 >
@@ -25,7 +25,7 @@ const jsonLd = [
   <div class="wrap">
     <div class="page-head">
       <h1>Privacy</h1>
-      <p>BoltGrab has no ads and no tracking. This page lists what it keeps and every optional feature that contacts another service.</p>
+      <p>The BoltGrab app has no ads and no tracking. This page lists what it keeps, every optional feature that contacts another service, and how this website counts visits.</p>
     </div>
 
     <div class="prose">
@@ -51,7 +51,12 @@ const jsonLd = [
       </ul>
 
       <h2>This website</h2>
-      <p>Browsing this website sets no cookies and loads nothing from other companies. Only if you create an account or sign in: we set a session cookie so you stay signed in, the sign-in and sign-up pages load Google's sign-in button, and the phone-number field shows country flag images from flagcdn.com. Our hosting provider may keep standard server logs for security and reliability.</p>
+      <h3>Visit statistics (Google Analytics)</h3>
+      <p>The public pages of this website (home, features, pricing, blog and this page) use Google Analytics 4 to count visits: which pages are read, roughly where visitors come from (country level), and what device and browser they use. Google sets cookies named <code>_ga</code> and <code>_ga_*</code> for this, and the page loads Google's script from googletagmanager.com. We have switched off Google's advertising features, so the data is not used for ad personalization. The statistics are used only to improve the website.</p>
+      <p>Analytics is not loaded on the sign-in, sign-up, account, purchase, thank-you or admin pages. It is also not loaded if your browser sends a Do Not Track or Global Privacy Control signal. You can also block it with a browser tracking-protection setting or an ad blocker. The BoltGrab app itself does not use Google Analytics.</p>
+
+      <h3>Accounts and sign-in</h3>
+      <p>Only if you create an account or sign in: we set a session cookie so you stay signed in, the sign-in and sign-up pages load Google's sign-in button, and the phone-number field shows country flag images from flagcdn.com. Our hosting provider may keep standard server logs for security and reliability.</p>
 
       <h2>Contact</h2>
       <p>Questions about privacy: <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a></p>

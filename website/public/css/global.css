@@ -261,7 +261,7 @@ section { padding: 88px 0; }
 }
 .ico.t, .ico.s, .ico.a, .ico.g { background: #fff; color: #111; }
 .ico svg { width: 21px; height: 21px; }
-.card h3 { font-size: 21px; font-weight: 600; margin-bottom: 10px; letter-spacing: -.02em; }
+.card h2, .card h3 { font-size: 21px; font-weight: 600; margin-bottom: 10px; letter-spacing: -.02em; }
 .card p { color: var(--muted); font-size: 16px; }
 
 /* steps */
@@ -481,9 +481,9 @@ body:not(.blog) .bcard { background: #fff; }
 .bcard-meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #55555e; }
 .bcard-meta time { color: #2A2A30; font-weight: 500; }
 .bcard-meta i { font-style: normal; color: #A1A1AA; font-size: 10px; }
-.bcard h3 { font-size: 19px; font-weight: 650; letter-spacing: -.02em; line-height: 1.25; margin: 10px 0 8px; }
-.bcard h3 a { text-decoration: none; }
-.bcard h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.bcard h2, .bcard h3 { font-size: 19px; font-weight: 650; letter-spacing: -.02em; line-height: 1.25; margin: 10px 0 8px; }
+.bcard h2 a, .bcard h3 a { text-decoration: none; }
+.bcard h2 a:hover, .bcard h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .bcard p { color: var(--muted); font-size: 14.5px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .bcard-author { display: flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 16px; font-size: 13.5px; color: var(--muted); }
 .bcard-author img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }

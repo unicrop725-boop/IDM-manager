@@ -96,5 +96,6 @@ const pageTitle = fullTitle || title.length > 48 ? title : `${title} | ${SITE.na
     </main>
     {!bare && <Footer />}
     {!bare && <script is:inline src={"/js/menu.js?v=" + Date.now()}></script>}
+    {!bare && <script is:inline src={"/js/analytics.js?v=" + Date.now()} defer></script>}
   </body>
 </html>

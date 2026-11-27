@@ -6,8 +6,11 @@ interface Props {
   post: Post;
   /** The first card above the fold: load its picture right away (it is usually the LCP image). */
   eager?: boolean;
+  /** Heading level of the card title: h2 when the card sits right under the page's h1, otherwise h3. */
+  level?: "h2" | "h3";
 }
-const { post, eager = false } = Astro.props;
+const { post, eager = false, level = "h3" } = Astro.props;
+const Heading = level;
 const href = `/blog/${post.id}/`;
 const author = post.data.author ?? SITE.defaultAuthor;
 ---
@@ -23,7 +26,7 @@ const author = post.data.author ?? SITE.defaultAuthor;
       <i aria-hidden="true">•</i>
       <span>{readingMinutes(post.body)} min read</span>
     </div>
-    <h3><a href={href}>{post.data.title}</a></h3>
+    <Heading><a href={href}>{post.data.title}</a></Heading>
     <p>{post.data.description}</p>
     <div class="bcard-author">
       <img src="/img/icon-128.png" alt="" width="30" height="30" loading="lazy" />

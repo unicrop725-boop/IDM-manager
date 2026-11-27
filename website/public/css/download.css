@@ -81,6 +81,20 @@
 .browsers img, .browsers svg { width: 20px; height: 20px; flex: none; object-fit: contain; }
 .browsers .more-browsers { background: var(--ink); color: #fff; border-color: var(--ink); font-weight: 600; padding: 7px 14px; }
 
+/* ---------- extension setup guide (with screenshots) ---------- */
+.ext-guide { margin-top: 20px; padding: 36px 40px 40px; background: #fff; border: 1px solid var(--line-strong); box-shadow: var(--shadow); }
+.ext-guide-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.ext-guide-head h3 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 0; color: var(--text); }
+.ext-guide-head p { margin: 0; font-size: 14.5px; color: var(--muted); }
+.ext-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.ext-step { display: flex; flex-direction: column; gap: 12px; padding: 20px; background: #F8FAFC; border: 1px solid var(--line); }
+.ext-step-top { display: flex; align-items: center; gap: 12px; }
+.ext-step-num { display: grid; place-items: center; width: 28px; height: 28px; flex: none; border-radius: 50%; background: #1A73E8; color: #fff; font-size: 13.5px; font-weight: 700; }
+.ext-step h4 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+.ext-step p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.ext-step code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; padding: 2px 6px; background: #E8F0FE; color: #1A56C4; border-radius: 4px; }
+.ext-shot { width: 100%; height: auto; display: block; border: 1px solid #D5DCE6; border-radius: 8px; background: #F4F6FA; }
+
 /* ---------- steps / requirements / verify ---------- */
 .steps4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .dlstep { padding: 28px 24px 30px; }
@@ -104,6 +118,8 @@
   .dlcard, .verify { grid-template-columns: minmax(0, 1fr); }
   .steps4 { grid-template-columns: 1fr 1fr; }
   .reqs { grid-template-columns: 1fr; }
+  .ext-steps { grid-template-columns: 1fr; }
+  .ext-guide { padding: 28px 24px; }
   .extband, .helpband { flex-direction: column; align-items: flex-start; padding: 40px 26px 32px; }
 }
 @media (max-width: 560px) {

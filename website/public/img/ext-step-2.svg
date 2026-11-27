@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" fill="none">
+  <rect width="640" height="380" rx="12" fill="#F4F6FA"/>
+  <rect x="24" y="24" width="592" height="332" rx="10" fill="#FFFFFF" stroke="#D5DCE6" stroke-width="2"/>
+
+  <!-- Chrome top bar -->
+  <rect x="24" y="24" width="592" height="78" rx="10" fill="#EDF1F7"/>
+  <rect x="24" y="88" width="592" height="14" fill="#EDF1F7"/>
+  <rect x="44" y="34" width="144" height="28" rx="8" fill="#FFFFFF"/>
+  <text x="64" y="53" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#1E293B">Extensions</text>
+
+  <!-- Address bar -->
+  <rect x="44" y="66" width="552" height="30" rx="15" fill="#FFFFFF" stroke="#1A73E8" stroke-width="2"/>
+  <text x="64" y="86" font-family="ui-monospace, Consolas, monospace" font-size="14" font-weight="700" fill="#1A73E8">chrome://extensions</text>
+
+  <!-- Extensions header + Developer mode toggle -->
+  <rect x="24" y="102" width="592" height="62" fill="#FFFFFF"/>
+  <line x1="24" y1="164" x2="616" y2="164" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text x="52" y="140" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="20" font-weight="700" fill="#0F172A">Extensions</text>
+
+  <!-- Highlight box around Developer mode -->
+  <rect x="412" y="114" width="184" height="40" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="2"/>
+  <text x="426" y="139" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13.5" font-weight="700" fill="#1A56C4">Developer mode</text>
+  <rect x="546" y="124" width="38" height="20" rx="10" fill="#1A73E8"/>
+  <circle cx="574" cy="134" r="7.5" fill="#FFFFFF"/>
+
+  <!-- Callout -->
+  <rect x="52" y="190" width="536" height="134" rx="10" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+  <text x="76" y="226" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="#0F172A">Works in Chrome, Edge, and Brave:</text>
+  <text x="76" y="256" font-family="ui-monospace, Consolas, monospace" font-size="13.5" fill="#1A56C4">Chrome: chrome://extensions</text>
+  <text x="76" y="280" font-family="ui-monospace, Consolas, monospace" font-size="13.5" fill="#0078D4">Edge:   edge://extensions</text>
+  <text x="76" y="304" font-family="ui-monospace, Consolas, monospace" font-size="13.5" fill="#EA580C">Brave:  brave://extensions</text>
+</svg>

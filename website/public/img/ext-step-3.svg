@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" fill="none">
+  <rect width="640" height="380" rx="12" fill="#F4F6FA"/>
+  <rect x="24" y="24" width="592" height="332" rx="10" fill="#FFFFFF" stroke="#D5DCE6" stroke-width="2"/>
+
+  <!-- Extensions toolbar with Load unpacked highlighted -->
+  <rect x="24" y="24" width="592" height="58" rx="10" fill="#EDF1F7"/>
+  <rect x="24" y="70" width="592" height="12" fill="#EDF1F7"/>
+
+  <rect x="44" y="36" width="136" height="34" rx="8" fill="#1A73E8"/>
+  <text x="112" y="58" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13.5" font-weight="700" fill="#FFFFFF">Load unpacked</text>
+
+  <rect x="192" y="36" width="132" height="34" rx="8" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="258" y="58" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" fill="#64748B">Pack extension</text>
+
+  <rect x="336" y="36" width="84" height="34" rx="8" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="378" y="58" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" fill="#64748B">Update</text>
+
+  <!-- Folder picker modal -->
+  <rect x="76" y="106" width="488" height="224" rx="10" fill="#FFFFFF" stroke="#94A3B8" stroke-width="2"/>
+  <rect x="76" y="106" width="488" height="38" rx="10" fill="#F1F5F9"/>
+  <rect x="76" y="134" width="488" height="10" fill="#F1F5F9"/>
+  <text x="96" y="130" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13.5" font-weight="700" fill="#0F172A">Select the extension directory</text>
+
+  <!-- Selected folder row -->
+  <rect x="96" y="166" width="448" height="44" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="2"/>
+  <path d="M114 179h16l5 6h22a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4h-43a4 4 0 0 1-4-4v-20a4 4 0 0 1 4-4z" fill="#FACC15" stroke="#CA8A04" stroke-width="1.5"/>
+  <text x="174" y="193" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0F172A">boltgrab-extension</text>
+  <text x="348" y="193" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12.5" fill="#1A56C4">(extracted folder)</text>
+
+  <text x="96" y="236" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12.5" fill="#64748B">Pick the folder that contains manifest.json, then click Select Folder.</text>
+
+  <!-- Select Folder button -->
+  <rect x="404" y="274" width="140" height="36" rx="8" fill="#1A73E8"/>
+  <text x="474" y="297" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13.5" font-weight="700" fill="#FFFFFF">Select Folder</text>
+  <rect x="304" y="274" width="88" height="36" rx="8" fill="#F1F5F9" stroke="#CBD5E1"/>
+  <text x="348" y="297" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" fill="#475569">Cancel</text>
+</svg>

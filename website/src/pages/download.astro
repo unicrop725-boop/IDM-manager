@@ -114,6 +114,49 @@ const reqs = [
           </span>
         )}
       </div>
+
+      {SITE.extensionUrl.endsWith(".zip") && (
+        <div class="ext-guide">
+          <div class="ext-guide-head">
+            <h3>How to install the extension (4 quick steps)</h3>
+            <p>Works in Chrome, Edge, Brave, and other Chromium browsers — takes about 30 seconds.</p>
+          </div>
+          <div class="ext-steps">
+            <article class="ext-step">
+              <div class="ext-step-top">
+                <span class="ext-step-num">1</span>
+                <h4>Download and unzip the file</h4>
+              </div>
+              <p>Click <b>Download extension (.zip)</b> above, then right-click <code>boltgrab-extension.zip</code> in Downloads and choose <b>Extract All...</b> into a folder.</p>
+              <img class="ext-shot" src="/img/ext-step-1.svg" alt="Step 1: Right-click boltgrab-extension.zip and choose Extract All" width="640" height="380" loading="lazy" />
+            </article>
+            <article class="ext-step">
+              <div class="ext-step-top">
+                <span class="ext-step-num">2</span>
+                <h4>Open Extensions &amp; enable Developer mode</h4>
+              </div>
+              <p>Paste <code>chrome://extensions</code> (or <code>edge://extensions</code> / <code>brave://extensions</code>) into your address bar, then switch on <b>Developer mode</b> in the top-right.</p>
+              <img class="ext-shot" src="/img/ext-step-2.svg" alt="Step 2: Open chrome://extensions and turn on Developer mode" width="640" height="380" loading="lazy" />
+            </article>
+            <article class="ext-step">
+              <div class="ext-step-top">
+                <span class="ext-step-num">3</span>
+                <h4>Click "Load unpacked" and pick the folder</h4>
+              </div>
+              <p>Click <b>Load unpacked</b> in the top-left, select the extracted <code>boltgrab-extension</code> folder (the one containing <code>manifest.json</code>), and click <b>Select Folder</b>.</p>
+              <img class="ext-shot" src="/img/ext-step-3.svg" alt="Step 3: Click Load unpacked and select the extracted boltgrab-extension folder" width="640" height="380" loading="lazy" />
+            </article>
+            <article class="ext-step">
+              <div class="ext-step-top">
+                <span class="ext-step-num">4</span>
+                <h4>Done! Pin BoltGrab to your toolbar</h4>
+              </div>
+              <p><b>BoltGrab Download Manager Integration</b> is now active. Keep the extracted folder on your PC (don't delete it) and pin the icon from your browser's puzzle menu.</p>
+              <img class="ext-shot" src="/img/ext-step-4.svg" alt="Step 4: BoltGrab Download Manager Integration extension enabled in Chrome" width="640" height="380" loading="lazy" />
+            </article>
+          </div>
+        </div>
+      )}
     </div>
   </section>
 

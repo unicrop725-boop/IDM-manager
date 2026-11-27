@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" fill="none">
+  <rect width="640" height="380" rx="12" fill="#F4F6FA"/>
+  <rect x="24" y="24" width="592" height="332" rx="10" fill="#FFFFFF" stroke="#D5DCE6" stroke-width="2"/>
+  <rect x="24" y="24" width="592" height="42" rx="10" fill="#EDF1F7"/>
+  <rect x="24" y="54" width="592" height="12" fill="#EDF1F7"/>
+  <circle cx="48" cy="45" r="6" fill="#EA4335"/>
+  <circle cx="68" cy="45" r="6" fill="#FBBC04"/>
+  <circle cx="88" cy="45" r="6" fill="#34A853"/>
+  <text x="112" y="50" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#334155">Downloads — File Explorer</text>
+
+  <!-- Zip file card -->
+  <rect x="52" y="96" width="240" height="224" rx="10" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5"/>
+  <rect x="74" y="122" width="52" height="60" rx="6" fill="#FEF3C7" stroke="#F59E0B" stroke-width="2"/>
+  <rect x="94" y="122" width="12" height="60" fill="#F59E0B" opacity="0.25"/>
+  <text x="82" y="157" font-family="ui-monospace, Consolas, monospace" font-size="13" font-weight="700" fill="#B45309">ZIP</text>
+  <text x="140" y="144" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0F172A">boltgrab-</text>
+  <text x="140" y="164" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0F172A">extension.zip</text>
+  <text x="140" y="184" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12" fill="#64748B">102 KB</text>
+
+  <!-- Right-click Extract All button -->
+  <rect x="74" y="212" width="196" height="40" rx="8" fill="#1A73E8"/>
+  <text x="172" y="237" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="600" fill="#FFFFFF">Right-click → Extract All...</text>
+  <text x="172" y="278" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12.5" fill="#475569">Unzip to a normal folder</text>
+
+  <!-- Arrow -->
+  <path d="M304 208h32m-9-8 9 8-9 8" stroke="#1A73E8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Extracted folder card -->
+  <rect x="348" y="96" width="240" height="224" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="2"/>
+  <path d="M372 126h26l8 10h42a6 6 0 0 1 6 6v38a6 6 0 0 1-6 6h-76a6 6 0 0 1-6-6v-48a6 6 0 0 1 6-6z" fill="#FACC15" stroke="#CA8A04" stroke-width="2"/>
+  <text x="466" y="150" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0F172A">boltgrab-</text>
+  <text x="466" y="170" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="#0F172A">extension</text>
+
+  <rect x="372" y="206" width="192" height="92" rx="6" fill="#FFFFFF" stroke="#BBF7D0" stroke-width="1.5"/>
+  <text x="386" y="230" font-family="ui-monospace, Consolas, monospace" font-size="12.5" fill="#15803D">✓ manifest.json</text>
+  <text x="386" y="252" font-family="ui-monospace, Consolas, monospace" font-size="12.5" fill="#334155">  background.js</text>
+  <text x="386" y="274" font-family="ui-monospace, Consolas, monospace" font-size="12.5" fill="#334155">  content.js, icons/</text>
+</svg>

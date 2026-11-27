@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" fill="none">
+  <rect width="640" height="380" rx="12" fill="#F4F6FA"/>
+  <rect x="24" y="24" width="592" height="332" rx="10" fill="#FFFFFF" stroke="#D5DCE6" stroke-width="2"/>
+
+  <!-- Browser toolbar showing pinned icon -->
+  <rect x="24" y="24" width="592" height="52" rx="10" fill="#EDF1F7"/>
+  <rect x="24" y="64" width="592" height="12" fill="#EDF1F7"/>
+  <rect x="44" y="35" width="430" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="64" y="55" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" fill="#64748B">https://...</text>
+
+  <!-- Pinned BoltGrab badge -->
+  <rect x="488" y="34" width="108" height="32" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <circle cx="508" cy="50" r="9" fill="#0F172A"/>
+  <path d="M510 44l-5 7h4l-1 5 5-7h-4z" fill="#B2D959"/>
+  <text x="524" y="55" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="12.5" font-weight="700" fill="#1A56C4">Pinned</text>
+
+  <!-- Extension card -->
+  <rect x="52" y="106" width="536" height="218" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+  <rect x="76" y="130" width="52" height="52" rx="12" fill="#0F172A"/>
+  <path d="M106 140l-12 17h9l-2 15 12-17h-9z" fill="#B2D959"/>
+
+  <text x="144" y="150" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="16" font-weight="700" fill="#0F172A">BoltGrab Download Manager Integration</text>
+  <text x="486" y="150" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#64748B">1.4.1</text>
+  <text x="144" y="174" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" fill="#475569">Seamless one-click download capture, cookie passing, and media detection.</text>
+
+  <!-- Status pill -->
+  <rect x="144" y="194" width="234" height="30" rx="6" fill="#DCFCE7"/>
+  <text x="158" y="214" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="700" fill="#166534">✓ Active — Ready to capture downloads</text>
+
+  <line x1="76" y1="248" x2="564" y2="248" stroke="#E2E8F0" stroke-width="1.5"/>
+  <rect x="76" y="268" width="84" height="32" rx="6" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="118" y="289" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#1A73E8">Details</text>
+  <rect x="172" y="268" width="84" height="32" rx="6" fill="#FFFFFF" stroke="#CBD5E1"/>
+  <text x="214" y="289" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="13" font-weight="600" fill="#1A73E8">Remove</text>
+
+  <!-- Enabled toggle -->
+  <rect x="520" y="274" width="42" height="22" rx="11" fill="#1A73E8"/>
+  <circle cx="551" cy="285" r="8" fill="#FFFFFF"/>
+</svg>

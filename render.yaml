@@ -3,8 +3,7 @@ services:
     name: boltgrab-api
     runtime: node
     plan: starter            # always on (the free plan sleeps after 15 minutes)
-    rootDir: .
-    buildCommand: echo "no build step: zero-dependency server"
+    buildCommand: "echo no build step needed"
     startCommand: node server/license-server.cjs
     healthCheckPath: /api/health
     autoDeploy: true

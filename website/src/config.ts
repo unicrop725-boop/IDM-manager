@@ -2,10 +2,10 @@
  * The one place for the website's facts and links. Edit here, then redeploy.
  */
 export const SITE = {
-  name: "FlowGet",
+  name: "BoltGrab",
   tagline: "Downloads that don't give up",
   description:
-    "FlowGet is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave.",
+    "BoltGrab is a fast download manager for Windows. It splits files across many connections, resumes after any interruption, and takes over downloads from Chrome, Edge and Brave.",
   language: "en",
 
   // Release details (shown on the download page and in structured data).
@@ -20,22 +20,21 @@ export const SITE = {
   // Where "Buy" buttons go. The on-site /buy/ page starts a Dodo Payments checkout (needs PUBLIC_API_URL and the server's DODO_* settings).
   // Set a full URL here to use an external page instead.
   buyUrl: "/buy/",
-  supportEmail: "support@flowget.net",
+  supportEmail: "support@boltgrab.online",
   // Address of the accounts API (server/license-server.cjs). Set PUBLIC_API_URL when building, e.g. https://api.flowget.net.
   // While empty, the sign-in page says that sign-in is not available yet.
   apiUrl: ((import.meta.env.PUBLIC_API_URL as string | undefined) || "").replace(/\/$/, ""),
 
   // Price (one paid plan, no free trial).
   priceUsd: "19.99",
-  priceInr: "999",
 
   // Default picture for sharing links (1200x630, in /public).
   ogImage: "/img/og.png",
   // Name shown as the author of blog posts when a post does not set one.
-  defaultAuthor: "FlowGet Team",
+  defaultAuthor: "BoltGrab Team",
   // Shown after the author name on blog cards.
   defaultAuthorRole: "Editorial",
 } as const;
 
 export const buyHref = (): string =>
-  SITE.buyUrl || `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("FlowGet Pro")}`;
+  SITE.buyUrl || `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("BoltGrab Pro")}`;

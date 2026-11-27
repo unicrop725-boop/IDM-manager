@@ -1,0 +1,165 @@
+---
+import Base from "../../layouts/Base.astro";
+import { SITE } from "../../config";
+---
+<Base title="Admin Login" description="BoltGrab Admin Portal Sign In" noindex bare bodyClass="authx">
+  <link slot="head" rel="stylesheet" href={"/css/auth.css?v=" + Date.now()} />
+
+  <div class="shell">
+    <div class="pane" style="max-width: 440px; margin: 40px auto; padding: 40px 32px; background: #fff; border: 1px solid rgba(24,24,27,.12); box-shadow: 0 16px 40px rgba(0,0,0,.08);">
+      <header class="pane-top" style="text-align: center; margin-bottom: 24px;">
+        <a class="brand" href="/" style="display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: #18181B; margin-bottom: 12px;">
+          <img src="/img/icon-128.png" alt="" width="36" height="36" style="border-radius: 8px;" />
+          <span style="font-weight: 700; font-size: 18px; letter-spacing: .04em;">{SITE.name}</span>
+          <span style="background: #000; color: #fff; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; letter-spacing: .08em;">Admin</span>
+        </a>
+        <h1 style="font-size: 24px; font-weight: 700; margin: 8px 0 4px; color: #18181B;">Admin Portal</h1>
+        <p style="color: #71717A; font-size: 14px; margin: 0;">Authorized administrator access only.</p>
+      </header>
+
+      <div id="admin-auth" data-api={SITE.apiUrl}>
+        <!-- Google Sign-in button for Admin -->
+        <div style="position: relative; height: 44px; margin-bottom: 16px;">
+          <button type="button" class="gfake" id="g-fake" style="position: absolute; inset: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #fff; border: 1px solid rgba(24,24,27,.16); color: #18181B; font-weight: 500; font-size: 14px; cursor: pointer;">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+            Continue with Admin Google
+          </button>
+          <div class="g-slot" id="g-slot" style="position: absolute; inset: 0; overflow: hidden; opacity: .01;"></div>
+        </div>
+
+        <p class="err" id="err-admin-auth" role="alert" style="color: #DC2626; font-size: 13.5px; text-align: center; margin: 12px 0;"></p>
+
+        <div class="or" style="display: flex; align-items: center; gap: 12px; margin: 18px 0; color: #A1A1AA; font-size: 12px;">
+          <span style="flex: 1; height: 1px; background: rgba(24,24,27,.1);"></span>
+          <span>Or Admin Email &amp; Password</span>
+          <span style="flex: 1; height: 1px; background: rgba(24,24,27,.1);"></span>
+        </div>
+
+        <form id="admin-login-form" novalidate style="text-align: left;">
+          <label for="adm-email" style="display: block; font-size: 13px; font-weight: 500; color: #3F3F46; margin-bottom: 6px;">Admin Email</label>
+          <input id="adm-email" type="email" placeholder="admin@example.com" required style="width: 100%; height: 42px; border: 1px solid rgba(24,24,27,.14); padding: 0 12px; font-size: 14px; margin-bottom: 14px; box-sizing: border-box;" />
+
+          <label for="adm-pass" style="display: block; font-size: 13px; font-weight: 500; color: #3F3F46; margin-bottom: 6px;">Password</label>
+          <input id="adm-pass" type="password" placeholder="Admin password" required style="width: 100%; height: 42px; border: 1px solid rgba(24,24,27,.14); padding: 0 12px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;" />
+
+          <button type="submit" id="adm-btn" style="width: 100%; height: 44px; background: #000; color: #fff; font-weight: 600; font-size: 14.5px; border: none; cursor: pointer; transition: background .15s;">
+            Sign In to Admin
+          </button>
+        </form>
+
+        <p style="text-align: center; margin-top: 24px; font-size: 13px; color: #71717A;">
+          <a href="/" style="color: #52525B; text-decoration: none;">&larr; Return to main site</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline>
+    (function () {
+      var root = document.getElementById("admin-auth");
+      if (!root) return;
+      var API = (root.getAttribute("data-api") || "").replace(/\/$/, "");
+      if (API && (API.indexOf("localhost") >= 0 || API.indexOf("127.0.0.1") >= 0)) {
+        API = API.replace(/localhost|127\.0\.0\.1/, window.location.hostname);
+      }
+      var errEl = document.getElementById("err-admin-auth");
+      function setErr(msg) { errEl.textContent = msg || ""; }
+
+      function checkAdminAndRedirect() {
+        fetch(API + "/api/admin/me", { credentials: "include" })
+          .then(function (res) {
+            if (res.ok) {
+              window.location.replace("/admin/");
+            } else if (res.status === 403) {
+              setErr("Access Denied: This account is not an authorized administrator.");
+            }
+          })
+          .catch(function () {});
+      }
+
+      // If already signed in as admin, go straight in
+      checkAdminAndRedirect();
+
+      // Email + Password login
+      var form = document.getElementById("admin-login-form");
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        setErr("");
+        var email = document.getElementById("adm-email").value.trim();
+        var pass = document.getElementById("adm-pass").value;
+        if (!email || !pass) return setErr("Enter your admin email and password.");
+
+        var btn = document.getElementById("adm-btn");
+        btn.disabled = true;
+        btn.textContent = "Checking credentials…";
+
+        fetch(API + "/api/auth/login", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, password: pass, remember: true })
+        })
+          .then(function (res) { return res.json().then(function (j) { if (!res.ok) throw new Error(j.error || "Login failed."); return j; }); })
+          .then(function () {
+            // Check if admin
+            return fetch(API + "/api/admin/me", { credentials: "include" })
+              .then(function (res) {
+                if (res.ok) {
+                  window.location.replace("/admin/");
+                } else {
+                  throw new Error("Access Denied: " + email + " is not configured as an administrator.");
+                }
+              });
+          })
+          .catch(function (err) {
+            setErr(err.message);
+            btn.disabled = false;
+            btn.textContent = "Sign In to Admin";
+          });
+      });
+
+      // Google Sign In
+      fetch(API + "/api/auth/config")
+        .then(function (res) { return res.json(); })
+        .then(function (c) {
+          if (!c.googleClientId) return;
+          var s = document.createElement("script");
+          s.src = "https://accounts.google.com/gsi/client";
+          s.async = true;
+          s.onload = function () {
+            google.accounts.id.initialize({
+              client_id: c.googleClientId,
+              callback: function (r) {
+                setErr("");
+                fetch(API + "/api/auth/google", {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ credential: r.credential })
+                })
+                  .then(function (res) { return res.json().then(function (j) { if (!res.ok) throw new Error(j.error || "Failed"); return j; }); })
+                  .then(function () {
+                    return fetch(API + "/api/admin/me", { credentials: "include" })
+                      .then(function (res) {
+                        if (res.ok) {
+                          window.location.replace("/admin/");
+                        } else {
+                          throw new Error("Access Denied: Your Google account is not configured as an administrator.");
+                        }
+                      });
+                  })
+                  .catch(function (err) {
+                    setErr(err.message);
+                  });
+              },
+              ux_mode: "popup"
+            });
+            var slot = document.getElementById("g-slot");
+            google.accounts.id.renderButton(slot, { theme: "outline", size: "large", width: 376 });
+          };
+          document.head.appendChild(s);
+        })
+        .catch(function () {});
+    })();
+  </script>
+</Base>

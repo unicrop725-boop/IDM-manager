@@ -3,14 +3,14 @@ import Base from "../layouts/Base.astro";
 import AuthShell from "../components/AuthShell.astro";
 import { SITE } from "../config";
 ---
-<Base title="Get FlowGet Pro" description="Buy FlowGet Pro: one payment, lifetime license, no subscription." noindex bare bodyClass="authx">
+<Base title={`Get ${SITE.name} Pro`} description={`Buy ${SITE.name} Pro: one payment, lifetime license, no subscription.`} noindex bare bodyClass="authx">
   <link slot="head" rel="stylesheet" href={"/css/auth.css?v=" + Date.now()} />
   <AuthShell hint="Already bought?" linkText="My account" linkHref="/account/">
     <div id="buy" data-api={SITE.apiUrl}>
       <section id="buy-form" class="view" hidden>
         <span class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></svg></span>
-        <h1>Get FlowGet Pro</h1>
-        <p class="sub">One payment of <b>${SITE.priceUsd}</b> (₹{SITE.priceInr} in India). Lifetime license for 2 PCs, no subscription.</p>
+        <h1>Get {SITE.name} Pro</h1>
+        <p class="sub">One payment of <b>${SITE.priceUsd}</b>. Lifetime license for 2 PCs, no subscription.</p>
 
         <form id="form-buy" novalidate>
           <label for="b-email">Email address</label>

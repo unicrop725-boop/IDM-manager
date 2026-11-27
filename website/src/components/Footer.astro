@@ -5,8 +5,13 @@ const year = new Date().getFullYear();
 <footer>
   <div class="wrap">
     <div class="foot-grid">
-      <div>
-        <a class="brand" href="/"><img src="/img/icon-128.png" alt="" width="26" height="26" loading="lazy" />{SITE.name}</a>
+      <div class="foot-brand-card">
+        <a class="brand" href="/" title={SITE.name}>
+          <span class="brand-logo-wrap">
+            <img src="/img/icon-128.png" alt={SITE.name} width="46" height="46" loading="lazy" />
+          </span>
+          <span>{SITE.name}</span>
+        </a>
         <p class="foot-about">A fast, patient download manager for Windows. It splits files across many connections and carries on after any interruption.</p>
       </div>
       <div>
@@ -14,7 +19,7 @@ const year = new Date().getFullYear();
         <ul>
           <li><a href="/features/">Features</a></li>
           <li><a href="/#demo">Live demo</a></li>
-          <li><a href="/#pricing">Pricing</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
           <li><a href="/download/">Download</a></li>
         </ul>
       </div>

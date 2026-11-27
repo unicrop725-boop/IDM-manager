@@ -868,6 +868,9 @@
     }
   }
 
+  // Quality picker modal / renderer (1080p, 720p, 480p, audio only)
+  const showQualityPicker = renderFormats;
+
   function renderFormats(data) {
     const options = data.videoOptions;
     const heights = [...new Set(options.map((o) => o.height))].sort((a, b) => b - a);

@@ -4,6 +4,9 @@
   var root = document.getElementById("admin");
   if (!root) return;
   var API = (root.getAttribute("data-api") || "").replace(/\/$/, "");
+  if (API && (API.indexOf("localhost") >= 0 || API.indexOf("127.0.0.1") >= 0)) {
+    API = API.replace(/localhost|127\.0\.0\.1/, window.location.hostname);
+  }
   var $ = function (id) { return document.getElementById(id); };
   var NS = "http://www.w3.org/2000/svg";
 
@@ -248,7 +251,7 @@
     var first = location.hash.slice(1);
     openTab(TABS.indexOf(first) >= 0 ? first : "overview");
   }).catch(function (e) {
-    if (e.status === 401) { location.replace("/signin/?next=" + encodeURIComponent("/admin/")); return; }
+    if (e.status === 401) { location.replace("/admin/login/"); return; }
     if (e.status === 403) {
       clear(gate);
       gate.appendChild(document.createTextNode("This account is not an admin. "));
@@ -259,7 +262,7 @@
   });
 
   $("signout").addEventListener("click", function () {
-    api("POST", "/api/auth/logout", {}).catch(function () {}).then(function () { location.assign("/signin/?switch=1"); });
+    api("POST", "/api/auth/logout", {}).catch(function () {}).then(function () { location.assign("/admin/login/"); });
   });
 
   var current = "overview";

@@ -43,12 +43,11 @@ import { SITE } from "../config";
         </div>
 
         <div class="row-btns">
-          <a class="soft link-btn" href="/download/">Download FlowGet</a>
-          <a class="soft link-btn" id="a-admin" href="/admin/" hidden>Admin panel</a>
+          <a class="soft link-btn" href="/download/">Download BoltGrab</a>
           <button class="soft" type="button" id="a-out">Sign out</button>
         </div>
       </section>
     </div>
   </AuthShell>
-  <script is:inline src="/js/account.js" defer></script>
+  <script is:inline src={"/js/account.js?v=" + Date.now()} defer></script>
 </Base>

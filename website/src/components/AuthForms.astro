@@ -79,7 +79,24 @@ const resetHref = `mailto:${SITE.supportEmail}?subject=${encodeURIComponent("Res
       <input id="p-name" name="name" type="text" autocomplete="name" maxlength="80" required />
 
       <label for="p-phone">Phone number</label>
-      <input id="p-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" required />
+      <div class="phone-input-wrap">
+        <div class="phone-picker" id="phone-picker">
+          <button type="button" class="phone-picker-btn" id="phone-picker-btn" aria-haspopup="listbox" aria-expanded="false">
+            <img id="p-flag-selected" src="https://flagcdn.com/24x18/in.png" alt="India" width="20" height="15" />
+            <span id="p-dial-selected">+91</span>
+            <svg class="picker-chevron" viewBox="0 0 24 24" width="14" height="14"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="hidden" id="p-country" name="countryCode" value="+91" />
+
+          <div class="phone-picker-menu" id="phone-picker-menu" hidden>
+            <div class="phone-picker-search">
+              <input type="text" id="phone-picker-filter" placeholder="Search country or code..." autocomplete="off" />
+            </div>
+            <ul class="phone-picker-list" id="phone-picker-list" role="listbox"></ul>
+          </div>
+        </div>
+        <input id="p-phone" name="phone" type="tel" autocomplete="tel-national" inputmode="tel" placeholder="98765 43210" required />
+      </div>
 
       <label for="p-pass">Create a password</label>
       <div class="pw-row">

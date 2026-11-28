@@ -56,7 +56,7 @@ const reqs = [
           <small>Version {SITE.version}</small>
           <h2>{SITE.name} for Windows</h2>
           <p>Windows 10 and 11 (64-bit){SITE.fileSize ? ` · ${SITE.fileSize}` : ""}</p>
-          <a class="btn btn-win btn-lg" href={SITE.downloadUrl}>
+          <a class="btn btn-win btn-lg" href={SITE.downloadUrl} download={SITE.downloadUrl.split("/").pop()}>
             <svg viewBox="0 0 24 24" aria-hidden="true" set:html={`<path d="M12 4v11" ${s}/><path d="m7 11 5 5 5-5" ${s}/><path d="M5 20h14" ${s}/>`}></svg>
             Download for Windows
           </a>

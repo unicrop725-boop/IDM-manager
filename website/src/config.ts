@@ -14,7 +14,7 @@ export const SITE = {
   sha256: "EFC5964D1ACCFCBA401E95491CEF89C772E3192E4D274B840C6BC07AE1755D2B", // SHA-256 of the installer (leave empty to hide)
 
   // Where "Download" buttons go: a direct link to the installer, or your releases page.
-  downloadUrl: "https://github.com/unicrop725-boop/IDM-manager/releases/latest",
+  downloadUrl: "/downloads/BoltGrab_1.0.0_x64-setup.exe",
   // Chrome Web Store / Edge Add-ons page, or local .zip download in /public/downloads/.
   extensionUrl: "/downloads/boltgrab-extension.zip",
   // Where "Buy" buttons go. The on-site /buy/ page starts a Dodo Payments checkout (needs PUBLIC_API_URL and the server's DODO_* settings).

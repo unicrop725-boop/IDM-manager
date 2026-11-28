@@ -10,8 +10,8 @@ export const SITE = {
 
   // Release details (shown on the download page and in structured data).
   version: "1.0.0",
-  fileSize: "", // e.g. "42 MB" (leave empty to hide)
-  sha256: "", // SHA-256 of the installer (leave empty to hide)
+  fileSize: "11.6 MB", // e.g. "42 MB" (leave empty to hide)
+  sha256: "EFC5964D1ACCFCBA401E95491CEF89C772E3192E4D274B840C6BC07AE1755D2B", // SHA-256 of the installer (leave empty to hide)
 
   // Where "Download" buttons go: a direct link to the installer, or your releases page.
   downloadUrl: "https://github.com/unicrop725-boop/IDM-manager/releases/latest",

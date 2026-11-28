@@ -11,7 +11,7 @@ export const SITE = {
   // Release details (shown on the download page and in structured data).
   version: "1.0.0",
   fileSize: "11.5 MB", // e.g. "42 MB" (leave empty to hide)
-  sha256: "2BF182CDE906C8357C844021CAD91C4A08743169FED768F6F65C76171D804FBA", // SHA-256 of the installer (leave empty to hide)
+  sha256: "3FE6978951390E1D3C57F5CC6D27C567810E1C76579689B99C7601F217F6A58F", // SHA-256 of the installer (leave empty to hide)
 
   // Where "Download" buttons go: a direct link to the installer, or your releases page.
   downloadUrl: "/downloads/BoltGrab_1.0.0_x64-setup.exe",

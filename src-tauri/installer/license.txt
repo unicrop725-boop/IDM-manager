@@ -1,0 +1,81 @@
+BOLTGRAB END USER LICENSE AGREEMENT
+Version 1.0 - last updated 28 November 2026
+
+Please read this agreement before installing BoltGrab. By clicking "I Agree" and installing, activating or using BoltGrab, you accept these terms. If you do not accept them, click "Cancel" and do not install or use the software.
+
+
+1. WHAT THIS AGREEMENT COVERS
+
+This is an agreement between you and the BoltGrab team ("we", "us") about the BoltGrab download manager for Windows, the BoltGrab browser extension, and any updates we provide (together, "BoltGrab").
+
+
+2. YOUR LICENSE
+
+BoltGrab is paid software. When you buy BoltGrab Pro you receive a license key. With a valid key we give you a personal, non-exclusive, non-transferable, lifetime license to install and use BoltGrab on up to 2 PCs that you own or control. The license is a one-time payment. There is no subscription and no renewal fee.
+
+BoltGrab does not run without an activated license key. There is no free trial.
+
+
+3. ACTIVATION AND LICENSE CHECKS
+
+- Your key is checked on your PC when you enter it.
+- When you activate, and from time to time afterwards, BoltGrab contacts our license server (api.boltgrab.online) to register your PC against your key, to enforce the limit of 2 PCs per key, and to check that the key has not been refunded or switched off.
+- The license server receives your license key and a machine identifier generated for this PC. It does not need to know what you download.
+- BoltGrab needs an internet connection now and then to confirm your license. If it cannot be confirmed for about 14 days, BoltGrab stops working until it can connect again. Being offline for a short time does not affect you.
+- You can deactivate your key on one PC from the License window in BoltGrab and use that place on another PC.
+- If a payment is refunded, the key linked to it is switched off and BoltGrab will no longer run on the PCs that used it.
+
+
+4. WHAT YOU MAY NOT DO
+
+You may not:
+- share, sell, publish or give your license key to other people, or use it on more PCs than your license allows;
+- copy, rent, lease, sell, sub-license or redistribute BoltGrab or any part of it;
+- remove, bypass, disable or tamper with the license check, the activation screen or any other protection in BoltGrab, or create or use keys that we did not issue;
+- reverse engineer, decompile or disassemble BoltGrab, except where the law gives you that right and does not allow us to prevent it;
+- use BoltGrab to break the law or to attack or harm any person, network or service.
+
+
+5. WHAT YOU DOWNLOAD IS YOUR RESPONSIBILITY
+
+BoltGrab is a tool for saving files that you choose. We do not host, check or control the files, websites or videos you download. You are responsible for making sure that you have the right to download and keep them, and that you follow the laws and the terms of the websites you use, including copyright law.
+
+
+6. UPDATES
+
+We may provide updates and new versions. Updates that we release for BoltGrab Pro are covered by your license unless we say otherwise when we release them. We may change, add or remove features, and we may stop supporting old versions.
+
+
+7. OWNERSHIP
+
+BoltGrab, its code, name, logo and design belong to us or our licensors. This agreement gives you the right to use BoltGrab. It does not transfer any ownership to you.
+
+
+8. PRIVACY
+
+How we handle information on our website and license server is described in the BoltGrab privacy policy at https://boltgrab.online/privacy/.
+
+
+9. NO WARRANTY
+
+BoltGrab is provided "as is" and "as available". To the fullest extent the law allows, we do not promise that BoltGrab will be error-free, uninterrupted or suitable for a particular purpose, or that every download will succeed. Some places do not allow these limits, so they may apply to you only in part.
+
+
+10. LIMIT OF LIABILITY
+
+To the fullest extent the law allows, we are not liable for any indirect, incidental, special or consequential loss, or for lost data, files or profits, arising from the use of or inability to use BoltGrab. Our total liability to you for any claim is limited to the amount you paid for your BoltGrab license. Nothing in this agreement limits any right or liability that cannot be limited by law.
+
+
+11. ENDING THIS AGREEMENT
+
+This agreement lasts until it is ended. You can end it at any time by uninstalling BoltGrab and deleting your copies. We may end it and switch off your key if you break these terms. When it ends you must stop using BoltGrab and remove it from your PCs.
+
+
+12. CHANGES TO THESE TERMS
+
+We may update this agreement for future versions of BoltGrab. The version shown when you install or update BoltGrab is the one that applies to that version.
+
+
+13. CONTACT
+
+Questions about this agreement or your license: support@boltgrab.online

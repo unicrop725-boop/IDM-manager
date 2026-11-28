@@ -2,7 +2,8 @@ import { ModalCorner } from "./NotchCorner";
 // src/components/LicenseModal.tsx
 // License Management & Activation Modal
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { getPriceDisplay } from "../price";
 import { Key, CheckCircle, AlertTriangle, ShieldCheck, ExternalLink } from "lucide-react";
 import { api } from "../api";
 import type { TrialAndLicenseStatus } from "../types";
@@ -20,6 +21,7 @@ export default function LicenseModal({ status, onClose, onRefreshStatus, require
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const price = useMemo(() => getPriceDisplay(), []);
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,17 +62,120 @@ export default function LicenseModal({ status, onClose, onRefreshStatus, require
     }
   };
 
+  // Activation gate: full-window split screen (form on the left, brand panel on the right).
+  // Starts below the 48px title bar so the window can still be minimized, moved and closed.
+  if (required && !status.isLicensed) {
+    return (
+      <div
+        className="fixed inset-x-0 bottom-0 top-12 z-40 flex bg-[#fafafa] select-none"
+        role="dialog"
+        aria-modal={true}
+        aria-label="Activate BoltGrab"
+      >
+        {/* Left: form */}
+        <div className="flex flex-1 items-center justify-center overflow-y-auto px-8 py-10">
+          <div className="w-full max-w-[22rem] text-[#18181b]">
+            <div className="flex justify-center">
+              <Key className="h-6 w-6 text-[#4B7E31]" strokeWidth={2.5} />
+            </div>
+            <h1 className="mt-6 text-center text-[26px] font-bold leading-tight tracking-tight">
+              Access your account
+              <br />
+              with a license key
+            </h1>
+            <p className="mt-4 text-center text-[13px] leading-snug text-[#71717a]">
+              Enter your license key to unlock full access to the app. One key works on up to 2 PCs.
+            </p>
+
+            {error && (
+              <div className="mt-5 flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 p-3 text-[12px] text-rose-700" role="alert">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+            {status.licenseNotice && (
+              <div className="mt-5 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-800" role="alert">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{status.licenseNotice}</span>
+              </div>
+            )}
+            {successMsg && (
+              <div className="mt-5 flex items-start gap-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-[12px] text-emerald-700">
+                <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleActivate} className="mt-7">
+              <label htmlFor="license-key-input" className="mb-1.5 block text-[12px] font-semibold text-[#18181b]">
+                License key<span className="text-[#18181b]">*</span>
+              </label>
+              <input
+                id="license-key-input"
+                type="text"
+                value={licenseKeyInput}
+                onChange={(e) => setLicenseKeyInput(e.target.value)}
+                placeholder="License key"
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                className="h-11 w-full rounded-lg border border-[#ececf0] bg-[#f1f1f4] px-3.5 font-mono text-[12px] text-[#18181b] placeholder:font-sans placeholder:text-[#a1a1aa] focus:border-[#7EC151] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#B2D959]/40"
+              />
+              <button
+                type="submit"
+                disabled={loading || !licenseKeyInput.trim()}
+                className="mt-4 h-11 w-full rounded-lg bg-[#B2D959] text-[14px] font-semibold text-[#15200a] transition hover:bg-[#a3cb48] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Verifying..." : "Activate Access"}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-[12px] text-[#52525b]">
+              Lost your license key?{" "}
+              <span className="font-medium text-[#4B7E31]">support@boltgrab.online</span>
+            </p>
+
+            {/* No key yet: price in the buyer's currency (₹ in India, converted elsewhere) */}
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-[#e4e4e7] bg-white p-3.5">
+              <div className="min-w-0">
+                <div className="text-[13px] font-semibold text-[#18181b]">BoltGrab Lifetime Pro</div>
+                <div className="mt-0.5 text-[11px] leading-snug text-[#71717a]">One-time payment • 2 PCs • All updates</div>
+                <div className="mt-0.5 text-[11px] text-[#6b6b73]">{price.note}</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  api.openUrl("https://boltgrab.online/buy/").catch(() => window.open("https://boltgrab.online/buy/", "_blank", "noopener"));
+                }}
+                className="flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-[#0F0F12] px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-[#26262c]"
+              >
+                <span>Buy {price.main}</span>
+                <ExternalLink size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: brand panel (hidden when the window is narrow) */}
+        <div
+          className="relative hidden w-[42%] max-w-[34rem] flex-shrink-0 items-end overflow-hidden p-10 md:flex"
+          style={{
+            background:
+              "radial-gradient(120% 90% at 0% 0%, #B2D959 0%, #5E9A3A 22%, #1F3A14 48%, #0F0F12 80%)",
+          }}
+          aria-hidden="true"
+        >
+          <p className="text-[34px] font-medium leading-[1.15] tracking-tight text-white">
+            Your license key is unique — keep it safe and don't share it with others.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={
-        required
-          ? // Starts below the 48px title bar so the window can still be minimized, moved and closed.
-            "fixed inset-x-0 bottom-0 top-12 z-40 flex items-center justify-center bg-[var(--bg-app)] p-4 select-none"
-          : "fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none"
-      }
-      role={required ? "dialog" : undefined}
-      aria-modal={required ? true : undefined}
-      aria-label={required ? "Activate BoltGrab" : undefined}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none"
     >
       <div className="notch-card flex w-full max-w-md flex-col border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs">
         {!required && <ModalCorner onClose={onClose} />}

@@ -1,3 +1,6 @@
 node_modules/
 dist/
 .astro/
+.wrangler/
+# Zips of the built site made for manual upload to Cloudflare Pages
+/site-dist*.zip

@@ -5,7 +5,7 @@
 // because the exact amount, tax and rate are set by the payment page at checkout. The rates below are rough
 // reference values, not live ones: update them now and then (or the display will drift).
 
-export const PRICE_USD = 19.99;
+export const PRICE_USD = 9;
 export const PRICE_INR = 999;
 
 /** Approximate units of each currency per 1 US dollar. */

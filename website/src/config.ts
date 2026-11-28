@@ -26,7 +26,7 @@ export const SITE = {
   apiUrl: ((import.meta.env.PUBLIC_API_URL as string | undefined) || "").replace(/\/$/, ""),
 
   // Price (one paid plan, no free trial).
-  priceUsd: "19.99",
+  priceUsd: "9",
 
   // Default picture for sharing links (1200x630, in /public).
   ogImage: "/img/og.png",

@@ -1360,8 +1360,22 @@ export default function App() {
         />
       )}
 
-      {/* License Management & Activation Modal */}
-      {isLicenseModalOpen && licenseStatus && (
+      {/* Activation gate: until a valid license key is accepted, nothing else in the app can be used. It sits below
+          the title bar, so the window can still be minimized or closed. */}
+      {licenseStatus && !licenseStatus.isLicensed && (
+        <LicenseModal
+          required
+          status={licenseStatus}
+          onClose={() => {}}
+          onRefreshStatus={async () => {
+            const st = await api.getLicenseStatus();
+            setLicenseStatus(st);
+          }}
+        />
+      )}
+
+      {/* License details (only for an activated license; without one the gate above is shown) */}
+      {isLicenseModalOpen && licenseStatus?.isLicensed && (
         <LicenseModal
           status={licenseStatus}
           onClose={() => setIsLicenseModalOpen(false)}

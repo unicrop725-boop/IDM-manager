@@ -11,9 +11,11 @@ interface Props {
   status: TrialAndLicenseStatus;
   onClose: () => void;
   onRefreshStatus: () => Promise<void>;
+  /** Activation gate: the window cannot be closed and covers the app (below the title bar) until a key is accepted. */
+  required?: boolean;
 }
 
-export default function LicenseModal({ status, onClose, onRefreshStatus }: Props) {
+export default function LicenseModal({ status, onClose, onRefreshStatus, required = false }: Props) {
   const [licenseKeyInput, setLicenseKeyInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,14 +61,24 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none">
+    <div
+      className={
+        required
+          ? // Starts below the 48px title bar so the window can still be minimized, moved and closed.
+            "fixed inset-x-0 bottom-0 top-12 z-40 flex items-center justify-center bg-[var(--bg-app)] p-4 select-none"
+          : "fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs select-none"
+      }
+      role={required ? "dialog" : undefined}
+      aria-modal={required ? true : undefined}
+      aria-label={required ? "Activate BoltGrab" : undefined}
+    >
       <div className="notch-card flex w-full max-w-md flex-col border border-[var(--border-subtle)] bg-[var(--bg-card)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-xs">
-        <ModalCorner onClose={onClose} />
+        {!required && <ModalCorner onClose={onClose} />}
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-3.5 bg-[var(--bg-panel)]">
           <div className="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
             <Key className="w-4 h-4 text-purple-400" />
-            <span>BoltGrab License & Subscription</span>
+            <span>{required ? "Activate BoltGrab" : "BoltGrab License & Subscription"}</span>
           </div>
         </div>
 
@@ -124,14 +136,18 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5 font-bold text-amber-400">
                   <AlertTriangle size={16} />
-                  <span>Not Activated</span>
+                  <span>{required ? "License key required" : "Not Activated"}</span>
                 </span>
-                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-medium">
-                  Limited Basic Mode
-                </span>
+                {!required && (
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-300 font-medium">
+                    Limited Basic Mode
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-zinc-300">
-                Basic downloading works, but connections are capped to 2, and Turbo Mode and media streaming are disabled. Activate a license to unlock full 32-stream multi-threaded performance.
+                {required
+                  ? "BoltGrab needs a license key before you can use it. Enter the key from your purchase email to continue. You can use one key on up to 2 PCs."
+                  : "Basic downloading works, but connections are capped to 2, and Turbo Mode and media streaming are disabled. Activate a license to unlock full 32-stream multi-threaded performance."}
               </p>
             </div>
           )}
@@ -183,15 +199,17 @@ export default function LicenseModal({ status, onClose, onRefreshStatus }: Props
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end border-t border-[var(--border-subtle)] px-5 py-3 bg-[var(--bg-panel)]">
-          <button
-            onClick={onClose}
-            className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition"
-          >
-            Close
-          </button>
-        </div>
+        {/* Footer (the activation gate has no Close: it goes away once the key is accepted) */}
+        {!required && (
+          <div className="flex items-center justify-end border-t border-[var(--border-subtle)] px-5 py-3 bg-[var(--bg-panel)]">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-card)] px-4 py-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -246,6 +246,12 @@ fn cancel_yt_job(job: &std::sync::Arc<YtJob>, app: &tauri::AppHandle) {
 /// Add a download and start or queue it.
 #[tauri::command]
 pub async fn add_download(state: State<'_, AppState>, mut request: AddRequest) -> CmdResult<DownloadInfo> {
+    // 0. BoltGrab is paid-only: nothing is downloaded until a valid license key has been activated on this PC. The
+    // app shows an activation screen first; this check also covers downloads handed over by the browser extension.
+    if !crate::licensing::get_status(&state.db).await.is_licensed {
+        return Err("BoltGrab is not activated. Enter your license key in BoltGrab to start downloading.".to_string());
+    }
+
     // 1. Check if Torrent or Magnet link
     if crate::torrent::TorrentManager::is_torrent(&request.url) {
         let id = uuid::Uuid::new_v4().to_string();

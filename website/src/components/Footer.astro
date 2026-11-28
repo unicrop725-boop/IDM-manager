@@ -36,8 +36,10 @@ const year = new Date().getFullYear();
         <h4>Company</h4>
         <ul>
           <li><a href="/signin/">Sign in</a></li>
-          <li><a href={`mailto:${SITE.supportEmail}`}>Contact</a></li>
+          <li><a href="/contact/">Contact</a></li>
           <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+          <li><a href="/refund/">Refund Policy</a></li>
         </ul>
       </div>
     </div>
@@ -48,7 +50,9 @@ const year = new Date().getFullYear();
       <span class="foot-copy">© {year} {SITE.name}. All rights reserved.</span>
       <nav class="foot-legal" aria-label="Legal and contact">
         <a href="/privacy/">Privacy</a>
-        <a href={`mailto:${SITE.supportEmail}`}>Contact</a>
+        <a href="/terms/">Terms</a>
+        <a href="/refund/">Refunds</a>
+        <a href="/contact/">Contact</a>
         <a href="/rss.xml">RSS</a>
         <span class="foot-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.500"/></svg>No ads · No tracking</span>
         <span class="foot-ver">Version {SITE.version}</span>

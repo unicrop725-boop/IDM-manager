@@ -1,0 +1,52 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE } from "../config";
+
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
+      { "@type": "ListItem", position: 2, name: "Contact", item: site + "/contact/" },
+    ],
+  },
+];
+---
+<Base
+  title={`Contact & Support — ${SITE.name}`}
+  description={`Get help with ${SITE.name}, license keys, installation, browser extension setup, or billing and refunds.`}
+  current=""
+  jsonLd={jsonLd}
+>
+
+  <div class="wrap">
+    <div class="page-head">
+      <h1>Contact &amp; Support</h1>
+      <p>Need help installing {SITE.name}, activating a license key, or checking a payment? Reach us directly by email.</p>
+    </div>
+
+    <div class="prose">
+      <h2>Support email</h2>
+      <p>Email us anytime at <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a>. We aim to reply within <b>1–2 business days</b>.</p>
+
+      <h2>What to include so we can help faster</h2>
+      <ul>
+        <li><b>Installation or app issues:</b> Your Windows version (Windows 10 or 11), {SITE.name} version ({SITE.version}), and what happened.</li>
+        <li><b>Browser extension help:</b> Which browser you use (Chrome, Edge, or Brave) and whether {SITE.name} is open on your PC.</li>
+        <li><b>License or billing questions:</b> The email address used at checkout and your Dodo Payments order ID.</li>
+      </ul>
+
+      <h2>Helpful links</h2>
+      <ul>
+        <li><a href="/download/">Download {SITE.name} &amp; browser extension setup guide</a></li>
+        <li><a href="/pricing/">Pricing &amp; license details</a></li>
+        <li><a href="/refund/">Refund Policy</a></li>
+        <li><a href="/terms/">Terms &amp; Conditions</a></li>
+        <li><a href="/privacy/">Privacy Policy</a></li>
+      </ul>
+    </div>
+  </div>
+
+</Base>

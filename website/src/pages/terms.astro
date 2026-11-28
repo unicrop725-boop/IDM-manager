@@ -1,0 +1,63 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE } from "../config";
+
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = [
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: site + "/" },
+      { "@type": "ListItem", position: 2, name: "Terms & Conditions", item: site + "/terms/" },
+    ],
+  },
+];
+---
+<Base
+  title={`Terms & Conditions — ${SITE.name}`}
+  description={`Terms and Conditions for purchasing and using ${SITE.name} Pro for Windows, including licensing, acceptable use, and support.`}
+  current=""
+  jsonLd={jsonLd}
+>
+
+  <div class="wrap">
+    <div class="page-head">
+      <h1>Terms &amp; Conditions</h1>
+      <p>Rules and license terms for using the {SITE.name} website, desktop application, and browser extension.</p>
+    </div>
+
+    <div class="prose">
+      <p class="fine">Last updated: November 2026</p>
+
+      <h2>1. Acceptance of terms</h2>
+      <p>By downloading, installing, or purchasing {SITE.name} ("the Software"), or by using this website, you agree to these Terms &amp; Conditions. If you do not agree, do not install or use the Software.</p>
+
+      <h2>2. Software license</h2>
+      <ul>
+        <li><b>One-time purchase:</b> {SITE.name} Pro is sold for a one-time payment of ${SITE.priceUsd} USD (plus any applicable local taxes shown at checkout). There are no recurring subscription fees.</li>
+        <li><b>Device limit:</b> Each license key allows activation on up to <b>2 Windows PCs</b> owned or controlled by you.</li>
+        <li><b>Restrictions:</b> You may not resell, share publicly, redistribute license keys, or reverse-engineer the licensing mechanism.</li>
+      </ul>
+
+      <h2>3. Payments and delivery</h2>
+      <p>Payments are processed by our Merchant of Record, <b>Dodo Payments</b>. Immediately after successful payment, your {SITE.name} Pro license key is generated and displayed on the confirmation page (and linked to your account if signed in).</p>
+
+      <h2>4. Refunds</h2>
+      <p>Refund eligibility and request instructions are described in our <a href="/refund/">Refund Policy</a>.</p>
+
+      <h2>5. Acceptable use</h2>
+      <p>{SITE.name} is a general-purpose download manager tool. You are solely responsible for ensuring that you have the legal right to download, save, or access any files or media from third-party websites, and for complying with the terms of service and copyright laws applicable in your jurisdiction.</p>
+
+      <h2>6. Disclaimer of warranties &amp; limitation of liability</h2>
+      <p>The Software is provided "as is" without warranties of any kind, express or implied. To the maximum extent permitted by law, {SITE.name} shall not be liable for any indirect, incidental, or consequential damages, data loss, or third-party service interruptions arising from the use of the Software.</p>
+
+      <h2>7. Changes to these terms</h2>
+      <p>We may update these Terms &amp; Conditions from time to time. Continued use of the website or Software after updates constitutes acceptance of the revised terms.</p>
+
+      <h2>8. Contact</h2>
+      <p>Questions about these terms: <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a> or visit our <a href="/contact/">Contact page</a>.</p>
+    </div>
+  </div>
+
+</Base>
